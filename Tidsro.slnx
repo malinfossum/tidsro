@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Tidsro/Tidsro.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Tidsro.Tests/Tidsro.Tests.csproj" />
+  </Folder>
+</Solution>
