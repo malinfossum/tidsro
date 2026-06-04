@@ -1,0 +1,77 @@
+<Window x:Class="Tidsro.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+        Title="Tidsro" Width="420" Height="560"
+        Background="{StaticResource PageBg}" Foreground="{StaticResource Text}"
+        FontFamily="{StaticResource FontSans}">
+  <Grid Margin="16">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- Quick timers -->
+    <TextBlock Grid.Row="0" Text="Quick timers" FontSize="{StaticResource TextXl}" Margin="0,0,0,8"/>
+    <StackPanel Grid.Row="1">
+      <StackPanel Orientation="Horizontal">
+        <!-- CommandParameter must be a real Int32 to match StartPresetCommand (IRelayCommand<int>); "15" would pass a string and the button would disable/throw -->
+        <Button Content="15" Width="56" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}">
+          <Button.CommandParameter><sys:Int32>15</sys:Int32></Button.CommandParameter>
+        </Button>
+        <Button Content="30" Width="56" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}" Margin="8,0,0,0">
+          <Button.CommandParameter><sys:Int32>30</sys:Int32></Button.CommandParameter>
+        </Button>
+        <Button Content="60" Width="56" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}" Margin="8,0,0,0">
+          <Button.CommandParameter><sys:Int32>60</sys:Int32></Button.CommandParameter>
+        </Button>
+      </StackPanel>
+      <Grid Margin="0,8,0,0">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <TextBox Grid.Column="0" Text="{Binding CustomInput, UpdateSourceTrigger=PropertyChanged}"
+                 AutomationProperties.Name="Custom duration" ToolTip="e.g. 25, 5:00, 1:30:00"/>
+        <TextBox Grid.Column="1" Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}"
+                 AutomationProperties.Name="Label" Margin="8,0,0,0"/>
+        <Button Grid.Column="2" Content="Start" Command="{Binding StartCustomCommand}" Style="{StaticResource QuietAction}" Margin="8,0,0,0"/>
+      </Grid>
+      <TextBlock Text="{Binding CustomError}" Foreground="{StaticResource Danger}"
+                 FontSize="{StaticResource TextXs}" Margin="0,4,0,0"
+                 Visibility="{Binding CustomError, Converter={StaticResource NullToCollapsed}}"/>
+      <ItemsControl ItemsSource="{Binding Running}" Margin="0,12,0,0">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Border Background="{StaticResource CardBg}" CornerRadius="{StaticResource RadiusSm}"
+                    Padding="12" Margin="0,0,0,8">
+              <DockPanel>
+                <Button DockPanel.Dock="Right" Content="✕" Command="{Binding CancelCommand}"
+                        AutomationProperties.Name="Cancel timer" Style="{StaticResource QuietAction}"/>
+                <Button DockPanel.Dock="Right" Content="⏸" Command="{Binding PauseResumeCommand}"
+                        AutomationProperties.Name="Pause or resume" Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
+                <StackPanel>
+                  <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"/>
+                  <TextBlock Text="{Binding RemainingText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource Text2xl}"/>
+                  <TextBlock Text="{Binding SoundTag}" Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}"/>
+                </StackPanel>
+              </DockPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+
+    <!-- Your day (empty until Slice 2) -->
+    <StackPanel Grid.Row="2" VerticalAlignment="Top" Margin="0,16,0,0">
+      <TextBlock Text="Your day" FontSize="{StaticResource TextXl}" Margin="0,0,0,8"/>
+      <TextBlock Text="Nothing scheduled yet — add an alarm" Foreground="{StaticResource TextFaint}"
+                 FontSize="{StaticResource TextSm}"
+                 Visibility="{Binding IsDayEmpty, Converter={StaticResource BoolToVisible}}"/>
+    </StackPanel>
+
+    <Button Grid.Row="3" Content="Settings" HorizontalAlignment="Left"
+            Click="OnSettings" Style="{StaticResource QuietAction}"/>
+  </Grid>
+</Window>

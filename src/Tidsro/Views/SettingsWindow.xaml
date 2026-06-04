@@ -1,0 +1,14 @@
+<Window x:Class="Tidsro.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Settings" Width="360" Height="220" WindowStartupLocation="CenterOwner"
+        Background="{StaticResource PageBg}" Foreground="{StaticResource Text}"
+        FontFamily="{StaticResource FontSans}">
+  <StackPanel Margin="16">
+    <CheckBox Content="Launch Tidsro at startup" IsChecked="{Binding LaunchAtStartup}"
+              AutomationProperties.Name="Launch at startup" Margin="0,0,0,16"/>
+    <TextBlock Text="Default sound for new timers" Margin="0,0,0,4"/>
+    <ComboBox ItemsSource="{Binding SoundOptions}" SelectedItem="{Binding DefaultSound}"
+              AutomationProperties.Name="Default sound"/>
+  </StackPanel>
+</Window>

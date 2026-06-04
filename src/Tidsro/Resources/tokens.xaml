@@ -1,6 +1,10 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+                    xmlns:v="clr-namespace:Tidsro.Views">
+
+  <v:NullToCollapsedConverter x:Key="NullToCollapsed"/>
+  <v:BoolToVisibleConverter x:Key="BoolToVisible"/>
 
   <!-- Surfaces -->
   <SolidColorBrush x:Key="PageBg"      Color="#000000"/>
