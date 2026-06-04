@@ -42,11 +42,15 @@ public partial class App : Application
         _timer.Start();
 
         _hotkey = new HotkeyService();
-        _hotkey.Pressed += (_, _) => _openPopups.LastOrDefault()?.FocusForKeyboard();
-        _hotkey.Register();
+        _hotkey.Pressed += (_, _) => FocusLatestAlert();
+        _hotkey.Register();   // best-effort; the tray "Focus latest alert" item is the keyboard fallback if the chord is taken
 
-        _tray = TrayBuilder.Create(ShowMainWindow, Quit);
+        _tray = TrayBuilder.Create(ShowMainWindow, FocusLatestAlert, Quit);
     }
+
+    // Keyboard route to the newest completion card — shared by the global hotkey and the tray
+    // "Focus latest alert" item (the fallback when the hotkey can't register; spec §5.3)
+    private void FocusLatestAlert() => _openPopups.LastOrDefault()?.FocusForKeyboard();
 
     private void OnTimerFired(object? sender, TimerItem item)
     {
