@@ -10,6 +10,8 @@
 
 ---
 
+> **⚠ Before executing:** apply the corrections in **§ Stress-test findings & fixes** (near the end). Findings #1–#3 fix Task 1 setup (the build fails without them); #4–#6 fix feature/accessibility breaks. Apply each as you reach the named task.
+
 ## Resolved open decisions (spec §13)
 
 | Decision | Resolution | Source |
@@ -2335,6 +2337,44 @@ git commit -m "Document Slice 1 usage and complete countdown acceptance pass"
 **2. Placeholder scan:** No `TODO`/`TBD`/"add error handling" left. Asset files (`.ico`, `.wav`) are sourced, not coded — flagged as asset steps, not placeholders.
 
 **3. Type consistency:** `SchedulerService` members (`StartCountdown`, `Tick`, `Remaining`, `Pause/Resume/Cancel`, `Snooze`, `Restart`, `Fired`, `Running`) are used identically in Tasks 15/16/19. `PopupViewModel` ctor signature `(TimerItem, Func<TimerItem,TimerItem> onSnooze, Func<TimerItem,TimerItem> onRestart, Action<TimerItem> onDismiss)` matches Task 15 tests and Task 19 wiring. `AppSettings` shape matches across Tasks 8/9/18. `ScreenHelper.ClampBottomRight(Rect, Size, double)` matches Task 10 tests and Task 19 usage.
+
+---
+
+## Stress-test findings & fixes
+
+Adversarial review of this plan (2026-06-04). Apply each fix as you reach the named task. Severity: 🔴 build/feature-breaking · 🟠 real gap · 🟡 polish.
+
+### 🔴 Must fix
+1. **Task 1 — `dotnet new` framework value.** `-f net10.0-windows` is rejected by the templates (they accept `net10.0` and append `-windows`). **Fix:** use `-f net10.0` for both `dotnet new wpf` and `dotnet new xunit`.
+2. **Task 1 — test project TFM.** `dotnet new xunit` yields `net10.0`; referencing the WPF app and using `System.Windows` geometry (and `UseWPF`) needs a `-windows` TFM. **Fix:** set `tests/Tidsro.Tests/Tidsro.Tests.csproj` to `<TargetFramework>net10.0-windows</TargetFramework>` (then `UseWPF` is valid).
+3. **Task 1 — manifest ordering.** Step 3 sets `<ApplicationManifest>app.manifest</ApplicationManifest>` but the file is created in Task 2 → Step 5 build fails. **Fix:** create `app.manifest` (Task 2 Step 1 content) during Task 1, before the property references it.
+4. **Task 18 — preset `CommandParameter` type.** `CommandParameter="15"` passes a **string** to `IRelayCommand<int>` → preset buttons throw/disable at runtime. The Task 16 unit test passes a real `int`, so it stays green while the app is broken. **Fix:** pass an int — add `xmlns:sys="clr-namespace:System;assembly=System.Runtime"` and `<Button.CommandParameter><sys:Int32>15</sys:Int32></Button.CommandParameter>` (×3), or bind the `Presets` items so the parameter is the bound int.
+5. **Tasks 16/19 — re-armed countdowns are headless.** Snooze/Restart create scheduler items directly; `MainViewModel.RefreshAll` only refreshes/removes existing rows, never adds → a +5/Restart timer runs with no row (can't see/pause/cancel) until it fires. **Fix:** in `RefreshAll`, after pruning stale rows, reconcile — for each `_scheduler.Running` item with no matching `TimerItemViewModel`, add one.
+6. **Task 17 — keyboard focus to a no-activate window.** `Activate()` on a `WS_EX_NOACTIVATE` window won't reliably take keyboard focus → the headline accessibility path may silently fail. **Fix:** in `FocusForKeyboard`, clear `WS_EX_NOACTIVATE` via `SetWindowLong`, call `SetForegroundWindow(hwnd)`, then `Keyboard.Focus(DismissX)`; re-apply NOACTIVATE on blur if needed. Add a Narrator/keyboard hand-check that focus actually lands and returns.
+
+### 🟠 Important
+7. **Tray fallback missing (spec §5.3).** `TrayBuilder` is Open/Quit only; the spec lists active cards in the tray as the keyboard fallback. **Fix:** add a "Focus latest alert" tray item (wired to the same handler as the hotkey), and/or an Alerts submenu.
+8. **Task 13/19 — hotkey failure swallowed.** `Register()`'s bool is ignored; if Ctrl+Alt+T is taken the keyboard path dies silently. **Fix:** check the result; on failure rely on the tray fallback (#7) and don't pretend the hotkey works.
+9. **Task 18 — settings `Save` can throw.** A locked/failed write propagates out of a property setter (toggle) → possible crash. **Fix:** wrap the `Persist()` call best-effort (try/catch, no labels logged).
+10. **Task 19 — popup positioned before measured.** Placement/stacking use a 140 px estimate pre-`Show` → off-by/overlap. **Fix:** position in `ContentRendered`/first `SizeChanged` when `ActualHeight` is real.
+11. **Task 12 — startup path under `dotnet run`.** `Environment.ProcessPath` is the dev `bin` exe; the Run entry only makes sense for a built/installed exe. **Fix:** note this; run the manual verify against a published build.
+
+### 🟡 Worth addressing
+12. **Task 2 — missing `.ico` crashes startup** (pack-URI `BitmapImage` on a missing file). **Fix:** source it before first run, or fall back to a generated icon in `TrayBuilder`.
+13. **Task 16 — fired rows linger at 00:00** in Quick timers until the popup is dismissed. **Fix:** decide — drop the row on fire, or keep it; document the choice.
+14. **Task 17 — popup `AutomationProperties.Name` is static** ("Timer complete") and ignores the label. **Fix:** bind it to `Title`.
+15. **Task 16 — test gap + nit.** The int/string mismatch (#4) hides under green tests; `Assert.False(vm.IsDayEmpty == false)` is a confusing double-negative. **Fix:** add a note that presets need a XAML-level check; simplify the assert to `Assert.True(vm.IsDayEmpty)`.
+16. **Task 19 — unbounded upward stacking** can push cards above the work area with many simultaneous fires. **Fix:** cap visible cards (collapse overflow into a count) or clamp the top.
+- **Verify:** confirm the H.NotifyIcon left-click API name (`TrayLeftMouseUp` vs `LeftClickCommand`) against the installed package.
+
+### Clean (stress-tested, no change)
+Scheduler core (single-fire guard, pause/resume, snooze/restart), persistence (atomic save, tolerant load, enum sanitization), duration parse/bounds, clamp math, debounce — all correct and covered.
+
+### Considered and rejected (accepted trade-offs)
+- **SoundPlayer not retained** — `PlaySound`/SND_ASYNC plays independently of the managed object; accept.
+- **`.corrupt` overwritten each load** — keeping only the latest copy is fine.
+- **±1 s tick display drift** — acceptable for a calm timer.
+- **`0:90` rejected** (seconds > 59) — users type `1:30`; accept.
 
 ---
 
