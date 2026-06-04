@@ -10,7 +10,7 @@
 
 ---
 
-> **⚠ Before executing:** apply the corrections in **§ Stress-test findings & fixes** (near the end). Findings #1–#3 fix Task 1 setup (the build fails without them); #4–#6 fix feature/accessibility breaks. Apply each as you reach the named task.
+> **⚠ Before executing:** the 6 🔴 must-fix corrections from **§ Stress-test findings & fixes** (near the end) are now folded into the named tasks — Task 1 setup (#1–#3) and Tasks 16/17/18 feature + accessibility (#4–#6). The 🟠 important and 🟡 polish items there are still open; apply each as you reach the named task.
 
 ## Resolved open decisions (spec §13)
 
@@ -129,8 +129,8 @@ static bool TryValidate(TimeSpan d, out string? error);
 Run:
 ```powershell
 dotnet new sln -n Tidsro
-dotnet new wpf -n Tidsro -o src/Tidsro -f net10.0-windows
-dotnet new xunit -n Tidsro.Tests -o tests/Tidsro.Tests -f net10.0-windows
+dotnet new wpf -n Tidsro -o src/Tidsro -f net10.0        # template emits net10.0-windows
+dotnet new xunit -n Tidsro.Tests -o tests/Tidsro.Tests -f net10.0   # emits net10.0; retargeted in Step 3
 dotnet sln add src/Tidsro/Tidsro.csproj tests/Tidsro.Tests/Tidsro.Tests.csproj
 dotnet add tests/Tidsro.Tests/Tidsro.Tests.csproj reference src/Tidsro/Tidsro.csproj
 ```
@@ -158,10 +158,23 @@ Edit `src/Tidsro/Tidsro.csproj` so the first `<PropertyGroup>` reads:
   <RootNamespace>Tidsro</RootNamespace>
 </PropertyGroup>
 ```
-Edit `tests/Tidsro.Tests/Tidsro.Tests.csproj` `<PropertyGroup>` to add (geometry types live in WPF assemblies):
+Edit `tests/Tidsro.Tests/Tidsro.Tests.csproj` `<PropertyGroup>`: retarget to a `-windows` TFM (so it can reference the WPF app and use `System.Windows` geometry types + `UseWPF`), and add the two properties:
 ```xml
+<TargetFramework>net10.0-windows</TargetFramework>   <!-- retarget: the xunit template emits net10.0 -->
 <UseWPF>true</UseWPF>
 <Nullable>enable</Nullable>
+```
+
+**Create the app manifest now** — Task 1's `<ApplicationManifest>` references it, so it must exist before the Step 5 build (otherwise the build fails here). Create `src/Tidsro/app.manifest` with a DPI-aware manifest:
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
+    </windowsSettings>
+  </application>
+</assembly>
 ```
 
 - [ ] **Step 4: Copy the editorconfig convention**
@@ -195,19 +208,7 @@ git commit -m "Scaffold solution, WPF app, and xUnit test project"
 - Create: `src/Tidsro/app.manifest`
 - Delete: `src/Tidsro/MainWindow.xaml(.cs)` template content is replaced in Task 16; for now keep but don't show.
 
-- [ ] **Step 1: Add a DPI-aware manifest**
-
-Create `src/Tidsro/app.manifest`:
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
-  <application xmlns="urn:schemas-microsoft-com:asm.v3">
-    <windowsSettings>
-      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2</dpiAwareness>
-    </windowsSettings>
-  </application>
-</assembly>
-```
+- [ ] **Step 1: DPI-aware manifest** — already created in Task 1, Step 3 (the build there references it). Confirm `src/Tidsro/app.manifest` exists with the `PerMonitorV2` `dpiAwareness` content; no edit needed here.
 
 - [ ] **Step 2: Make App start to tray, not a window**
 
@@ -1565,6 +1566,18 @@ public class MainViewModelTests
         var vm = New(out _, out _);
         Assert.True(vm.IsDayEmpty);   // agenda goes live in Slice 2
     }
+
+    [Fact]
+    public void RefreshAll_surfaces_a_scheduler_item_that_has_no_row()
+    {
+        var vm = New(out _, out var sched);
+        // Snooze/Restart enqueue on the scheduler directly, bypassing the view-model's Add()
+        var item = sched.StartCountdown(TimeSpan.FromMinutes(5), "pom", SoundChoice.None);
+        Assert.Empty(vm.Running);
+        vm.RefreshAll();
+        Assert.Single(vm.Running);                 // reconciled into a visible row
+        Assert.Equal(item.Id, vm.Running[0].Item.Id);
+    }
 }
 ```
 
@@ -1682,6 +1695,13 @@ public partial class MainViewModel : ObservableObject
             if (!_scheduler.Running.Contains(Running[i].Item)) Running.RemoveAt(i);
             else Running[i].Refresh();
         }
+
+        // reconcile: Snooze/Restart add items to the scheduler directly (no row),
+        // so give every running timer without a row a fresh one — otherwise a
+        // +5/Restart countdown runs headless until it fires (can't see/pause/cancel)
+        foreach (var item in _scheduler.Running)
+            if (!Running.Any(vm => vm.Item == item))
+                Running.Add(new TimerItemViewModel(item, _scheduler));
     }
 }
 ```
@@ -1689,7 +1709,7 @@ public partial class MainViewModel : ObservableObject
 - [ ] **Step 5: Run to verify it passes**
 
 Run: `dotnet test --filter MainViewModelTests`
-Expected: PASS (4 tests green). Then run the full suite: `dotnet test` → all green.
+Expected: PASS (5 tests green). Then run the full suite: `dotnet test` → all green.
 
 - [ ] **Step 6: Commit**
 
@@ -1789,6 +1809,7 @@ Add the `QuietAction` button style to `tokens.xaml` (within the `ResourceDiction
 ```csharp
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Interop;
 using Tidsro.Services;
 using Tidsro.ViewModels;
@@ -1820,6 +1841,15 @@ public partial class CompletionPopup : Window
             SetWindowLong(h, GWL_EXSTYLE, GetWindowLong(h, GWL_EXSTYLE) | WS_EX_NOACTIVATE);
         };
 
+        // FocusForKeyboard clears NOACTIVATE to grab focus; re-arm it on blur so the
+        // card returns to its calm, non-focus-stealing behaviour
+        Deactivated += (_, _) =>
+        {
+            var h = new WindowInteropHelper(this).Handle;
+            if (h != IntPtr.Zero)
+                SetWindowLong(h, GWL_EXSTYLE, GetWindowLong(h, GWL_EXSTYLE) | WS_EX_NOACTIVATE);
+        };
+
         // reveal actions on hover OR keyboard focus anywhere in the card
         MouseEnter += (_, _) => Actions.Opacity = 1;
         MouseLeave += (_, _) => { if (!IsKeyboardFocusWithin) Actions.Opacity = 0; };
@@ -1832,9 +1862,13 @@ public partial class CompletionPopup : Window
     /// <summary>Called by the global hotkey: pull this card into keyboard focus on demand.</summary>
     public void FocusForKeyboard()
     {
-        Activate();
+        // Activate() won't move keyboard focus to a WS_EX_NOACTIVATE window; briefly
+        // clear the flag, force the window foreground, then put focus on an action
+        var h = new WindowInteropHelper(this).Handle;
+        SetWindowLong(h, GWL_EXSTYLE, GetWindowLong(h, GWL_EXSTYLE) & ~WS_EX_NOACTIVATE);
+        NativeFocus.SetForeground(h);
         Actions.Opacity = 1;
-        DismissX.Focus();
+        Keyboard.Focus(DismissX);   // Deactivated re-arms NOACTIVATE on blur
     }
 }
 ```
@@ -1850,7 +1884,9 @@ internal static class NativeFocus
     [DllImport("user32.dll")] internal static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] private static extern bool SetForegroundWindow(IntPtr hWnd);
 
-    internal static void Restore(IntPtr hWnd)
+    internal static void Restore(IntPtr hWnd) => SetForeground(hWnd);
+
+    internal static void SetForeground(IntPtr hWnd)
     {
         if (hWnd != IntPtr.Zero) SetForegroundWindow(hWnd);
     }
@@ -1935,6 +1971,7 @@ public partial class SettingsViewModel : ObservableObject
 <Window x:Class="Tidsro.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sys="clr-namespace:System;assembly=System.Runtime"
         Title="Tidsro" Width="420" Height="560"
         Background="{StaticResource PageBg}" Foreground="{StaticResource Text}"
         FontFamily="{StaticResource FontSans}">
@@ -1950,9 +1987,16 @@ public partial class SettingsViewModel : ObservableObject
     <TextBlock Grid.Row="0" Text="Quick timers" FontSize="{StaticResource TextXl}" Margin="0,0,0,8"/>
     <StackPanel Grid.Row="1">
       <StackPanel Orientation="Horizontal">
-        <Button Content="15" Width="56" Command="{Binding StartPresetCommand}" CommandParameter="15" Style="{StaticResource QuietAction}"/>
-        <Button Content="30" Width="56" Command="{Binding StartPresetCommand}" CommandParameter="30" Style="{StaticResource QuietAction}" Margin="8,0,0,0"/>
-        <Button Content="60" Width="56" Command="{Binding StartPresetCommand}" CommandParameter="60" Style="{StaticResource QuietAction}" Margin="8,0,0,0"/>
+        <!-- CommandParameter must be a real Int32 to match StartPresetCommand (IRelayCommand<int>); "15" would pass a string and the button would disable/throw -->
+        <Button Content="15" Width="56" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}">
+          <Button.CommandParameter><sys:Int32>15</sys:Int32></Button.CommandParameter>
+        </Button>
+        <Button Content="30" Width="56" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}" Margin="8,0,0,0">
+          <Button.CommandParameter><sys:Int32>30</sys:Int32></Button.CommandParameter>
+        </Button>
+        <Button Content="60" Width="56" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}" Margin="8,0,0,0">
+          <Button.CommandParameter><sys:Int32>60</sys:Int32></Button.CommandParameter>
+        </Button>
       </StackPanel>
       <Grid Margin="0,8,0,0">
         <Grid.ColumnDefinitions>
@@ -2344,13 +2388,13 @@ git commit -m "Document Slice 1 usage and complete countdown acceptance pass"
 
 Adversarial review of this plan (2026-06-04). Apply each fix as you reach the named task. Severity: 🔴 build/feature-breaking · 🟠 real gap · 🟡 polish.
 
-### 🔴 Must fix
-1. **Task 1 — `dotnet new` framework value.** `-f net10.0-windows` is rejected by the templates (they accept `net10.0` and append `-windows`). **Fix:** use `-f net10.0` for both `dotnet new wpf` and `dotnet new xunit`.
-2. **Task 1 — test project TFM.** `dotnet new xunit` yields `net10.0`; referencing the WPF app and using `System.Windows` geometry (and `UseWPF`) needs a `-windows` TFM. **Fix:** set `tests/Tidsro.Tests/Tidsro.Tests.csproj` to `<TargetFramework>net10.0-windows</TargetFramework>` (then `UseWPF` is valid).
-3. **Task 1 — manifest ordering.** Step 3 sets `<ApplicationManifest>app.manifest</ApplicationManifest>` but the file is created in Task 2 → Step 5 build fails. **Fix:** create `app.manifest` (Task 2 Step 1 content) during Task 1, before the property references it.
-4. **Task 18 — preset `CommandParameter` type.** `CommandParameter="15"` passes a **string** to `IRelayCommand<int>` → preset buttons throw/disable at runtime. The Task 16 unit test passes a real `int`, so it stays green while the app is broken. **Fix:** pass an int — add `xmlns:sys="clr-namespace:System;assembly=System.Runtime"` and `<Button.CommandParameter><sys:Int32>15</sys:Int32></Button.CommandParameter>` (×3), or bind the `Presets` items so the parameter is the bound int.
-5. **Tasks 16/19 — re-armed countdowns are headless.** Snooze/Restart create scheduler items directly; `MainViewModel.RefreshAll` only refreshes/removes existing rows, never adds → a +5/Restart timer runs with no row (can't see/pause/cancel) until it fires. **Fix:** in `RefreshAll`, after pruning stale rows, reconcile — for each `_scheduler.Running` item with no matching `TimerItemViewModel`, add one.
-6. **Task 17 — keyboard focus to a no-activate window.** `Activate()` on a `WS_EX_NOACTIVATE` window won't reliably take keyboard focus → the headline accessibility path may silently fail. **Fix:** in `FocusForKeyboard`, clear `WS_EX_NOACTIVATE` via `SetWindowLong`, call `SetForegroundWindow(hwnd)`, then `Keyboard.Focus(DismissX)`; re-apply NOACTIVATE on blur if needed. Add a Narrator/keyboard hand-check that focus actually lands and returns.
+### 🔴 Must fix — ✅ all applied 2026-06-04 (folded into the tasks above)
+1. ✅ **Task 1 — `dotnet new` framework value.** `-f net10.0-windows` is rejected by the templates (they accept `net10.0` and append `-windows`). **Fix:** use `-f net10.0` for both `dotnet new wpf` and `dotnet new xunit`.
+2. ✅ **Task 1 — test project TFM.** `dotnet new xunit` yields `net10.0`; referencing the WPF app and using `System.Windows` geometry (and `UseWPF`) needs a `-windows` TFM. **Fix:** set `tests/Tidsro.Tests/Tidsro.Tests.csproj` to `<TargetFramework>net10.0-windows</TargetFramework>` (then `UseWPF` is valid).
+3. ✅ **Task 1 — manifest ordering.** Step 3 sets `<ApplicationManifest>app.manifest</ApplicationManifest>` but the file is created in Task 2 → Step 5 build fails. **Fix:** create `app.manifest` (Task 2 Step 1 content) during Task 1, before the property references it.
+4. ✅ **Task 18 — preset `CommandParameter` type.** `CommandParameter="15"` passes a **string** to `IRelayCommand<int>` → preset buttons throw/disable at runtime. The Task 16 unit test passes a real `int`, so it stays green while the app is broken. **Fix:** pass an int — add `xmlns:sys="clr-namespace:System;assembly=System.Runtime"` and `<Button.CommandParameter><sys:Int32>15</sys:Int32></Button.CommandParameter>` (×3), or bind the `Presets` items so the parameter is the bound int.
+5. ✅ **Tasks 16/19 — re-armed countdowns are headless.** Snooze/Restart create scheduler items directly; `MainViewModel.RefreshAll` only refreshes/removes existing rows, never adds → a +5/Restart timer runs with no row (can't see/pause/cancel) until it fires. **Fix:** in `RefreshAll`, after pruning stale rows, reconcile — for each `_scheduler.Running` item with no matching `TimerItemViewModel`, add one.
+6. ✅ **Task 17 — keyboard focus to a no-activate window.** `Activate()` on a `WS_EX_NOACTIVATE` window won't reliably take keyboard focus → the headline accessibility path may silently fail. **Fix:** in `FocusForKeyboard`, clear `WS_EX_NOACTIVATE` via `SetWindowLong`, call `SetForegroundWindow(hwnd)`, then `Keyboard.Focus(DismissX)`; re-apply NOACTIVATE on blur if needed. Add a Narrator/keyboard hand-check that focus actually lands and returns.
 
 ### 🟠 Important
 7. **Tray fallback missing (spec §5.3).** `TrayBuilder` is Open/Quit only; the spec lists active cards in the tray as the keyboard fallback. **Fix:** add a "Focus latest alert" tray item (wired to the same handler as the hotkey), and/or an Alerts submenu.
