@@ -1,3 +1,4 @@
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Tidsro.Models;
 using Tidsro.Services;
@@ -36,6 +37,10 @@ public partial class SettingsViewModel : ObservableObject
         Persist();
     }
 
-    private void Persist() =>
-        _persistence.Save(new AppSettings { LaunchAtStartup = LaunchAtStartup, DefaultSound = DefaultSound });
+    // Best-effort: a locked/unwritable settings file must never crash a toggle (symmetric with PersistenceService.Load)
+    private void Persist()
+    {
+        try { _persistence.Save(new AppSettings { LaunchAtStartup = LaunchAtStartup, DefaultSound = DefaultSound }); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* settings are non-critical */ }
+    }
 }

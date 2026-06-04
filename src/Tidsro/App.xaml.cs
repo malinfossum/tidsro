@@ -59,6 +59,8 @@ public partial class App : Application
 
         var popup = new CompletionPopup(vm);
         popup.Closed += (_, _) => { _openPopups.Remove(popup); RestackPopups(); };
+        // first placement uses an estimated height; reposition the stack once the card has actually measured
+        popup.ContentRendered += (_, _) => RestackPopups();
         _openPopups.Add(popup);
         PositionPopup(popup, _openPopups.Count - 1);
         popup.Show();   // ShowActivated=false -> appears without stealing focus
