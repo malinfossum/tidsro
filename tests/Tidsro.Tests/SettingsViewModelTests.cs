@@ -20,21 +20,39 @@ public class SettingsViewModelTests : IDisposable
 
     public void Dispose() { try { Directory.Delete(_dir, true); } catch { } }
 
-    // Repro for the "settings revert / won't save" bug: App reuses ONE AppSettings instance to
-    // build the Settings window each time it opens. Changing a setting must update THAT shared
-    // object, or a reopened window shows the stale startup value while disk has already moved on.
+    // Apply-on-Save contract: editing a field only updates the in-memory draft. Until Save() is
+    // called, the shared AppSettings snapshot and the file on disk must be untouched, so closing
+    // the window without saving discards the edit.
     // (Exercises the default-sound path only, so it never writes to the real HKCU Run key.)
     [Fact]
-    public void Changing_a_setting_updates_the_shared_AppSettings_and_persists()
+    public void Editing_a_setting_does_not_apply_until_Save()
     {
         var shared = new AppSettings { LaunchAtStartup = false, DefaultSound = SoundChoice.None };
         var persistence = new PersistenceService(_path);
         var startup = new StartupService("Tidsro.exe");   // not exercised here
         var vm = new SettingsViewModel(shared, startup, persistence, _ => { });
 
-        vm.DefaultSound = SoundChoice.Bell;
+        vm.DefaultSound = SoundChoice.Bell;   // edit the draft only
 
-        Assert.Equal(SoundChoice.Bell, shared.DefaultSound);              // the reused snapshot must reflect the change
-        Assert.Equal(SoundChoice.Bell, persistence.Load().DefaultSound);  // and it must be on disk
+        Assert.Equal(SoundChoice.None, shared.DefaultSound);   // shared snapshot untouched
+        Assert.False(File.Exists(_path));                      // nothing written to disk
+    }
+
+    // Save() is the apply step: it must update the shared AppSettings snapshot (so a reopened window
+    // isn't stale — the bug fixed in Slice 1) and write the change to disk.
+    // (Default-sound path only; LaunchAtStartup is unchanged, so the real HKCU Run key is never touched.)
+    [Fact]
+    public void Save_applies_changes_to_the_shared_AppSettings_and_persists()
+    {
+        var shared = new AppSettings { LaunchAtStartup = false, DefaultSound = SoundChoice.None };
+        var persistence = new PersistenceService(_path);
+        var startup = new StartupService("Tidsro.exe");   // not exercised: LaunchAtStartup unchanged
+        var vm = new SettingsViewModel(shared, startup, persistence, _ => { });
+
+        vm.DefaultSound = SoundChoice.Bell;
+        vm.Save();
+
+        Assert.Equal(SoundChoice.Bell, shared.DefaultSound);              // reused snapshot reflects the change
+        Assert.Equal(SoundChoice.Bell, persistence.Load().DefaultSound);  // and it's on disk
     }
 }

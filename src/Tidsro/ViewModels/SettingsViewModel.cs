@@ -27,23 +27,19 @@ public partial class SettingsViewModel : ObservableObject
         _defaultSound = settings.DefaultSound;
     }
 
-    partial void OnLaunchAtStartupChanged(bool value)
+    // Apply the draft to the shared snapshot and disk. Called by the Save button; closing without it
+    // discards the draft (App rebuilds this VM from the shared snapshot each time Settings opens).
+    // Startup is the only change with external reach, so only touch the HKCU Run key when it actually
+    // changed. Persisting is best-effort: a locked/unwritable file must never crash Save.
+    public void Save()
     {
-        if (value) _startup.Enable(); else _startup.Disable();
-        Persist();
-    }
+        if (LaunchAtStartup != _settings.LaunchAtStartup)
+        {
+            if (LaunchAtStartup) _startup.Enable(); else _startup.Disable();
+        }
 
-    partial void OnDefaultSoundChanged(SoundChoice value)
-    {
-        _onDefaultSoundChanged(value);
-        Persist();
-    }
+        _onDefaultSoundChanged(DefaultSound);
 
-    // Keep the shared in-memory snapshot current so reopening Settings shows live state (not the value
-    // loaded at launch), then write that same object to disk. Best-effort: a locked/unwritable file must
-    // never crash a toggle (symmetric with PersistenceService.Load).
-    private void Persist()
-    {
         _settings.LaunchAtStartup = LaunchAtStartup;
         _settings.DefaultSound = DefaultSound;
         try { _persistence.Save(_settings); }

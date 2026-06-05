@@ -6,7 +6,7 @@ A calm, dark-mode-first desktop timer and alarm for Windows — countdown timers
 
 ## Status
 
-Early design. The full design lives in [`docs/superpowers/specs/2026-06-03-tidsro-design.md`](docs/superpowers/specs/2026-06-03-tidsro-design.md). No application code yet — implementation is planned in slices, countdowns first.
+In development, built in slices. **Slice 1 (countdowns) is implemented and merged.** Currently refining the Settings dialog (changes apply on **Save**). The full design lives in [`docs/superpowers/specs/2026-06-03-tidsro-design.md`](docs/superpowers/specs/2026-06-03-tidsro-design.md).
 
 ## Stack
 
@@ -33,7 +33,7 @@ Or build and launch the resulting `Tidsro.exe` directly. The app starts in the s
   - **+5** arms a new 5-minute countdown. **Restart** re-runs the original duration. **Dismiss** closes the card.
   - Press **Ctrl+Alt+T** to bring the latest card into keyboard focus; Tab reaches the buttons; Enter activates; focus returns to your previous app on dismiss.
   - Multiple finished cards stack upward and dismiss independently.
-- Open **Settings** from the tray menu to toggle launch-at-startup and choose a default sound.
+- Open **Settings** (bottom-left of the main window) to toggle launch-at-startup and choose a default sound. Changes apply when you click **Save**; **Cancel**, **Esc**, or closing the window discards them.
 
 > Note: tray icon and sound files are placeholder assets in this slice.
 

@@ -1,7 +1,7 @@
 <Window x:Class="Tidsro.Views.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Settings" Width="360" Height="220" WindowStartupLocation="CenterOwner"
+        Title="Settings" Width="360" SizeToContent="Height" WindowStartupLocation="CenterOwner"
         Background="{StaticResource PageBg}" Foreground="{StaticResource Text}"
         FontFamily="{StaticResource FontSans}">
   <StackPanel Margin="16">
@@ -11,5 +11,13 @@
     <TextBlock Text="Default sound for new timers" Margin="0,0,0,4"/>
     <ComboBox ItemsSource="{Binding SoundOptions}" SelectedItem="{Binding DefaultSound}"
               AutomationProperties.Name="Default sound"/>
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
+      <Button Content="Save" Style="{StaticResource QuietAction}" IsDefault="True"
+              MinWidth="84" Margin="0,0,8,0" Click="Save_Click"
+              AutomationProperties.Name="Save settings"/>
+      <Button Content="Cancel" Style="{StaticResource QuietAction}" IsCancel="True"
+              MinWidth="84"
+              AutomationProperties.Name="Cancel and discard changes"/>
+    </StackPanel>
   </StackPanel>
 </Window>
