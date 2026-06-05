@@ -10,6 +10,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly StartupService _startup;
     private readonly PersistenceService _persistence;
     private readonly Action<SoundChoice> _onDefaultSoundChanged;
+    private readonly AppSettings _settings;   // the in-memory snapshot App reuses to open this window; keep it current
 
     [ObservableProperty] private bool _launchAtStartup;
     [ObservableProperty] private SoundChoice _defaultSound;
@@ -20,6 +21,7 @@ public partial class SettingsViewModel : ObservableObject
     public SettingsViewModel(AppSettings settings, StartupService startup,
         PersistenceService persistence, Action<SoundChoice> onDefaultSoundChanged)
     {
+        _settings = settings;
         _startup = startup; _persistence = persistence; _onDefaultSoundChanged = onDefaultSoundChanged;
         _launchAtStartup = settings.LaunchAtStartup;
         _defaultSound = settings.DefaultSound;
@@ -37,10 +39,14 @@ public partial class SettingsViewModel : ObservableObject
         Persist();
     }
 
-    // Best-effort: a locked/unwritable settings file must never crash a toggle (symmetric with PersistenceService.Load)
+    // Keep the shared in-memory snapshot current so reopening Settings shows live state (not the value
+    // loaded at launch), then write that same object to disk. Best-effort: a locked/unwritable file must
+    // never crash a toggle (symmetric with PersistenceService.Load).
     private void Persist()
     {
-        try { _persistence.Save(new AppSettings { LaunchAtStartup = LaunchAtStartup, DefaultSound = DefaultSound }); }
+        _settings.LaunchAtStartup = LaunchAtStartup;
+        _settings.DefaultSound = DefaultSound;
+        try { _persistence.Save(_settings); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* settings are non-critical */ }
     }
 }
