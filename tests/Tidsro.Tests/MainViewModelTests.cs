@@ -7,11 +7,16 @@ namespace Tidsro.Tests;
 
 public class MainViewModelTests
 {
-    private static MainViewModel New(out FakeClock clock, out SchedulerService sched)
+    private static MainViewModel New(out FakeClock clock, out SchedulerService sched) =>
+        New(SoundChoice.None, out clock, out sched, out _);
+
+    private static MainViewModel New(SoundChoice defaultSound, out FakeClock clock,
+        out SchedulerService sched, out FakeSoundService sound)
     {
         clock = new FakeClock();
         sched = new SchedulerService(clock);
-        return new MainViewModel(sched, SoundChoice.None);
+        sound = new FakeSoundService();
+        return new MainViewModel(sched, sound, defaultSound);
     }
 
     [Fact]
@@ -62,5 +67,58 @@ public class MainViewModelTests
         vm.RefreshAll();
         Assert.Single(vm.Running);                 // reconciled into a visible row
         Assert.Equal(item.Id, vm.Running[0].Item.Id);
+    }
+
+    [Fact]
+    public void SelectedSound_seeds_from_the_default()
+    {
+        var vm = New(SoundChoice.Bell, out _, out _, out _);
+        Assert.Equal(SoundChoice.Bell, vm.SelectedSound);
+    }
+
+    [Fact]
+    public void StartPreset_uses_the_selected_sound()
+    {
+        var vm = New(SoundChoice.None, out _, out _, out _);
+        vm.SelectedSound = SoundChoice.Marimba;
+        vm.StartPresetCommand.Execute(15);
+        Assert.Equal(SoundChoice.Marimba, vm.Running[0].Item.Sound);
+    }
+
+    [Fact]
+    public void StartCustom_uses_the_selected_sound()
+    {
+        var vm = New(SoundChoice.None, out _, out _, out _);
+        vm.SelectedSound = SoundChoice.Bell;
+        vm.CustomInput = "10";
+        vm.StartCustomCommand.Execute(null);
+        Assert.Equal(SoundChoice.Bell, vm.Running[0].Item.Sound);
+    }
+
+    [Fact]
+    public void SetDefaultSound_updates_the_picker()
+    {
+        var vm = New(SoundChoice.None, out _, out _, out _);
+        vm.SetDefaultSound(SoundChoice.Marimba);
+        Assert.Equal(SoundChoice.Marimba, vm.SelectedSound);
+    }
+
+    [Fact]
+    public void PreviewSound_plays_the_selected_sound()
+    {
+        var vm = New(SoundChoice.None, out _, out _, out var sound);
+        vm.SelectedSound = SoundChoice.Bell;
+        vm.PreviewSoundCommand.Execute(null);
+        Assert.Equal(SoundChoice.Bell, sound.LastPlayed);
+    }
+
+    [Fact]
+    public void Preview_is_disabled_when_the_sound_is_silent()
+    {
+        var vm = New(SoundChoice.None, out _, out _, out _);
+        vm.SelectedSound = SoundChoice.None;
+        Assert.False(vm.PreviewSoundCommand.CanExecute(null));
+        vm.SelectedSound = SoundChoice.Bell;
+        Assert.True(vm.PreviewSoundCommand.CanExecute(null));
     }
 }

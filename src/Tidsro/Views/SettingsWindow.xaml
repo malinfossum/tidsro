@@ -10,7 +10,13 @@
               AutomationProperties.Name="Launch at startup" Margin="0,0,0,16"/>
     <TextBlock Text="Default sound for new timers" Margin="0,0,0,4"/>
     <ComboBox ItemsSource="{Binding SoundOptions}" SelectedItem="{Binding DefaultSound}"
-              AutomationProperties.Name="Default sound"/>
+              AutomationProperties.Name="Default sound">
+      <ComboBox.ItemTemplate>
+        <DataTemplate>
+          <TextBlock Text="{Binding Converter={StaticResource SoundLabel}}"/>
+        </DataTemplate>
+      </ComboBox.ItemTemplate>
+    </ComboBox>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
       <Button Content="Save" Style="{StaticResource QuietAction}" IsDefault="True"
               MinWidth="84" Margin="0,0,8,0" Click="Save_Click"

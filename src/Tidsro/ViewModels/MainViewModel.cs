@@ -9,25 +9,37 @@ namespace Tidsro.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     private readonly SchedulerService _scheduler;
-    private SoundChoice _defaultSound;
+    private readonly ISoundService _sound;
 
     public ObservableCollection<TimerItemViewModel> Running { get; } = new();
     public int[] Presets { get; } = { 15, 30, 60 };
 
+    public SoundChoice[] SoundOptions { get; } =
+        { SoundChoice.None, SoundChoice.SoftChime, SoundChoice.Marimba, SoundChoice.Bell };
+
     [ObservableProperty] private string _customInput = "";
     [ObservableProperty] private string _label = "";
     [ObservableProperty] private string? _customError;
+    [ObservableProperty] private SoundChoice _selectedSound;
 
     /// <summary>Your day agenda is empty until Slice 2 (clock-time alarms).</summary>
     public bool IsDayEmpty => true;
 
-    public MainViewModel(SchedulerService scheduler, SoundChoice defaultSound)
+    public MainViewModel(SchedulerService scheduler, ISoundService sound, SoundChoice defaultSound)
     {
         _scheduler = scheduler;
-        _defaultSound = defaultSound;
+        _sound = sound;
+        _selectedSound = defaultSound;   // seed the picker from the global default; per-timer override lives here after
     }
 
-    public void SetDefaultSound(SoundChoice sound) => _defaultSound = sound;
+    // The Settings "default sound" changed: move the picker to match (last edit wins with a manual per-timer pick).
+    public void SetDefaultSound(SoundChoice sound) => SelectedSound = sound;
+
+    [RelayCommand(CanExecute = nameof(CanPreviewSound))]
+    private void PreviewSound() => _sound.Play(SelectedSound);
+    private bool CanPreviewSound() => SelectedSound != SoundChoice.None;   // nothing to hear when silent
+
+    partial void OnSelectedSoundChanged(SoundChoice value) => PreviewSoundCommand.NotifyCanExecuteChanged();
 
     [RelayCommand] private void StartPreset(int minutes) =>
         Add(TimeSpan.FromMinutes(minutes));
@@ -44,7 +56,7 @@ public partial class MainViewModel : ObservableObject
     private void Add(TimeSpan duration)
     {
         var label = string.IsNullOrWhiteSpace(Label) ? null : Label.Trim();
-        var item = _scheduler.StartCountdown(duration, label, _defaultSound);
+        var item = _scheduler.StartCountdown(duration, label, SelectedSound);
         Running.Add(new TimerItemViewModel(item, _scheduler));
     }
 

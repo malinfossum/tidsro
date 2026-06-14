@@ -30,7 +30,7 @@ public partial class App : Application
         _settings = _persistence.Load();
         _scheduler = new SchedulerService(new SystemClock());
         _sound = new SoundService();
-        _mainVm = new MainViewModel(_scheduler, _settings.DefaultSound);
+        _mainVm = new MainViewModel(_scheduler, _sound, _settings.DefaultSound);
 
         var startup = new StartupService(StartupService.CurrentExePath);
         startup.RefreshIfEnabled();          // self-heal a stale Run-key path

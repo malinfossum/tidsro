@@ -4,7 +4,7 @@ using Tidsro.Models;
 
 namespace Tidsro.Services;
 
-public sealed class SoundService
+public sealed class SoundService : ISoundService
 {
     private static string File(string name) =>
         Path.Combine(AppContext.BaseDirectory, "Assets", "sounds", name);

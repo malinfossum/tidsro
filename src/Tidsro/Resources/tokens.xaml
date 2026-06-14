@@ -5,6 +5,7 @@
 
   <v:NullToCollapsedConverter x:Key="NullToCollapsed"/>
   <v:BoolToVisibleConverter x:Key="BoolToVisible"/>
+  <v:SoundChoiceToLabelConverter x:Key="SoundLabel"/>
 
   <!-- Surfaces -->
   <SolidColorBrush x:Key="PageBg"      Color="#000000"/>
