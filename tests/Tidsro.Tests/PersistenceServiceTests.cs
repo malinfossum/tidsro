@@ -62,4 +62,22 @@ public class PersistenceServiceTests : IDisposable
         var svc = new PersistenceService(_path);
         Assert.Equal(SoundChoice.None, svc.Load().DefaultSound);  // untrusted-input hardening
     }
+
+    [Fact]
+    public void Save_then_Load_round_trips_window_position()
+    {
+        var svc = new PersistenceService(_path);
+        svc.Save(new AppSettings { WindowLeft = 123.5, WindowTop = 45.0 });
+        var s = svc.Load();
+        Assert.Equal(123.5, s.WindowLeft);
+        Assert.Equal(45.0, s.WindowTop);
+    }
+
+    [Fact]
+    public void Sanitized_nulls_non_finite_window_position()
+    {
+        var s = new AppSettings { WindowLeft = double.NaN, WindowTop = double.PositiveInfinity }.Sanitized();
+        Assert.Null(s.WindowLeft);
+        Assert.Null(s.WindowTop);
+    }
 }

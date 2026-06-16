@@ -9,6 +9,16 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AssemblyName>Tidsro</AssemblyName>
     <RootNamespace>Tidsro</RootNamespace>
+
+    <!-- App identity / version — used by exe properties and the installer -->
+    <Version>1.0.0</Version>
+    <Product>Tidsro</Product>
+    <Authors>Malin Fossum</Authors>
+    <Company>Malin Fossum</Company>
+    <Description>A calm, dark-mode-first desktop timer and alarm for Windows.</Description>
+    <Copyright>© 2026 Malin Fossum</Copyright>
+    <ApplicationIcon>Assets\icons\tidsro.ico</ApplicationIcon>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,7 +32,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Assets\sounds\*.wav" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Chimes are embedded in the assembly so the single-file build carries them. -->
+    <EmbeddedResource Include="Assets\sounds\*.wav" />
   </ItemGroup>
 
 </Project>

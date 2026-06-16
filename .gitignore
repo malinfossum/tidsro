@@ -6,6 +6,9 @@
 x64/
 x86/
 
+## Packaging / release output
+dist/
+
 ## Visual Studio
 .vs/
 *.user

@@ -8,6 +8,20 @@ A calm, dark-mode-first desktop timer and alarm for Windows — countdown timers
 
 In development, built in slices. **Slice 1 (countdowns) is implemented and merged**, with polish on top: Settings apply on **Save**, the running-timer row has clearer **pause/resume** plus a **Reset**, and each timer can use its own **sound**, chosen with a preview at setup. The full design lives in [`docs/superpowers/specs/2026-06-03-tidsro-design.md`](docs/superpowers/specs/2026-06-03-tidsro-design.md).
 
+## Install
+
+**Most people — install it:**
+
+1. Open the [Releases page](https://github.com/malinfossum/tidsro/releases) and download **`Tidsro-Setup.exe`** from the latest release.
+2. Run it. Windows may warn *"Windows protected your PC"* because the app isn't code-signed yet — click **More info → Run anyway**.
+3. Click through the short wizard. Tidsro installs just for you (no admin), adds a Start Menu shortcut, and starts in the system tray.
+
+Uninstall any time from **Settings → Apps → Installed apps → Tidsro**.
+
+**Prefer not to install?** Download **`Tidsro.exe`** (the portable build) from the same release and double-click it — it runs as-is, no installation. The same SmartScreen note applies.
+
+Both builds are self-contained: they run on any 64-bit Windows PC with no .NET required. Your timers and settings stay on your machine in `%AppData%\Tidsro`.
+
 ## Stack
 
 C# · WPF (.NET) · MVVM. Local-first: no accounts, no network — your data stays on your machine.
@@ -43,3 +57,17 @@ Or build and launch the resulting `Tidsro.exe` directly. The app starts in the s
 - Clock-time alarms and recurring (weekday) alarms
 - An optional label per timer
 - Cloud sync / backup (future slice)
+
+## Building a release (developers)
+
+`publish.ps1` builds both downloads into `dist/`:
+
+```
+./publish.ps1
+```
+
+It publishes a self-contained, single-file `Tidsro.exe` (portable) and wraps it in `Tidsro-Setup.exe` (a per-user installer) with [Inno Setup](https://jrsoftware.org/isinfo.php) — install that once via `winget install --id JRSoftware.InnoSetup -e`. Attach both `.exe` files to a [GitHub Release](https://github.com/malinfossum/tidsro/releases).
+
+## License
+
+Apache License 2.0 — see [LICENSE](LICENSE). © 2026 Malin Fossum.

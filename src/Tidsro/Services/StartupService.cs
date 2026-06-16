@@ -8,14 +8,17 @@ public sealed class StartupService
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string ValueName = "Tidsro";
 
+    /// <summary>Passed on the Run-key command so a boot launch can stay in the tray (a manual launch shows the window).</summary>
+    public const string StartupArg = "--startup";
+
     private readonly string _exePath;
     public StartupService(string exePath) => _exePath = exePath;
 
     public static string CurrentExePath =>
         Environment.ProcessPath ?? Process.GetCurrentProcess().MainModule!.FileName;
 
-    /// <summary>Fully-quoted command so a space in the path can't mis-parse.</summary>
-    public static string RunValueFor(string exePath) => "\"" + exePath + "\"";
+    /// <summary>Fully-quoted path plus the boot flag, so a space in the path can't mis-parse.</summary>
+    public static string RunValueFor(string exePath) => "\"" + exePath + "\" " + StartupArg;
 
     public bool IsEnabled()
     {

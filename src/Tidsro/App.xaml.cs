@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
 using H.NotifyIcon;
@@ -11,6 +12,9 @@ namespace Tidsro;
 
 public partial class App : Application
 {
+    private const string SingleInstanceMutexName = "Tidsro.SingleInstance.v1";
+    private const string ShowWindowEventName = "Tidsro.ShowWindow.v1";
+
     private TaskbarIcon? _tray;
     private SchedulerService _scheduler = null!;
     private SoundService _sound = null!;
@@ -21,10 +25,25 @@ public partial class App : Application
     private DispatcherTimer _timer = null!;
     private MainWindow? _main;
     private readonly List<CompletionPopup> _openPopups = new();
+    private Mutex? _instanceMutex;
+    private EventWaitHandle? _showEvent;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        // Single instance: a second launch signals the first to surface its window, then exits.
+        _instanceMutex = new Mutex(initiallyOwned: true, SingleInstanceMutexName, out var isFirst);
+        if (!isFirst)
+        {
+            try { EventWaitHandle.OpenExisting(ShowWindowEventName).Set(); }
+            catch { /* the first instance may be mid-exit; nothing useful to do */ }
+            Shutdown();
+            return;
+        }
+        _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowWindowEventName);
+        ThreadPool.RegisterWaitForSingleObject(_showEvent,
+            (_, _) => Dispatcher.Invoke(ShowMainWindow), null, Timeout.Infinite, executeOnlyOnce: false);
 
         _persistence = new PersistenceService(PersistenceService.DefaultPath);
         _settings = _persistence.Load();
@@ -46,6 +65,10 @@ public partial class App : Application
         _hotkey.Register();   // best-effort; the tray "Focus latest alert" item is the keyboard fallback if the chord is taken
 
         _tray = TrayBuilder.Create(ShowMainWindow, FocusLatestAlert, Quit);
+
+        // Surface the window on a normal launch so it's discoverable; stay in the tray when auto-started at boot.
+        if (!e.Args.Contains(StartupService.StartupArg))
+            ShowMainWindow();
     }
 
     // Keyboard route to the newest completion card — shared by the global hotkey and the tray
@@ -89,8 +112,9 @@ public partial class App : Application
     private void ShowMainWindow()
     {
         _main ??= new MainWindow(_mainVm, () => new SettingsWindow(
-            new SettingsViewModel(_settings, new StartupService(StartupService.CurrentExePath),
-                _persistence, _mainVm.SetDefaultSound)));
+                new SettingsViewModel(_settings, new StartupService(StartupService.CurrentExePath),
+                    _persistence, _mainVm.SetDefaultSound)),
+            _settings, () => _persistence.Save(_settings));
         Application.Current.MainWindow = _main;
         _main.Show();
         _main.WindowState = WindowState.Normal;
@@ -105,5 +129,11 @@ public partial class App : Application
         Shutdown();
     }
 
-    protected override void OnExit(ExitEventArgs e) { _tray?.Dispose(); base.OnExit(e); }
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _tray?.Dispose();
+        _showEvent?.Dispose();
+        _instanceMutex?.Dispose();
+        base.OnExit(e);
+    }
 }
