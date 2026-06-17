@@ -52,6 +52,7 @@ public partial class App : Application
         _scheduler = new SchedulerService(new SystemClock());
         _sound = new SoundService();
         _mainVm = new MainViewModel(_scheduler, _sound, _settings.DefaultSound);
+        _mainVm.AlarmsChanged += (_, _) => _persistence.Save(new TidsroData { Settings = _settings, Alarms = new() });
 
         var startup = new StartupService(StartupService.CurrentExePath);
         startup.RefreshIfEnabled();          // self-heal a stale Run-key path
