@@ -30,7 +30,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private SoundChoice _alarmSound;
     [ObservableProperty] private bool _isEditingAlarm;
 
-    private Guid? _editingId;   // the alarm being edited in place (wired further in a later task)
+    private Guid? _editingId;   // the alarm being edited in place; null in add mode
 
     [ObservableProperty] private string? _missedNote;
 
@@ -118,7 +118,7 @@ public partial class MainViewModel : ObservableObject
         var label = string.IsNullOrWhiteSpace(AlarmLabel) ? null : AlarmLabel.Trim();
         var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
 
-        if (_editingId is { } id)                                   // edit in place (wired further later)
+        if (_editingId is { } id)                                   // edit in place
         {
             var existing = _scheduler.Alarms.FirstOrDefault(a => a.Id == id);
             if (existing is not null) _scheduler.RemoveAlarm(existing);

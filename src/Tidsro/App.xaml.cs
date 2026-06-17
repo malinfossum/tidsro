@@ -74,6 +74,8 @@ public partial class App : Application
         _tray = TrayBuilder.Create(ShowMainWindow, FocusLatestAlert, Quit);
 
         // Surface the window on a normal launch so it's discoverable; stay in the tray when auto-started at boot.
+        // On a boot launch the window isn't built yet, so a missed-while-away alarm's UIA announcement is
+        // best-effort — the visible MissedNote still persists and is shown (and read) once the window opens.
         if (!e.Args.Contains(StartupService.StartupArg))
             ShowMainWindow();
     }

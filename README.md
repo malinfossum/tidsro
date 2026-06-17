@@ -8,7 +8,7 @@ A calm, dark-mode-first desktop timer for Windows — countdown timers and clock
 
 **v1.0.0 is released** — see the [Releases page](https://github.com/malinfossum/tidsro/releases). That version does countdown timers, with Settings that apply on **Save**, a running-timer row with clear **pause/resume** and **Reset**, and a per-timer **sound** chosen with a preview at setup.
 
-**v1.1** (in development) adds clock-time alarms — a **"Your day" agenda** where you set one-shot fire-at-HH:MM alarms with an optional label and per-alarm sound choice. The full design lives in [`docs/superpowers/specs/2026-06-03-tidsro-design.md`](docs/superpowers/specs/2026-06-03-tidsro-design.md).
+**v1.1** (in development) adds clock-time alarms — a **"Your day" agenda** where you set one-shot fire-at-HH:MM alarms with an optional label and per-alarm sound choice. The full design lives in [`docs/superpowers/specs/2026-06-16-tidsro-v1.1-clock-time-alarms-design.md`](docs/superpowers/specs/2026-06-16-tidsro-v1.1-clock-time-alarms-design.md).
 
 ## Install
 
