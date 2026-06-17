@@ -9,11 +9,12 @@
   <v:BoolToSoundGlyphConverter x:Key="SoundGlyph"/>
 
   <!-- Surfaces -->
-  <SolidColorBrush x:Key="PageBg"      Color="#000000"/>
-  <SolidColorBrush x:Key="PanelBg"     Color="#0A0D10"/>
-  <SolidColorBrush x:Key="CardBg"      Color="#11161B"/>
-  <SolidColorBrush x:Key="ElevatedBg"  Color="#171D24"/>
-  <SolidColorBrush x:Key="InteractiveBg" Color="#1D252D"/>
+  <SolidColorBrush x:Key="PageBg"        Color="#0E141A"/>
+  <SolidColorBrush x:Key="PanelBg"       Color="#0A0F14"/>
+  <SolidColorBrush x:Key="CardBg"        Color="#161D27"/>
+  <SolidColorBrush x:Key="ElevatedBg"    Color="#232C38"/>
+  <SolidColorBrush x:Key="InteractiveBg" Color="#1F2832"/>
+  <SolidColorBrush x:Key="InteractiveHover" Color="#28323E"/>
 
   <!-- Text -->
   <SolidColorBrush x:Key="Text"        Color="#F4F7FA"/>
@@ -21,19 +22,19 @@
   <SolidColorBrush x:Key="TextFaint"   Color="#87919C"/>
 
   <!-- Lines -->
-  <SolidColorBrush x:Key="Border"      Color="#232C35"/>
-  <SolidColorBrush x:Key="BorderStrong" Color="#313C48"/>
-  <SolidColorBrush x:Key="BorderSoft"  Color="#1A2128"/>
+  <SolidColorBrush x:Key="Border"       Color="#2B3440"/>
+  <SolidColorBrush x:Key="BorderStrong" Color="#3A4552"/>
+  <SolidColorBrush x:Key="BorderSoft"   Color="#1A222B"/>
 
   <!-- Accent + semantic -->
-  <SolidColorBrush x:Key="Accent"      Color="#7C9AB3"/>
-  <SolidColorBrush x:Key="AccentStrong" Color="#90ADC5"/>
-  <SolidColorBrush x:Key="AccentSoft"  Color="#297C9AB3"/>  <!-- 0.16 -->
+  <SolidColorBrush x:Key="Accent"       Color="#E3B341"/>
+  <SolidColorBrush x:Key="AccentStrong" Color="#ECC25A"/>
+  <SolidColorBrush x:Key="AccentSoft"  Color="#29E3B341"/>  <!-- 0.16 -->
   <SolidColorBrush x:Key="Success"     Color="#7D9E8A"/>
   <SolidColorBrush x:Key="Warning"     Color="#A79A74"/>
   <SolidColorBrush x:Key="Danger"      Color="#A1837F"/>
   <SolidColorBrush x:Key="Info"        Color="#7F92A3"/>
-  <SolidColorBrush x:Key="FocusRing"   Color="#6190ADC5"/>  <!-- 0.38 -->
+  <SolidColorBrush x:Key="FocusRing"   Color="#99E3B341"/>  <!-- 0.60 -->
 
   <!-- Spacing (DIP) -->
   <sys:Double x:Key="Space1">4</sys:Double>
@@ -100,6 +101,31 @@
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
               <Setter TargetName="b" Property="Background" Value="{StaticResource ElevatedBg}"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Primary action: the one gold button per surface (Start, Add/Save). -->
+  <Style x:Key="GoldAction" TargetType="Button">
+    <Setter Property="FocusVisualStyle" Value="{StaticResource ActionFocusVisual}"/>
+    <Setter Property="Background" Value="{StaticResource Accent}"/>
+    <Setter Property="Foreground" Value="{StaticResource PageBg}"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Padding" Value="14,7"/>
+    <Setter Property="FontSize" Value="{StaticResource TextSm}"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="b" Property="Background" Value="{StaticResource AccentStrong}"/>
             </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
