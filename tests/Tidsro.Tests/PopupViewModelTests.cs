@@ -37,4 +37,20 @@ public class PopupViewModelTests
         Assert.Equal(1, dismissed);
         Assert.Equal(1, closed);
     }
+
+    [Fact]
+    public void ShowRestart_is_true_for_a_countdown()
+    {
+        var item = new TimerItem { TriggerType = TriggerType.Countdown, OriginalDuration = TimeSpan.FromMinutes(5) };
+        var vm = new PopupViewModel(item, _ => item, _ => item, _ => { });
+        Assert.True(vm.ShowRestart);
+    }
+
+    [Fact]
+    public void ShowRestart_is_false_for_a_clock_time_alarm()
+    {
+        var item = new TimerItem { TriggerType = TriggerType.ClockTime };
+        var vm = new PopupViewModel(item, _ => item, _ => item, _ => { });
+        Assert.False(vm.ShowRestart);   // Restart is meaningless for a one-shot alarm
+    }
 }

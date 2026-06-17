@@ -1,12 +1,14 @@
 # Tidsro
 
-A calm, dark-mode-first desktop timer for Windows — countdown timers that nudge you with a quiet corner card instead of a flashy notification. Clock-time and recurring alarms are on the roadmap.
+A calm, dark-mode-first desktop timer for Windows — countdown timers and clock-time alarms that nudge you with a quiet corner card instead of a flashy notification.
 
 > **Tidsro** is Norwegian: *tid* (time) + *ro* (calm / peace) — roughly *"calm time."* The name is the whole idea: a timer that's visible when you need it and invisible when you don't.
 
 ## Status
 
-**v1.0.0 is released** — see the [Releases page](https://github.com/malinfossum/tidsro/releases). This first version does countdown timers, with Settings that apply on **Save**, a running-timer row with clear **pause/resume** and **Reset**, and a per-timer **sound** chosen with a preview at setup. Clock-time and recurring alarms are next (see [Roadmap](#roadmap)). The full design lives in [`docs/superpowers/specs/2026-06-03-tidsro-design.md`](docs/superpowers/specs/2026-06-03-tidsro-design.md).
+**v1.0.0 is released** — see the [Releases page](https://github.com/malinfossum/tidsro/releases). That version does countdown timers, with Settings that apply on **Save**, a running-timer row with clear **pause/resume** and **Reset**, and a per-timer **sound** chosen with a preview at setup.
+
+**v1.1** (in development) adds clock-time alarms — a **"Your day" agenda** where you set one-shot fire-at-HH:MM alarms with an optional label and per-alarm sound choice. The full design lives in [`docs/superpowers/specs/2026-06-16-tidsro-v1.1-clock-time-alarms-design.md`](docs/superpowers/specs/2026-06-16-tidsro-v1.1-clock-time-alarms-design.md).
 
 ## Install
 
@@ -33,12 +35,20 @@ Launching Tidsro opens its window — it remembers where you last placed it. Clo
   - **+5** arms a new 5-minute countdown. **Restart** re-runs the original duration. **Dismiss** closes the card.
   - Press **Ctrl+Alt+T** to bring the latest card into keyboard focus; Tab reaches the buttons; Enter activates; focus returns to your previous app on dismiss.
   - Multiple finished cards stack upward and dismiss independently.
+
+**Your day** (clock-time alarms) lives below the countdown list. Type a time in HH:MM (24-hour), an optional label, choose a sound, and click **Add** — the alarm is saved immediately and fires once at the given time.
+
+- If Tidsro isn't running when an alarm time passes, it fires within a 5-minute grace window on next launch.
+- Each alarm row shows its fire time, label, and sound. Click **Edit** (pencil) to change it in place; **Save** commits, **Cancel** discards.
+- **Delete** removes the alarm with a brief undo window — click **Undo** in the announcement bar to restore it.
+- When an alarm fires, the same quiet bottom-right card appears, with **Snooze +5** (arms a 5-minute countdown) and **Dismiss**.
+
 - Open **Settings** (bottom-left of the main window) to toggle launch-at-startup and choose a default sound. Changes apply when you click **Save**; **Cancel**, **Esc**, or closing the window discards them.
 
 ## Roadmap
 
-- Clock-time alarms and recurring (weekday) alarms
-- An optional label per timer
+- Recurring (weekday) alarms
+- An optional label per countdown timer
 - Cloud sync / backup
 
 ## Stack

@@ -31,3 +31,14 @@ public sealed class SoundChoiceToLabelConverter : IValueConverter
     };
     public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
 }
+
+public sealed class BoolToSoundGlyphConverter : IValueConverter
+{
+    // Segoe Fluent Icons code points, built from char codes so the source stays plain ASCII
+    // (same pattern as TimerItemViewModel): Volume (0xE767) when audible, Mute (0xE74F) when silent.
+    private static readonly string Volume = ((char)0xE767).ToString();
+    private static readonly string Mute = ((char)0xE74F).ToString();
+
+    public object Convert(object? v, Type t, object? p, CultureInfo c) => v is true ? Volume : Mute;
+    public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
+}

@@ -27,7 +27,8 @@
         <Button Content="+5 min" Command="{Binding Plus5Command}"
                 AutomationProperties.Name="Add 5 minutes" Style="{StaticResource QuietAction}"/>
         <Button Content="Restart" Command="{Binding RestartCommand}"
-                AutomationProperties.Name="Restart timer" Style="{StaticResource QuietAction}" Margin="8,0,0,0"/>
+                AutomationProperties.Name="Restart timer" Style="{StaticResource QuietAction}" Margin="8,0,0,0"
+                Visibility="{Binding ShowRestart, Converter={StaticResource BoolToVisible}}"/>
         <Button Content="Dismiss" Command="{Binding DismissCommand}"
                 AutomationProperties.Name="Dismiss" Style="{StaticResource QuietAction}" Margin="8,0,0,0"/>
       </StackPanel>

@@ -1,4 +1,3 @@
-using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Tidsro.Models;
 using Tidsro.Services;
@@ -8,7 +7,7 @@ namespace Tidsro.ViewModels;
 public partial class SettingsViewModel : ObservableObject
 {
     private readonly StartupService _startup;
-    private readonly PersistenceService _persistence;
+    private readonly Action _save;                              // bundles settings + alarms at the App level
     private readonly Action<SoundChoice> _onDefaultSoundChanged;
     private readonly AppSettings _settings;   // the in-memory snapshot App reuses to open this window; keep it current
 
@@ -19,10 +18,10 @@ public partial class SettingsViewModel : ObservableObject
         { SoundChoice.None, SoundChoice.SoftChime, SoundChoice.Marimba, SoundChoice.Bell };
 
     public SettingsViewModel(AppSettings settings, StartupService startup,
-        PersistenceService persistence, Action<SoundChoice> onDefaultSoundChanged)
+        Action save, Action<SoundChoice> onDefaultSoundChanged)
     {
         _settings = settings;
-        _startup = startup; _persistence = persistence; _onDefaultSoundChanged = onDefaultSoundChanged;
+        _startup = startup; _save = save; _onDefaultSoundChanged = onDefaultSoundChanged;
         _launchAtStartup = settings.LaunchAtStartup;
         _defaultSound = settings.DefaultSound;
     }
@@ -42,7 +41,6 @@ public partial class SettingsViewModel : ObservableObject
 
         _settings.LaunchAtStartup = LaunchAtStartup;
         _settings.DefaultSound = DefaultSound;
-        try { _persistence.Save(_settings); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* settings are non-critical */ }
+        _save();   // App's SaveData handles IO errors; settings remain non-critical
     }
 }

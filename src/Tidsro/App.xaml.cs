@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Threading;
@@ -19,6 +21,7 @@ public partial class App : Application
     private SchedulerService _scheduler = null!;
     private SoundService _sound = null!;
     private PersistenceService _persistence = null!;
+    private TidsroData _data = null!;
     private MainViewModel _mainVm = null!;
     private AppSettings _settings = null!;
     private HotkeyService _hotkey = null!;
@@ -46,15 +49,19 @@ public partial class App : Application
             (_, _) => Dispatcher.Invoke(ShowMainWindow), null, Timeout.Infinite, executeOnlyOnce: false);
 
         _persistence = new PersistenceService(PersistenceService.DefaultPath);
-        _settings = _persistence.Load();
+        _data = _persistence.Load();
+        _settings = _data.Settings ?? AppSettings.Defaults();
         _scheduler = new SchedulerService(new SystemClock());
         _sound = new SoundService();
         _mainVm = new MainViewModel(_scheduler, _sound, _settings.DefaultSound);
+        ArmLoadedAlarms(_data.Alarms);
+        _mainVm.AlarmsChanged += (_, _) => SaveData();
 
         var startup = new StartupService(StartupService.CurrentExePath);
         startup.RefreshIfEnabled();          // self-heal a stale Run-key path
 
         _scheduler.Fired += OnTimerFired;
+        _scheduler.Expired += (_, item) => { _mainVm.AddMissed(item); SaveData(); };
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += (_, _) => { _scheduler.Tick(); _mainVm.RefreshAll(); };
@@ -67,6 +74,8 @@ public partial class App : Application
         _tray = TrayBuilder.Create(ShowMainWindow, FocusLatestAlert, Quit);
 
         // Surface the window on a normal launch so it's discoverable; stay in the tray when auto-started at boot.
+        // On a boot launch the window isn't built yet, so a missed-while-away alarm's UIA announcement is
+        // best-effort — the visible MissedNote still persists and is shown (and read) once the window opens.
         if (!e.Args.Contains(StartupService.StartupArg))
             ShowMainWindow();
     }
@@ -91,6 +100,8 @@ public partial class App : Application
         _openPopups.Add(popup);
         PositionPopup(popup, _openPopups.Count - 1);
         popup.Show();   // ShowActivated=false -> appears without stealing focus
+
+        if (item.TriggerType == TriggerType.ClockTime) SaveData();   // the one-shot left the armed set; mirror to disk
     }
 
     private void PositionPopup(CompletionPopup popup, int indexFromBottom)
@@ -113,8 +124,8 @@ public partial class App : Application
     {
         _main ??= new MainWindow(_mainVm, () => new SettingsWindow(
                 new SettingsViewModel(_settings, new StartupService(StartupService.CurrentExePath),
-                    _persistence, _mainVm.SetDefaultSound)),
-            _settings, () => _persistence.Save(_settings));
+                    SaveData, _mainVm.SetDefaultSound)),
+            _settings, SaveData);
         Application.Current.MainWindow = _main;
         _main.Show();
         _main.WindowState = WindowState.Normal;
@@ -126,7 +137,41 @@ public partial class App : Application
         _timer.Stop();
         _hotkey.Dispose();
         _tray?.Dispose();
+        _mainVm.CommitPendingDelete();   // an uncommitted delete commits on quit (spec §3.1)
+        SaveData();                      // flush the final armed set
         Shutdown();
+    }
+
+    private void SaveData()
+    {
+        var data = new TidsroData
+        {
+            Settings = _settings,
+            Alarms = _scheduler.Alarms.Select(ToRecord).ToList(),
+        };
+        try { _persistence.Save(data); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* non-critical */ }
+    }
+
+    private static AlarmRecord ToRecord(TimerItem a) => new()
+    {
+        Id = a.Id,
+        FireAt = a.EndsAt?.LocalDateTime ?? default,
+        Label = a.Label,
+        Sound = a.Sound,
+    };
+
+    private void ArmLoadedAlarms(IEnumerable<AlarmRecord> records)
+    {
+        foreach (var r in records)
+        {
+            try
+            {
+                var fireAt = new DateTimeOffset(DateTime.SpecifyKind(r.FireAt, DateTimeKind.Local));
+                _scheduler.ArmClockAlarm(fireAt, r.Label, r.Sound, r.Id);
+            }
+            catch { /* a residual bad record must never stop launch (spec §4) */ }
+        }
     }
 
     protected override void OnExit(ExitEventArgs e)

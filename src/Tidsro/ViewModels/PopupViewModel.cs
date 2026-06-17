@@ -24,6 +24,8 @@ public partial class PopupViewModel : ObservableObject
     }
 
     public TimerItem Item => _item;
+    /// <summary>Restart re-runs a duration; it has no meaning for a one-shot alarm, so the card hides it.</summary>
+    public bool ShowRestart => _item.TriggerType == TriggerType.Countdown;
     public event EventHandler? CloseRequested;
 
     [RelayCommand] private void Plus5()   { if (Begin()) { _onSnooze(_item);  Close(); } }
