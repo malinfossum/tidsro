@@ -102,4 +102,53 @@ public class SchedulerServiceTests
         Assert.Equal(TimerState.Paused, item.State);         // stays stopped at the start
         Assert.Equal(TimeSpan.FromMinutes(25), s.Remaining(item));
     }
+
+    [Fact]
+    public void ArmClockAlarm_adds_to_alarms_not_running()
+    {
+        var (s, c) = New();
+        var fire = c.Now + TimeSpan.FromHours(2);
+        var alarm = s.ArmClockAlarm(fire, "lunch", SoundChoice.Bell);
+        Assert.Empty(s.Running);
+        Assert.Same(alarm, Assert.Single(s.Alarms));
+        Assert.Equal(TriggerType.ClockTime, alarm.TriggerType);
+        Assert.Equal(fire, alarm.EndsAt);
+        Assert.Equal(TimerState.Running, alarm.State);
+    }
+
+    [Fact]
+    public void ArmClockAlarm_preserves_a_supplied_id()
+    {
+        var (s, c) = New();
+        var id = Guid.NewGuid();
+        var alarm = s.ArmClockAlarm(c.Now + TimeSpan.FromHours(1), null, SoundChoice.None, id);
+        Assert.Equal(id, alarm.Id);
+    }
+
+    [Fact]
+    public void RemoveAlarm_disarms_the_alarm()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmClockAlarm(c.Now + TimeSpan.FromHours(1), null, SoundChoice.None);
+        s.RemoveAlarm(alarm);
+        Assert.Empty(s.Alarms);
+    }
+
+    [Fact]
+    public void Cancel_removes_an_item_from_either_list()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmClockAlarm(c.Now + TimeSpan.FromHours(1), null, SoundChoice.None);
+        s.Cancel(alarm);                                   // alarm lives in _alarms, not _running
+        Assert.Empty(s.Alarms);
+    }
+
+    [Fact]
+    public void Now_reflects_the_clock()
+    {
+        var (s, c) = New();
+        Assert.Equal(c.Now, s.Now);
+        c.Advance(TimeSpan.FromMinutes(5));
+        Assert.Equal(c.Now, s.Now);
+    }
 }
