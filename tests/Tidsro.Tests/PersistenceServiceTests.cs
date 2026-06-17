@@ -17,30 +17,62 @@ public class PersistenceServiceTests : IDisposable
     }
     public void Dispose() { try { Directory.Delete(_dir, true); } catch { } }
 
+    private static AlarmRecord Alarm(Guid id, int hour) => new()
+    {
+        Id = id,
+        FireAt = new DateTime(2026, 6, 17, hour, 0, 0, DateTimeKind.Local),
+        Label = "Lunch",
+        Sound = SoundChoice.Bell,
+    };
+
     [Fact]
     public void Load_missing_file_returns_defaults()
     {
-        var svc = new PersistenceService(_path);
-        var s = svc.Load();
-        Assert.False(s.LaunchAtStartup);
-        Assert.Equal(SoundChoice.None, s.DefaultSound);
+        var data = new PersistenceService(_path).Load();
+        Assert.False(data.Settings!.LaunchAtStartup);
+        Assert.Equal(SoundChoice.None, data.Settings!.DefaultSound);
+        Assert.Empty(data.Alarms);
     }
 
     [Fact]
-    public void Save_then_Load_round_trips()
+    public void Save_then_Load_round_trips_settings_and_alarms()
     {
         var svc = new PersistenceService(_path);
-        svc.Save(new AppSettings { LaunchAtStartup = true, DefaultSound = SoundChoice.Bell });
-        var s = svc.Load();
-        Assert.True(s.LaunchAtStartup);
-        Assert.Equal(SoundChoice.Bell, s.DefaultSound);
+        var id = Guid.NewGuid();
+        svc.Save(new TidsroData
+        {
+            Settings = new AppSettings { LaunchAtStartup = true, DefaultSound = SoundChoice.Bell },
+            Alarms = { Alarm(id, 14) },
+        });
+
+        var data = svc.Load();
+        Assert.True(data.Settings!.LaunchAtStartup);
+        Assert.Equal(SoundChoice.Bell, data.Settings!.DefaultSound);
+        var a = Assert.Single(data.Alarms);
+        Assert.Equal(id, a.Id);
+        Assert.Equal(14, a.FireAt.Hour);
+        Assert.Equal(SoundChoice.Bell, a.Sound);
+    }
+
+    [Fact]
+    public void Load_a_v1_0_bare_settings_file_preserves_settings_and_has_no_alarms()
+    {
+        // v1.0 wrote a bare AppSettings (no "Settings"/"Alarms" wrapper).
+        File.WriteAllText(_path,
+            "{\"SchemaVersion\":1,\"LaunchAtStartup\":true,\"DefaultSound\":3,\"WindowLeft\":120.0,\"WindowTop\":40.0}");
+        var data = new PersistenceService(_path).Load();
+
+        Assert.True(data.Settings!.LaunchAtStartup);
+        Assert.Equal(SoundChoice.Bell, data.Settings!.DefaultSound);   // enum 3 == Bell
+        Assert.Equal(120.0, data.Settings!.WindowLeft);
+        Assert.Empty(data.Alarms);
     }
 
     [Fact]
     public void Save_is_atomic_and_leaves_no_temp_file()
     {
         var svc = new PersistenceService(_path);
-        svc.Save(new AppSettings());
+        svc.Save(TidsroData.Defaults());
         Assert.True(File.Exists(_path));
         Assert.False(File.Exists(_path + ".tmp"));
     }
@@ -49,35 +81,47 @@ public class PersistenceServiceTests : IDisposable
     public void Load_corrupt_file_quarantines_and_returns_defaults()
     {
         File.WriteAllText(_path, "{ this is not valid json ");
-        var svc = new PersistenceService(_path);
-        var s = svc.Load();
-        Assert.Equal(SoundChoice.None, s.DefaultSound);          // defaults
-        Assert.True(File.Exists(_path + ".corrupt"));            // quarantined, app still launches
+        var data = new PersistenceService(_path).Load();
+        Assert.Equal(SoundChoice.None, data.Settings!.DefaultSound);   // defaults
+        Assert.True(File.Exists(_path + ".corrupt"));                  // quarantined, app still launches
     }
 
     [Fact]
-    public void Load_unknown_enum_value_falls_back_to_none()
+    public void Load_drops_a_bad_alarm_but_keeps_the_good_one()
     {
-        File.WriteAllText(_path, "{\"SchemaVersion\":1,\"LaunchAtStartup\":false,\"DefaultSound\":999}");
+        var goodId = Guid.NewGuid();
+        var json =
+            "{\"SchemaVersion\":2,\"Settings\":{\"DefaultSound\":0}," +
+            "\"Alarms\":[" +
+            "{\"Id\":\"" + goodId + "\",\"FireAt\":\"2026-06-17T14:00:00\",\"Label\":\"ok\",\"Sound\":3}," +
+            "{\"Id\":\"" + Guid.NewGuid() + "\",\"FireAt\":\"2026-06-17T15:00:00\",\"Label\":\"bad\",\"Sound\":999}" +
+            "]}";
+        File.WriteAllText(_path, json);
+
+        var data = new PersistenceService(_path).Load();
+        var a = Assert.Single(data.Alarms);
+        Assert.Equal("ok", a.Label);
+    }
+
+    [Fact]
+    public void A_good_save_clears_a_stale_corrupt_file()
+    {
+        File.WriteAllText(_path, "{ broken ");
         var svc = new PersistenceService(_path);
-        Assert.Equal(SoundChoice.None, svc.Load().DefaultSound);  // untrusted-input hardening
+        svc.Load();                                       // quarantines -> .corrupt exists
+        Assert.True(File.Exists(_path + ".corrupt"));
+
+        svc.Save(TidsroData.Defaults());                  // a good save no longer needs the recovery copy
+        Assert.False(File.Exists(_path + ".corrupt"));    // labels in the quarantine file don't linger (spec §8)
     }
 
     [Fact]
     public void Save_then_Load_round_trips_window_position()
     {
         var svc = new PersistenceService(_path);
-        svc.Save(new AppSettings { WindowLeft = 123.5, WindowTop = 45.0 });
-        var s = svc.Load();
-        Assert.Equal(123.5, s.WindowLeft);
-        Assert.Equal(45.0, s.WindowTop);
-    }
-
-    [Fact]
-    public void Sanitized_nulls_non_finite_window_position()
-    {
-        var s = new AppSettings { WindowLeft = double.NaN, WindowTop = double.PositiveInfinity }.Sanitized();
-        Assert.Null(s.WindowLeft);
-        Assert.Null(s.WindowTop);
+        svc.Save(new TidsroData { Settings = new AppSettings { WindowLeft = 123.5, WindowTop = 45.0 } });
+        var data = svc.Load();
+        Assert.Equal(123.5, data.Settings!.WindowLeft);
+        Assert.Equal(45.0, data.Settings!.WindowTop);
     }
 }

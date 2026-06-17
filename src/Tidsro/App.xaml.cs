@@ -19,6 +19,7 @@ public partial class App : Application
     private SchedulerService _scheduler = null!;
     private SoundService _sound = null!;
     private PersistenceService _persistence = null!;
+    private TidsroData _data = null!;
     private MainViewModel _mainVm = null!;
     private AppSettings _settings = null!;
     private HotkeyService _hotkey = null!;
@@ -46,7 +47,8 @@ public partial class App : Application
             (_, _) => Dispatcher.Invoke(ShowMainWindow), null, Timeout.Infinite, executeOnlyOnce: false);
 
         _persistence = new PersistenceService(PersistenceService.DefaultPath);
-        _settings = _persistence.Load();
+        _data = _persistence.Load();
+        _settings = _data.Settings ?? AppSettings.Defaults();
         _scheduler = new SchedulerService(new SystemClock());
         _sound = new SoundService();
         _mainVm = new MainViewModel(_scheduler, _sound, _settings.DefaultSound);
@@ -113,8 +115,9 @@ public partial class App : Application
     {
         _main ??= new MainWindow(_mainVm, () => new SettingsWindow(
                 new SettingsViewModel(_settings, new StartupService(StartupService.CurrentExePath),
-                    () => _persistence.Save(_settings), _mainVm.SetDefaultSound)),
-            _settings, () => _persistence.Save(_settings));
+                    () => _persistence.Save(new TidsroData { Settings = _settings, Alarms = new() }),
+                    _mainVm.SetDefaultSound)),
+            _settings, () => _persistence.Save(new TidsroData { Settings = _settings, Alarms = new() }));
         Application.Current.MainWindow = _main;
         _main.Show();
         _main.WindowState = WindowState.Normal;
