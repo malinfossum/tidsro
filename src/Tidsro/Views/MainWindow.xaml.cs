@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Threading;
 using Tidsro.Models;
+using Tidsro.Services;
 using Tidsro.ViewModels;
 
 namespace Tidsro.Views;
@@ -10,12 +12,25 @@ public partial class MainWindow : Window
     private readonly Func<SettingsWindow> _settingsFactory;
     private readonly AppSettings _settings;
     private readonly Action _persist;
+    private readonly DispatcherTimer _undoTimer;
 
     public MainWindow(MainViewModel vm, Func<SettingsWindow> settingsFactory,
                       AppSettings settings, Action persist)
     {
         InitializeComponent();
         DataContext = vm;
+
+        vm.Announcement += (_, message) => UiaNotifier.Announce(this, message);
+
+        _undoTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(9) };   // comfortable undo floor (spec §3.1)
+        _undoTimer.Tick += (_, _) => { _undoTimer.Stop(); vm.CommitPendingDelete(); };
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(MainViewModel.PendingDeleteLabel)) return;
+            _undoTimer.Stop();
+            if (vm.HasPendingDelete) _undoTimer.Start();   // restart the window on each new delete
+        };
+
         _settingsFactory = settingsFactory;
         _settings = settings;
         _persist = persist;

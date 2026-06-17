@@ -106,4 +106,69 @@
       </Setter.Value>
     </Setter>
   </Style>
+
+  <!-- Dark ComboBox: the default popup is light-on-dark and illegible. Restyle the toggle + items. -->
+  <Style x:Key="ComboItem" TargetType="ComboBoxItem">
+    <Setter Property="Background" Value="{StaticResource ElevatedBg}"/>
+    <Setter Property="Foreground" Value="{StaticResource Text}"/>
+    <Setter Property="Padding" Value="8,6"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ComboBoxItem">
+          <Border x:Name="b" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+            <ContentPresenter/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsHighlighted" Value="True">
+              <Setter TargetName="b" Property="Background" Value="{StaticResource InteractiveBg}"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style TargetType="ComboBox">
+    <Setter Property="Foreground" Value="{StaticResource Text}"/>
+    <Setter Property="Background" Value="{StaticResource InteractiveBg}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+    <Setter Property="Padding" Value="8,6"/>
+    <Setter Property="ItemContainerStyle" Value="{StaticResource ComboItem}"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ComboBox">
+          <Grid>
+            <ToggleButton x:Name="Toggle" Focusable="False" ClickMode="Press"
+                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+              <ToggleButton.Template>
+                <ControlTemplate TargetType="ToggleButton">
+                  <Border Background="{StaticResource InteractiveBg}" BorderBrush="{StaticResource Border}"
+                          BorderThickness="1" CornerRadius="8" Padding="8,6">
+                    <Grid>
+                      <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                      </Grid.ColumnDefinitions>
+                      <ContentPresenter Grid.Column="0" Content="{Binding SelectionBoxItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                        ContentTemplate="{Binding ItemTemplate, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                        VerticalAlignment="Center"/>
+                      <TextBlock Grid.Column="1" Text="&#xE70D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                 Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    </Grid>
+                  </Border>
+                </ControlTemplate>
+              </ToggleButton.Template>
+            </ToggleButton>
+            <Popup IsOpen="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                   Placement="Bottom" AllowsTransparency="True" Focusable="False" PopupAnimation="Slide">
+              <Border Background="{StaticResource ElevatedBg}" BorderBrush="{StaticResource Border}"
+                      BorderThickness="1" CornerRadius="8" Margin="0,4,0,0"
+                      MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+                <ItemsPresenter/>
+              </Border>
+            </Popup>
+          </Grid>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
 </ResourceDictionary>
