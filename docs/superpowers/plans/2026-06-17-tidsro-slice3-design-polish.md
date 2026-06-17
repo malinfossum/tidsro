@@ -411,12 +411,14 @@ git commit -m "style: spacious MainWindow — editor containers, gold actions, c
 
 ---
 
-## Task 4: Resizable window with size persistence
+## Task 4: Resizable window — scroll, centered max-width, size persistence
 
 **Files:**
 - Modify: `src/Tidsro/Views/MainWindow.xaml`
 - Modify: `src/Tidsro/Models/AppSettings.cs`
 - Modify: `src/Tidsro/Views/MainWindow.xaml.cs`
+
+> **Amendment (post-Task-3 visual feedback):** beyond the original size+persist scope, this task now also (a) unifies the whole content into a **single `ScrollViewer`** with Settings pinned below, so any number of running timers *and* alarms scroll (previously only "Your day" scrolled and the timers list grew unbounded), and (b) caps the content to a **centered `MaxWidth` (~640)** so a wide desktop window reads as an intentional centered column instead of stretching controls across the full width. The full restructured Grid is applied wholesale (see Step 1b). The adaptive side-by-side/tabs layout is explicitly a *future slice*, not this — see the spec's "What's next".
 
 - [ ] **Step 1: Window attributes**
 

@@ -192,14 +192,13 @@ This slice is almost entirely View/XAML, so it is **manual-acceptance, not TDD**
 - [ ] Narrator: names and announcements unchanged from v1.1.
 - [ ] Keyboard: gold focus ring visible, keyboard-only.
 
-## What's next — Slice 4 (not this slice)
+## What's next (future slices — not this one)
 
-Captured here so the intent isn't lost; designed separately once Slice 3 ships:
+Captured here so the ideas aren't lost; each gets its own brainstorm → design → plan once Slice 3 ships:
 
 - **Recurring schedules** — per-alarm repeat: Weekdays, Weekend, or specific days (e.g. Tue + Thu). Needs a recurrence model, a persistence bump (schema v2 → v3), and scheduler re-arm logic (after a recurring alarm fires, compute the next occurrence).
 - **Today-scoped "Your day"** — show only the current day's alarms by default, with a toggle to see the full schedule. Pairs naturally with recurring (with one-shot alarms, everything is essentially today or tomorrow).
-
-Each gets its own brainstorm → design → plan.
+- **Adaptive layout** — on a wide desktop window, divide "Quick timers" and "Your day" into two side-by-side sections, plus a user toggle to switch between side-by-side and tabbed views (remembered across launches). A real layout feature: needs a layout-mode state, a toggle control, persistence, a responsive breakpoint, and UX calls (do tabs make sense for two sections? auto-split threshold? interaction with the tray/popup?). Slice 3 ships only the precursor — scroll + a centered max-width column so wide windows aren't stretched.
 
 ## Open notes
 
