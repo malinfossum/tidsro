@@ -5,7 +5,7 @@
         Title="Tidsro" Icon="pack://application:,,,/Assets/icons/tidsro.ico" Width="420" Height="560"
         Background="{StaticResource PageBg}" Foreground="{StaticResource Text}"
         FontFamily="{StaticResource FontSans}">
-  <Grid Margin="16">
+  <Grid Margin="24">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
@@ -13,61 +13,55 @@
       <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
 
-    <!-- Quick timers -->
-    <TextBlock Grid.Row="0" Text="Quick timers" FontSize="{StaticResource TextXl}" Margin="0,0,0,8"/>
+    <!-- ===== Quick timers ===== -->
+    <TextBlock Grid.Row="0" Text="Quick timers" FontSize="{StaticResource TextXl}" Margin="0,0,0,14"/>
     <StackPanel Grid.Row="1">
       <StackPanel Orientation="Horizontal">
-        <!-- CommandParameter must be a real Int32 to match StartPresetCommand (IRelayCommand<int>); "15" would pass a string and the button would disable/throw -->
-        <Button Content="15" Width="56" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}">
+        <Button Content="15" Width="64" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}">
           <Button.CommandParameter><sys:Int32>15</sys:Int32></Button.CommandParameter>
         </Button>
-        <Button Content="30" Width="56" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}" Margin="8,0,0,0">
+        <Button Content="30" Width="64" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}" Margin="10,0,0,0">
           <Button.CommandParameter><sys:Int32>30</sys:Int32></Button.CommandParameter>
         </Button>
-        <Button Content="60" Width="56" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}" Margin="8,0,0,0">
+        <Button Content="60" Width="64" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}" Margin="10,0,0,0">
           <Button.CommandParameter><sys:Int32>60</sys:Int32></Button.CommandParameter>
         </Button>
       </StackPanel>
 
-      <!-- Sound for the next timer (preset or custom); seeded from the default, ▶ previews it -->
-      <Grid Margin="0,8,0,0">
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
-        </Grid.ColumnDefinitions>
-        <TextBlock Grid.Column="0" Text="Sound" VerticalAlignment="Center"
-                   Foreground="{StaticResource TextMuted}" Margin="0,0,8,0"/>
-        <ComboBox Grid.Column="1" ItemsSource="{Binding SoundOptions}" SelectedItem="{Binding SelectedSound}"
-                  AutomationProperties.Name="Sound for new timers">
-          <ComboBox.ItemTemplate>
-            <DataTemplate>
-              <TextBlock Text="{Binding Converter={StaticResource SoundLabel}}"/>
-            </DataTemplate>
-          </ComboBox.ItemTemplate>
-        </ComboBox>
-        <Button Grid.Column="2" Content="&#xE768;" Command="{Binding PreviewSoundCommand}"
-                FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                AutomationProperties.Name="Preview sound" ToolTip="Preview sound"
-                Style="{StaticResource QuietAction}" Margin="8,0,0,0"/>
-      </Grid>
+      <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+              CornerRadius="{StaticResource RadiusMd}" Padding="16" Margin="0,14,0,0">
+        <StackPanel>
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <TextBox Grid.Column="0" Text="{Binding CustomInput, UpdateSourceTrigger=PropertyChanged}"
+                     AutomationProperties.Name="Custom duration" ToolTip="e.g. 25, 5:00, 1:30:00"/>
+            <TextBox Grid.Column="1" Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}"
+                     AutomationProperties.Name="Label" Margin="10,0,0,0"/>
+          </Grid>
+          <Grid Margin="0,12,0,0">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="Sound" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" Margin="0,0,8,0"/>
+            <ComboBox Grid.Column="1" ItemsSource="{Binding SoundOptions}" SelectedItem="{Binding SelectedSound}"
+                      AutomationProperties.Name="Sound for new timers">
+              <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Converter={StaticResource SoundLabel}}"/></DataTemplate></ComboBox.ItemTemplate>
+            </ComboBox>
+            <Button Grid.Column="2" Content="&#xE768;" Command="{Binding PreviewSoundCommand}"
+                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                    AutomationProperties.Name="Preview sound" ToolTip="Preview sound" Style="{StaticResource QuietAction}" Margin="8,0,0,0"/>
+          </Grid>
+          <Button Content="Start" Command="{Binding StartCustomCommand}" Style="{StaticResource GoldAction}"
+                  HorizontalAlignment="Right" Margin="0,14,0,0" AutomationProperties.Name="Start timer"/>
+          <TextBlock Text="{Binding CustomError}" Foreground="{StaticResource Danger}" FontSize="{StaticResource TextXs}"
+                     Margin="0,8,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"
+                     Visibility="{Binding CustomError, Converter={StaticResource NullToCollapsed}}"/>
+        </StackPanel>
+      </Border>
 
-      <Grid Margin="0,8,0,0">
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
-        </Grid.ColumnDefinitions>
-        <TextBox Grid.Column="0" Text="{Binding CustomInput, UpdateSourceTrigger=PropertyChanged}"
-                 AutomationProperties.Name="Custom duration" ToolTip="e.g. 25, 5:00, 1:30:00"/>
-        <TextBox Grid.Column="1" Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}"
-                 AutomationProperties.Name="Label" Margin="8,0,0,0"/>
-        <Button Grid.Column="2" Content="Start" Command="{Binding StartCustomCommand}" Style="{StaticResource QuietAction}" Margin="8,0,0,0"/>
-      </Grid>
-      <TextBlock Text="{Binding CustomError}" Foreground="{StaticResource Danger}"
-                 FontSize="{StaticResource TextXs}" Margin="0,4,0,0"
-                 Visibility="{Binding CustomError, Converter={StaticResource NullToCollapsed}}"/>
       <ItemsControl ItemsSource="{Binding Running}" Margin="0,12,0,0">
         <ItemsControl.ItemTemplate>
           <DataTemplate>
-            <Border Background="{StaticResource CardBg}" CornerRadius="{StaticResource RadiusSm}"
-                    Padding="12" Margin="0,0,0,8">
+            <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+                    CornerRadius="{StaticResource RadiusMd}" Padding="16" Margin="0,0,0,12">
               <DockPanel>
                 <Button DockPanel.Dock="Right" Content="&#xE711;" Command="{Binding CancelCommand}"
                         FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
@@ -78,6 +72,7 @@
                 <Button DockPanel.Dock="Right" Content="{Binding PauseResumeGlyph}" Command="{Binding PauseResumeCommand}"
                         FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                         AutomationProperties.Name="{Binding PauseResumeLabel}" ToolTip="{Binding PauseResumeLabel}" Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
+                <Ellipse DockPanel.Dock="Left" Width="9" Height="9" Margin="0,2,12,0" VerticalAlignment="Top" Fill="{StaticResource Accent}"/>
                 <StackPanel>
                   <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"/>
                   <TextBlock Text="{Binding RemainingText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource Text2xl}">
@@ -85,7 +80,6 @@
                       <Style TargetType="TextBlock">
                         <Setter Property="Foreground" Value="{StaticResource Text}"/>
                         <Style.Triggers>
-                          <!-- Paused: dim the readout. Reinforces the ▶ glyph + "Resume" name; never the sole signal. -->
                           <DataTrigger Binding="{Binding IsPaused}" Value="True">
                             <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
                           </DataTrigger>
@@ -102,59 +96,46 @@
       </ItemsControl>
     </StackPanel>
 
-    <!-- Your day -->
-    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,16,0,0">
+    <!-- ===== Your day ===== -->
+    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,28,0,0">
       <StackPanel>
-        <TextBlock Text="Your day" FontSize="{StaticResource TextXl}" Margin="0,0,0,8"/>
+        <TextBlock Text="Your day" FontSize="{StaticResource TextXl}" Margin="0,0,0,14"/>
 
-        <!-- Inline add/edit editor -->
-        <Grid>
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
-          </Grid.ColumnDefinitions>
-          <TextBox Grid.Column="0" Width="64" Text="{Binding AlarmTimeInput, UpdateSourceTrigger=PropertyChanged}"
-                   x:Name="AlarmTimeBox" AutomationProperties.Name="Time" ToolTip="24-hour time, e.g. 14:30"/>
-          <TextBox Grid.Column="1" Text="{Binding AlarmLabel, UpdateSourceTrigger=PropertyChanged}"
-                   AutomationProperties.Name="Alarm label" Margin="8,0,0,0"/>
-          <Button Grid.Column="2" Content="{Binding AddOrSaveLabel}" Command="{Binding AddOrSaveAlarmCommand}"
-                  AutomationProperties.Name="{Binding AddOrSaveLabel}"
-                  Background="{StaticResource AccentStrong}" Foreground="{StaticResource PageBg}"
-                  BorderThickness="0" Padding="12,6" Cursor="Hand" Margin="8,0,0,0"
-                  FocusVisualStyle="{StaticResource ActionFocusVisual}"/>
-        </Grid>
+        <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+                CornerRadius="{StaticResource RadiusMd}" Padding="16">
+          <StackPanel>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <TextBox Grid.Column="0" Width="64" x:Name="AlarmTimeBox"
+                       Text="{Binding AlarmTimeInput, UpdateSourceTrigger=PropertyChanged}"
+                       AutomationProperties.Name="Time" ToolTip="24-hour time, e.g. 14:30"/>
+              <TextBox Grid.Column="1" Text="{Binding AlarmLabel, UpdateSourceTrigger=PropertyChanged}"
+                       AutomationProperties.Name="Alarm label" Margin="10,0,0,0"/>
+            </Grid>
+            <Grid Margin="0,12,0,0">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="Sound" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" Margin="0,0,8,0"/>
+              <ComboBox Grid.Column="1" ItemsSource="{Binding SoundOptions}" SelectedItem="{Binding AlarmSound}" AutomationProperties.Name="Alarm sound">
+                <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Converter={StaticResource SoundLabel}}"/></DataTemplate></ComboBox.ItemTemplate>
+              </ComboBox>
+              <Button Grid.Column="2" Content="&#xE768;" Command="{Binding PreviewAlarmSoundCommand}"
+                      FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" AutomationProperties.Name="Preview sound"
+                      ToolTip="Preview sound" Style="{StaticResource QuietAction}" Margin="8,0,0,0"/>
+            </Grid>
+            <DockPanel Margin="0,14,0,0" LastChildFill="False">
+              <Button DockPanel.Dock="Left" Content="Cancel" Command="{Binding CancelEditAlarmCommand}" Style="{StaticResource QuietAction}"
+                      Visibility="{Binding IsEditingAlarm, Converter={StaticResource BoolToVisible}}"/>
+              <Button DockPanel.Dock="Right" Content="{Binding AddOrSaveLabel}" Command="{Binding AddOrSaveAlarmCommand}"
+                      Style="{StaticResource GoldAction}" AutomationProperties.Name="{Binding AddOrSaveLabel}"/>
+            </DockPanel>
+            <TextBlock Text="{Binding AlarmError}" Foreground="{StaticResource Danger}" FontSize="{StaticResource TextXs}"
+                       Margin="0,8,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"
+                       Visibility="{Binding AlarmError, Converter={StaticResource NullToCollapsed}}"/>
+          </StackPanel>
+        </Border>
 
-        <!-- Alarm sound (carries the dark-dropdown fix from Task 15) -->
-        <Grid Margin="0,8,0,0">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
-          </Grid.ColumnDefinitions>
-          <TextBlock Grid.Column="0" Text="Sound" VerticalAlignment="Center"
-                     Foreground="{StaticResource TextMuted}" Margin="0,0,8,0"/>
-          <ComboBox Grid.Column="1" ItemsSource="{Binding SoundOptions}" SelectedItem="{Binding AlarmSound}"
-                    AutomationProperties.Name="Alarm sound">
-            <ComboBox.ItemTemplate>
-              <DataTemplate><TextBlock Text="{Binding Converter={StaticResource SoundLabel}}"/></DataTemplate>
-            </ComboBox.ItemTemplate>
-          </ComboBox>
-          <Button Grid.Column="2" Content="&#xE768;" Command="{Binding PreviewAlarmSoundCommand}"
-                  FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                  AutomationProperties.Name="Preview sound" ToolTip="Preview sound"
-                  Style="{StaticResource QuietAction}" Margin="8,0,0,0"/>
-        </Grid>
-
-        <!-- Cancel edit -->
-        <Button Content="Cancel" Command="{Binding CancelEditAlarmCommand}" HorizontalAlignment="Left"
-                Style="{StaticResource QuietAction}" Margin="0,8,0,0"
-                Visibility="{Binding IsEditingAlarm, Converter={StaticResource BoolToVisible}}"/>
-
-        <!-- Inline validation -->
-        <TextBlock Text="{Binding AlarmError}" Foreground="{StaticResource Danger}"
-                   FontSize="{StaticResource TextXs}" Margin="0,4,0,0" TextWrapping="Wrap"
-                   AutomationProperties.LiveSetting="Assertive"
-                   Visibility="{Binding AlarmError, Converter={StaticResource NullToCollapsed}}"/>
-
-        <!-- Missed-while-away note -->
-        <Border Background="{StaticResource CardBg}" CornerRadius="{StaticResource RadiusSm}" Padding="12" Margin="0,12,0,0"
+        <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+                CornerRadius="{StaticResource RadiusMd}" Padding="16" Margin="0,12,0,0"
                 Visibility="{Binding MissedNote, Converter={StaticResource NullToCollapsed}}">
           <DockPanel>
             <Button DockPanel.Dock="Right" Content="&#xE711;" Command="{Binding DismissMissedNoteCommand}"
@@ -165,8 +146,8 @@
           </DockPanel>
         </Border>
 
-        <!-- Undo-delete banner -->
-        <Border Background="{StaticResource CardBg}" CornerRadius="{StaticResource RadiusSm}" Padding="12" Margin="0,12,0,0"
+        <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+                CornerRadius="{StaticResource RadiusMd}" Padding="16" Margin="0,12,0,0"
                 Visibility="{Binding PendingDeleteLabel, Converter={StaticResource NullToCollapsed}}">
           <DockPanel>
             <Button DockPanel.Dock="Right" Content="Undo" Command="{Binding UndoDeleteCommand}"
@@ -176,56 +157,49 @@
           </DockPanel>
         </Border>
 
-        <!-- Empty state -->
         <TextBlock Text="Nothing scheduled yet — add an alarm" Foreground="{StaticResource TextFaint}"
-                   FontSize="{StaticResource TextSm}" Margin="0,12,0,0"
+                   FontSize="{StaticResource TextSm}" Margin="0,14,0,0"
                    Visibility="{Binding IsDayEmpty, Converter={StaticResource BoolToVisible}}"/>
 
-        <!-- Agenda -->
-        <ItemsControl ItemsSource="{Binding Alarms}" Margin="0,12,0,0">
+        <ItemsControl ItemsSource="{Binding Alarms}" Margin="0,14,0,0">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <Border Background="{StaticResource CardBg}" CornerRadius="{StaticResource RadiusSm}"
-                      Padding="12" Margin="0,0,0,8" AutomationProperties.Name="{Binding AccessibleName}">
+              <Border Padding="16" Margin="0,0,0,12" CornerRadius="{StaticResource RadiusMd}"
+                      Background="{StaticResource CardBg}" BorderThickness="1"
+                      AutomationProperties.Name="{Binding AccessibleName}">
+                <Border.Style>
+                  <Style TargetType="Border">
+                    <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding IsNext}" Value="True">
+                        <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Border.Style>
                 <DockPanel>
                   <Button DockPanel.Dock="Right" Content="&#xE711;"
-                          FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                           Command="{Binding DataContext.DeleteAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                          CommandParameter="{Binding}"
-                          AutomationProperties.Name="{Binding DeleteLabel}" ToolTip="{Binding DeleteLabel}"
-                          Style="{StaticResource QuietAction}"/>
+                          CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                          AutomationProperties.Name="{Binding DeleteLabel}" ToolTip="{Binding DeleteLabel}" Style="{StaticResource QuietAction}"/>
                   <Button DockPanel.Dock="Right" Content="&#xE70F;"
-                          FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                           Command="{Binding DataContext.BeginEditAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                          CommandParameter="{Binding}"
-                          AutomationProperties.Name="{Binding EditLabel}" ToolTip="{Binding EditLabel}"
-                          Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
+                          CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                          AutomationProperties.Name="{Binding EditLabel}" ToolTip="{Binding EditLabel}" Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
                   <StackPanel Orientation="Horizontal">
-                    <!-- gold "next" dot: structural + has a text equivalent in AccessibleName -->
-                    <Ellipse Width="8" Height="8" Margin="0,0,8,0" VerticalAlignment="Center"
-                             Fill="{StaticResource AccentStrong}"
+                    <Ellipse Width="9" Height="9" Margin="0,2,12,0" VerticalAlignment="Top" Fill="{StaticResource Accent}"
                              Visibility="{Binding IsNext, Converter={StaticResource BoolToVisible}}"/>
                     <StackPanel>
                       <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding TimeText}" FontFamily="{StaticResource FontMono}"
-                                   FontSize="{StaticResource TextLg}" Foreground="{StaticResource Text}"/>
-                        <TextBlock Text="{Binding TomorrowText}" Foreground="{StaticResource TextFaint}"
-                                   FontSize="{StaticResource TextXs}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        <TextBlock Text="{Binding TimeText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource TextLg}" Foreground="{StaticResource Text}"/>
+                        <TextBlock Text="{Binding TomorrowText}" Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}" VerticalAlignment="Center" Margin="8,0,0,0"/>
                       </StackPanel>
-                      <TextBlock Text="{Binding DisplayLabel}" Foreground="{StaticResource TextMuted}"
-                                 FontSize="{StaticResource TextXs}"/>
-                      <StackPanel Orientation="Horizontal">
-                        <!-- sound state: glyph AND text, never colour alone -->
-                        <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="{StaticResource TextXs}"
-                                   Foreground="{StaticResource TextFaint}" Margin="0,0,4,0">
-                          <TextBlock.Text>
-                            <Binding Path="HasSound">
-                              <Binding.Converter><StaticResource ResourceKey="SoundGlyph"/></Binding.Converter>
-                            </Binding>
-                          </TextBlock.Text>
+                      <TextBlock Text="{Binding DisplayLabel}" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"/>
+                      <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                        <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="{StaticResource TextXs}" Foreground="{StaticResource TextFaint}" Margin="0,0,4,0">
+                          <TextBlock.Text><Binding Path="HasSound"><Binding.Converter><StaticResource ResourceKey="SoundGlyph"/></Binding.Converter></Binding></TextBlock.Text>
                         </TextBlock>
-                        <TextBlock Text="{Binding SoundText}" Foreground="{StaticResource TextFaint}"
-                                   FontSize="{StaticResource TextXs}"/>
+                        <TextBlock Text="{Binding SoundText}" Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}"/>
                       </StackPanel>
                     </StackPanel>
                   </StackPanel>
@@ -237,7 +211,6 @@
       </StackPanel>
     </ScrollViewer>
 
-    <Button Grid.Row="3" Content="Settings" HorizontalAlignment="Left"
-            Click="OnSettings" Style="{StaticResource QuietAction}"/>
+    <Button Grid.Row="3" Content="Settings" HorizontalAlignment="Left" Click="OnSettings" Style="{StaticResource QuietAction}"/>
   </Grid>
 </Window>
