@@ -151,7 +151,7 @@ public class MainViewModelTests
         vm.AlarmLabel = "Meeting";
         var changed = 0; vm.AlarmsChanged += (_, _) => changed++;
 
-        vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AddAlarmCommand.Execute(null);
 
         Assert.False(vm.IsDayEmpty);
         var row = Assert.Single(vm.Alarms);
@@ -169,7 +169,7 @@ public class MainViewModelTests
     {
         var vm = New(out var clock, out _);                 // 09:00
         vm.AlarmTimeInput = "08:00";                        // already passed today
-        vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AddAlarmCommand.Execute(null);
         Assert.True(Assert.Single(vm.Alarms).IsTomorrow);
     }
 
@@ -178,7 +178,7 @@ public class MainViewModelTests
     {
         var vm = New(out _, out _);
         vm.AlarmTimeInput = "99:99";
-        vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AddAlarmCommand.Execute(null);
         Assert.Empty(vm.Alarms);
         Assert.NotNull(vm.AlarmError);
     }
@@ -187,9 +187,9 @@ public class MainViewModelTests
     public void Alarms_are_sorted_by_fire_time()
     {
         var vm = New(out _, out _);                         // 09:00
-        vm.AlarmTimeInput = "16:00"; vm.AddOrSaveAlarmCommand.Execute(null);
-        vm.AlarmTimeInput = "11:00"; vm.AddOrSaveAlarmCommand.Execute(null);
-        vm.AlarmTimeInput = "13:30"; vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AlarmTimeInput = "16:00"; vm.AddAlarmCommand.Execute(null);
+        vm.AlarmTimeInput = "11:00"; vm.AddAlarmCommand.Execute(null);
+        vm.AlarmTimeInput = "13:30"; vm.AddAlarmCommand.Execute(null);
 
         Assert.Collection(vm.Alarms,
             a => Assert.Equal("11:00", a.TimeText),
@@ -207,7 +207,7 @@ public class MainViewModelTests
         string? announced = null; vm.Announcement += (_, m) => announced = m;
 
         vm.AlarmTimeInput = "10:00";
-        vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AddAlarmCommand.Execute(null);
 
         Assert.Equal(SoundChoice.Bell, vm.Alarms[0].Item.Sound);
         Assert.NotNull(announced);
@@ -219,7 +219,7 @@ public class MainViewModelTests
     {
         var vm = New(out _, out _);                         // 09:00
         vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Tea"; vm.AlarmSound = SoundChoice.Bell;
-        vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AddAlarmCommand.Execute(null);
         var row = vm.Alarms[0];
         AlarmItemViewModel? requested = null;
         vm.EditAlarmRequested += (_, r) => requested = r;
@@ -234,8 +234,8 @@ public class MainViewModelTests
     public void BeginEdit_commits_an_outstanding_pending_delete_first()
     {
         var vm = New(out _, out _);
-        vm.AlarmTimeInput = "10:00"; vm.AddOrSaveAlarmCommand.Execute(null);
-        vm.AlarmTimeInput = "11:00"; vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AlarmTimeInput = "10:00"; vm.AddAlarmCommand.Execute(null);
+        vm.AlarmTimeInput = "11:00"; vm.AddAlarmCommand.Execute(null);
 
         vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);        // 10:00 now pending
         Assert.True(vm.HasPendingDelete);
@@ -263,7 +263,7 @@ public class MainViewModelTests
     {
         var vm = New(SoundChoice.None, out _, out var sched, out _);
         vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Tea"; vm.AlarmSound = SoundChoice.Bell;
-        vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AddAlarmCommand.Execute(null);
         var originalId = vm.Alarms[0].Item.Id;
         var changed = 0; vm.AlarmsChanged += (_, _) => changed++;
 
@@ -284,7 +284,7 @@ public class MainViewModelTests
     public void ApplyAlarmEdit_announces_the_update()
     {
         var vm = New(out _, out _);
-        vm.AlarmTimeInput = "10:00"; vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AlarmTimeInput = "10:00"; vm.AddAlarmCommand.Execute(null);
         var id = vm.Alarms[0].Item.Id;
         string? announced = null; vm.Announcement += (_, m) => announced = m;
 
@@ -298,7 +298,7 @@ public class MainViewModelTests
     public void ApplyAlarmEdit_clears_a_whitespace_label_to_null()
     {
         var vm = New(out _, out _);
-        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Tea"; vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Tea"; vm.AddAlarmCommand.Execute(null);
         var id = vm.Alarms[0].Item.Id;
 
         vm.ApplyAlarmEdit(id, 11, 0, "   ", SoundChoice.None);
@@ -310,7 +310,7 @@ public class MainViewModelTests
     public void DeleteAlarm_disarms_immediately_but_does_not_commit_yet()
     {
         var vm = New(out _, out var sched);
-        vm.AlarmTimeInput = "10:00"; vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AlarmTimeInput = "10:00"; vm.AddAlarmCommand.Execute(null);
         var committed = 0; vm.AlarmsChanged += (_, _) => committed++;
 
         vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
@@ -326,7 +326,7 @@ public class MainViewModelTests
     public void UndoDelete_re_arms_the_alarm_with_its_original_id()
     {
         var vm = New(out _, out var sched);
-        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Tea"; vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Tea"; vm.AddAlarmCommand.Execute(null);
         var id = vm.Alarms[0].Item.Id;
 
         vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
@@ -343,7 +343,7 @@ public class MainViewModelTests
     public void CommitPendingDelete_persists_the_removal()
     {
         var vm = New(out _, out _);
-        vm.AlarmTimeInput = "10:00"; vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AlarmTimeInput = "10:00"; vm.AddAlarmCommand.Execute(null);
         vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
         var committed = 0; vm.AlarmsChanged += (_, _) => committed++;
 
@@ -357,8 +357,8 @@ public class MainViewModelTests
     public void Deleting_a_second_alarm_commits_the_first_pending_delete()
     {
         var vm = New(out _, out _);
-        vm.AlarmTimeInput = "10:00"; vm.AddOrSaveAlarmCommand.Execute(null);
-        vm.AlarmTimeInput = "11:00"; vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AlarmTimeInput = "10:00"; vm.AddAlarmCommand.Execute(null);
+        vm.AlarmTimeInput = "11:00"; vm.AddAlarmCommand.Execute(null);
 
         vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);   // pending: 10:00
         var committed = 0; vm.AlarmsChanged += (_, _) => committed++;
@@ -372,7 +372,7 @@ public class MainViewModelTests
     public void RefreshAll_drops_a_row_for_an_alarm_that_fired()
     {
         var vm = New(out var clock, out var sched);
-        vm.AlarmTimeInput = "09:30"; vm.AddOrSaveAlarmCommand.Execute(null);   // clock is 09:00
+        vm.AlarmTimeInput = "09:30"; vm.AddAlarmCommand.Execute(null);   // clock is 09:00
         Assert.Single(vm.Alarms);
 
         clock.Advance(TimeSpan.FromMinutes(31));   // past 09:30, within grace
@@ -387,7 +387,7 @@ public class MainViewModelTests
     public void RefreshAll_does_not_rebuild_when_the_alarm_set_is_unchanged()
     {
         var vm = New(out _, out _);
-        vm.AlarmTimeInput = "16:00"; vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AlarmTimeInput = "16:00"; vm.AddAlarmCommand.Execute(null);
         var rowInstance = vm.Alarms[0];
 
         vm.RefreshAll();   // nothing changed
@@ -514,7 +514,7 @@ public class MainViewModelTests
     {
         var vm = New(out _, out var sched);
         vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Stand-up";
-        vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AddAlarmCommand.Execute(null);
         var id = vm.Alarms[0].Item.Id;
 
         vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
@@ -570,7 +570,7 @@ public class MainViewModelTests
     {
         var vm = New(out _, out _);
         vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "tea";
-        vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AddAlarmCommand.Execute(null);
         Assert.Equal("Tea", vm.Alarms[0].DisplayLabel);
     }
 
@@ -579,7 +579,7 @@ public class MainViewModelTests
     {
         var vm = New(out _, out _);
         vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "a";
-        vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AddAlarmCommand.Execute(null);
         Assert.Equal("A", vm.Alarms[0].DisplayLabel);
     }
 
@@ -588,7 +588,7 @@ public class MainViewModelTests
     {
         var vm = New(out _, out _);
         vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "morning tea";
-        vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AddAlarmCommand.Execute(null);
         Assert.Equal("Morning tea", vm.Alarms[0].DisplayLabel);
     }
 
@@ -597,7 +597,7 @@ public class MainViewModelTests
     {
         var vm = New(out _, out _);
         vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "";
-        vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AddAlarmCommand.Execute(null);
         Assert.Null(vm.Alarms[0].Item.Label);
     }
 }

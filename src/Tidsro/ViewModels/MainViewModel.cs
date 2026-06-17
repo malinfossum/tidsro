@@ -132,7 +132,7 @@ public partial class MainViewModel : ObservableObject
 
     // Add-only now: editing happens in the modal Edit-alarm dialog (see BeginEditAlarm / ApplyAlarmEdit).
     [RelayCommand]
-    private void AddOrSaveAlarm()
+    private void AddAlarm()
     {
         CommitPendingDelete();
         if (!ClockTimeRules.TryParse(AlarmTimeInput, out var hour, out var minute, out var error))

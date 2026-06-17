@@ -138,11 +138,11 @@
               <TextBox Grid.Column="0" Width="64" x:Name="AlarmTimeBox"
                        Text="{Binding AlarmTimeInput, UpdateSourceTrigger=PropertyChanged}"
                        AutomationProperties.Name="Time" ToolTip="24-hour time, e.g. 14:30" Tag="14:30">
-                <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding AddOrSaveAlarmCommand}"/></TextBox.InputBindings>
+                <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding AddAlarmCommand}"/></TextBox.InputBindings>
               </TextBox>
               <TextBox Grid.Column="1" Text="{Binding AlarmLabel, UpdateSourceTrigger=PropertyChanged}"
                        AutomationProperties.Name="Alarm label" Margin="10,0,0,0" Tag="Alarm label">
-                <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding AddOrSaveAlarmCommand}"/></TextBox.InputBindings>
+                <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding AddAlarmCommand}"/></TextBox.InputBindings>
               </TextBox>
             </Grid>
             <Grid Margin="0,12,0,0">
@@ -155,7 +155,7 @@
                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" AutomationProperties.Name="Preview sound"
                       ToolTip="Preview sound" Style="{StaticResource QuietAction}" Margin="8,0,0,0"/>
             </Grid>
-            <Button Content="Add" Command="{Binding AddOrSaveAlarmCommand}" Style="{StaticResource GoldAction}"
+            <Button Content="Add" Command="{Binding AddAlarmCommand}" Style="{StaticResource GoldAction}"
                     HorizontalAlignment="Right" Margin="0,14,0,0" AutomationProperties.Name="Add alarm"/>
             <TextBlock Text="{Binding AlarmError}" Foreground="{StaticResource Danger}" FontSize="{StaticResource TextXs}"
                        Margin="0,8,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"
