@@ -17,13 +17,14 @@
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto"/>
           <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <StackPanel x:Name="QuickPanel" Grid.Row="0">
 
         <TextBlock Text="Quick timers" FontSize="{StaticResource TextXl}" Margin="0,0,0,14"/>
         <StackPanel Orientation="Horizontal">
-          <Button Content="15" Width="64" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}">
-            <Button.CommandParameter><sys:Int32>15</sys:Int32></Button.CommandParameter>
+          <Button Content="5" Width="64" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}">
+            <Button.CommandParameter><sys:Int32>5</sys:Int32></Button.CommandParameter>
           </Button>
           <Button Content="30" Width="64" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}" Margin="10,0,0,0">
             <Button.CommandParameter><sys:Int32>30</sys:Int32></Button.CommandParameter>
@@ -121,7 +122,8 @@
         </ItemsControl>
 
         </StackPanel>
-        <StackPanel x:Name="DayPanel" Grid.Row="1" Margin="0,24,0,0">
+        <Border x:Name="Divider" Grid.Row="1" Background="{StaticResource Border}" Height="1" Margin="0,12,0,12"/>
+        <StackPanel x:Name="DayPanel" Grid.Row="2" Margin="0,24,0,0">
 
         <TextBlock Text="Your day" FontSize="{StaticResource TextXl}" Margin="0,0,0,14"/>
 

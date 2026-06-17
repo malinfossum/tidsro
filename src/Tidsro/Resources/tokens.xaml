@@ -193,9 +193,13 @@
             </Grid>
           </Border>
           <ControlTemplate.Triggers>
-            <Trigger Property="Text" Value="">
+            <MultiTrigger>
+              <MultiTrigger.Conditions>
+                <Condition Property="Text" Value=""/>
+                <Condition Property="IsKeyboardFocused" Value="False"/>
+              </MultiTrigger.Conditions>
               <Setter TargetName="hint" Property="Visibility" Value="Visible"/>
-            </Trigger>
+            </MultiTrigger>
             <Trigger Property="IsKeyboardFocused" Value="True">
               <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource AccentStrong}"/>
             </Trigger>

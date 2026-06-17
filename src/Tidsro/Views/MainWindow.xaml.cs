@@ -59,7 +59,7 @@ public partial class MainWindow : Window
 
     private const double WideBreakpoint = 760;
 
-    // Narrow: the two sections stack in one column. Wide: side by side, equal width.
+    // Narrow: sections stack with a horizontal divider. Wide: side by side with a vertical divider.
     private void ApplyLayout()
     {
         var wide = ActualWidth >= WideBreakpoint;
@@ -68,20 +68,32 @@ public partial class MainWindow : Window
         if (wide)
         {
             Sections.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Sections.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             Sections.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             Grid.SetRow(QuickPanel, 0); Grid.SetColumn(QuickPanel, 0);
-            Grid.SetRow(DayPanel, 0); Grid.SetColumn(DayPanel, 1);
-            QuickPanel.Margin = new Thickness(0, 0, 12, 0);
-            DayPanel.Margin = new Thickness(12, 0, 0, 0);
+            Grid.SetRow(Divider, 0); Grid.SetColumn(Divider, 1);
+            Grid.SetRow(DayPanel, 0); Grid.SetColumn(DayPanel, 2);
+            QuickPanel.Margin = new Thickness(0, 0, 16, 0);
+            DayPanel.Margin = new Thickness(16, 0, 0, 0);
+            Divider.Width = 1; Divider.Height = double.NaN;
+            Divider.HorizontalAlignment = HorizontalAlignment.Center;
+            Divider.VerticalAlignment = VerticalAlignment.Stretch;
+            Divider.Margin = new Thickness(0);
         }
         else
         {
             Sections.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             Sections.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-            Grid.SetRow(QuickPanel, 0); Grid.SetColumn(QuickPanel, 0);
-            Grid.SetRow(DayPanel, 1); Grid.SetColumn(DayPanel, 0);
+            Sections.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Grid.SetColumn(QuickPanel, 0); Grid.SetRow(QuickPanel, 0);
+            Grid.SetColumn(Divider, 0); Grid.SetRow(Divider, 1);
+            Grid.SetColumn(DayPanel, 0); Grid.SetRow(DayPanel, 2);
             QuickPanel.Margin = new Thickness(0);
-            DayPanel.Margin = new Thickness(0, 24, 0, 0);
+            DayPanel.Margin = new Thickness(0);
+            Divider.Width = double.NaN; Divider.Height = 1;
+            Divider.HorizontalAlignment = HorizontalAlignment.Stretch;
+            Divider.VerticalAlignment = VerticalAlignment.Center;
+            Divider.Margin = new Thickness(0, 12, 0, 12);
         }
     }
 
