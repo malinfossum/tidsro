@@ -8,7 +8,10 @@
         FontFamily="{StaticResource FontSans}">
   <Border Background="{StaticResource CardBg}" CornerRadius="{StaticResource RadiusMd}"
           BorderBrush="{StaticResource Border}" BorderThickness="1"
-          Padding="{StaticResource CardPadding}" Width="320" Effect="{StaticResource CardShadow}">
+          Padding="{StaticResource CardPadding}" Width="320">
+    <Border.Effect>
+      <DropShadowEffect BlurRadius="30" ShadowDepth="10" Direction="270" Opacity="0.30" Color="#000000"/>
+    </Border.Effect>
     <StackPanel>
       <DockPanel>
         <TextBlock Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}" VerticalAlignment="Center">
@@ -23,7 +26,7 @@
                 Padding="6" Cursor="Hand" HorizontalAlignment="Right"/>
       </DockPanel>
       <TextBlock Text="{Binding Title}" Foreground="{StaticResource Text}"
-                 FontSize="{StaticResource TextLg}" TextWrapping="Wrap" Margin="0,4,0,12"/>
+                 FontSize="{StaticResource TextLg}" TextWrapping="Wrap" Margin="0,6,0,16"/>
       <!-- Actions: hidden for mouse-at-rest, shown on hover OR when the card has keyboard focus -->
       <StackPanel x:Name="Actions" Orientation="Horizontal" Opacity="0">
         <Button Content="+5 min" Command="{Binding Plus5Command}"
