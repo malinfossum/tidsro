@@ -65,6 +65,13 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnSelectedSoundChanged(SoundChoice value) => PreviewSoundCommand.NotifyCanExecuteChanged();
 
+    // The "Your day" sound picker has its own preview, gated on AlarmSound (independent of the timer sound above).
+    [RelayCommand(CanExecute = nameof(CanPreviewAlarmSound))]
+    private void PreviewAlarmSound() => _sound.Play(AlarmSound);
+    private bool CanPreviewAlarmSound() => AlarmSound != SoundChoice.None;   // nothing to hear when silent
+
+    partial void OnAlarmSoundChanged(SoundChoice value) => PreviewAlarmSoundCommand.NotifyCanExecuteChanged();
+
     [RelayCommand] private void StartPreset(int minutes) =>
         Add(TimeSpan.FromMinutes(minutes));
 

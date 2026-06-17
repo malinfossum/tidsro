@@ -123,6 +123,27 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public void PreviewAlarmSound_plays_the_alarm_sound_independently_of_the_timer_sound()
+    {
+        var vm = New(SoundChoice.None, out _, out _, out var sound);
+        vm.SelectedSound = SoundChoice.None;   // the Quick-timers sound is silent...
+        vm.AlarmSound = SoundChoice.Bell;      // ...but the alarm has a sound
+        Assert.True(vm.PreviewAlarmSoundCommand.CanExecute(null));   // gated by AlarmSound, not SelectedSound
+        vm.PreviewAlarmSoundCommand.Execute(null);
+        Assert.Equal(SoundChoice.Bell, sound.LastPlayed);           // plays the alarm sound, not the timer sound
+    }
+
+    [Fact]
+    public void Preview_alarm_is_disabled_when_the_alarm_sound_is_silent()
+    {
+        var vm = New(SoundChoice.Bell, out _, out _, out _);   // even with the Quick-timers sound set...
+        vm.AlarmSound = SoundChoice.None;                      // ...a silent alarm can't be previewed
+        Assert.False(vm.PreviewAlarmSoundCommand.CanExecute(null));
+        vm.AlarmSound = SoundChoice.Marimba;
+        Assert.True(vm.PreviewAlarmSoundCommand.CanExecute(null));
+    }
+
+    [Fact]
     public void AddAlarm_with_a_future_time_inserts_a_row_and_clears_the_editor()
     {
         var vm = New(out var clock, out _);                 // FakeClock starts 2026-01-01 09:00

@@ -134,7 +134,7 @@
               <DataTemplate><TextBlock Text="{Binding Converter={StaticResource SoundLabel}}"/></DataTemplate>
             </ComboBox.ItemTemplate>
           </ComboBox>
-          <Button Grid.Column="2" Content="&#xE768;" Command="{Binding PreviewSoundCommand}"
+          <Button Grid.Column="2" Content="&#xE768;" Command="{Binding PreviewAlarmSoundCommand}"
                   FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                   AutomationProperties.Name="Preview sound" ToolTip="Preview sound"
                   Style="{StaticResource QuietAction}" Margin="8,0,0,0"/>
