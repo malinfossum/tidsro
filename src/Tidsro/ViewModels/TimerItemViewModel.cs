@@ -32,7 +32,8 @@ public partial class TimerItemViewModel : ObservableObject
     public void Refresh()
     {
         var r = _scheduler.Remaining(Item);
-        RemainingText = r.Hours > 0 ? r.ToString(@"h\:mm\:ss") : r.ToString(@"mm\:ss");
+        var ts = TimeSpan.FromSeconds(Math.Ceiling(r.TotalSeconds));
+        RemainingText = ts.Hours > 0 ? ts.ToString(@"h\:mm\:ss") : ts.ToString(@"mm\:ss");
         IsPaused = Item.State == TimerState.Paused;
         PauseResumeGlyph = IsPaused ? PlayGlyph : PauseGlyph;
         PauseResumeLabel = IsPaused ? "Resume" : "Pause";

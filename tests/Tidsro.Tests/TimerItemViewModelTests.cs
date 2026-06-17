@@ -78,4 +78,19 @@ public class TimerItemViewModelTests
         Assert.False(vm.IsPaused);                // still running, from full
         Assert.Equal("25:00", vm.RemainingText);
     }
+
+    [Fact]
+    public void RemainingText_rounds_up_to_ceiling_second()
+    {
+        // With 90.4 s remaining the display should show 01:31 (ceiling), not 01:30 (floor/truncate).
+        var (s, c) = New();
+        var item = s.StartCountdown(TimeSpan.FromSeconds(120), "test", SoundChoice.None);
+        var vm = new TimerItemViewModel(item, s);
+
+        // Advance 29.6 s so that 90.4 s remain.
+        c.Advance(TimeSpan.FromMilliseconds(29_600));
+        vm.Refresh();
+
+        Assert.Equal("01:31", vm.RemainingText);
+    }
 }

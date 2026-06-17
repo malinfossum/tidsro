@@ -63,7 +63,7 @@ public partial class App : Application
         _scheduler.Fired += OnTimerFired;
         _scheduler.Expired += (_, item) => { _mainVm.AddMissed(item); SaveData(); };
 
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _timer.Tick += (_, _) => { _scheduler.Tick(); _mainVm.RefreshAll(); };
         _timer.Start();
 

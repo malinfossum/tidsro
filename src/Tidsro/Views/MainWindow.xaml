@@ -10,6 +10,7 @@
     <Grid.RowDefinitions>
       <RowDefinition Height="*"/>
       <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
     </Grid.RowDefinitions>
 
     <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
@@ -178,17 +179,6 @@
           </DockPanel>
         </Border>
 
-        <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
-                CornerRadius="{StaticResource RadiusMd}" Padding="16" Margin="0,12,0,0"
-                Visibility="{Binding PendingDeleteLabel, Converter={StaticResource NullToCollapsed}}">
-          <DockPanel>
-            <Button DockPanel.Dock="Right" Content="Undo" Command="{Binding UndoDeleteCommand}"
-                    AutomationProperties.Name="Undo delete" Style="{StaticResource QuietAction}"/>
-            <TextBlock Text="{Binding PendingDeleteLabel}" Foreground="{StaticResource TextMuted}"
-                       VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite"/>
-          </DockPanel>
-        </Border>
-
         <TextBlock Text="Nothing scheduled yet — add an alarm" Foreground="{StaticResource TextFaint}"
                    FontSize="{StaticResource TextSm}" Margin="0,14,0,0"
                    Visibility="{Binding IsDayEmpty, Converter={StaticResource BoolToVisible}}"/>
@@ -252,6 +242,19 @@
       </Grid>
     </ScrollViewer>
 
-    <Button Grid.Row="1" Content="Settings" HorizontalAlignment="Left" Click="OnSettings" Style="{StaticResource QuietAction}" Margin="0,16,0,0"/>
+    <Border Grid.Row="1" Margin="0,12,0,0"
+            Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+            CornerRadius="{StaticResource RadiusMd}" Padding="16"
+            Visibility="{Binding PendingDeleteLabel, Converter={StaticResource NullToCollapsed}}"
+            AutomationProperties.LiveSetting="Polite">
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Content="Undo" Command="{Binding UndoDeleteCommand}"
+                AutomationProperties.Name="Undo delete" Style="{StaticResource QuietAction}"/>
+        <TextBlock Text="{Binding PendingDeleteLabel}" Foreground="{StaticResource TextMuted}"
+                   VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite"/>
+      </DockPanel>
+    </Border>
+
+    <Button Grid.Row="2" Content="Settings" HorizontalAlignment="Left" Click="OnSettings" Style="{StaticResource QuietAction}" Margin="0,16,0,0"/>
   </Grid>
 </Window>
