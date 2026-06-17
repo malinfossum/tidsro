@@ -11,9 +11,11 @@
           Padding="{StaticResource CardPadding}" Width="320" Effect="{StaticResource CardShadow}">
     <StackPanel>
       <DockPanel>
-        <TextBlock Text="✓ complete" Foreground="{StaticResource TextFaint}"
-                   FontSize="{StaticResource TextXs}" VerticalAlignment="Center"/>
-        <Button x:Name="DismissX" DockPanel.Dock="Right" Content="✕"
+        <TextBlock Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}" VerticalAlignment="Center">
+          <Run FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Text="&#xE73E;"/><Run Text=" complete"/>
+        </TextBlock>
+        <Button x:Name="DismissX" DockPanel.Dock="Right" Content="&#xE711;"
+                FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                 Command="{Binding DismissCommand}"
                 AutomationProperties.Name="Dismiss" ToolTip="Dismiss"
                 Background="Transparent" BorderThickness="0"

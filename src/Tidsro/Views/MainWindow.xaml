@@ -69,9 +69,11 @@
             <Border Background="{StaticResource CardBg}" CornerRadius="{StaticResource RadiusSm}"
                     Padding="12" Margin="0,0,0,8">
               <DockPanel>
-                <Button DockPanel.Dock="Right" Content="✕" Command="{Binding CancelCommand}"
+                <Button DockPanel.Dock="Right" Content="&#xE711;" Command="{Binding CancelCommand}"
+                        FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                         AutomationProperties.Name="Cancel timer" ToolTip="Cancel timer" Style="{StaticResource QuietAction}"/>
-                <Button DockPanel.Dock="Right" Content="↺" Command="{Binding ResetCommand}"
+                <Button DockPanel.Dock="Right" Content="&#xE72C;" Command="{Binding ResetCommand}"
+                        FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                         AutomationProperties.Name="Reset timer" ToolTip="Reset to full time" Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
                 <Button DockPanel.Dock="Right" Content="{Binding PauseResumeGlyph}" Command="{Binding PauseResumeCommand}"
                         FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
@@ -155,7 +157,8 @@
         <Border Background="{StaticResource CardBg}" CornerRadius="{StaticResource RadiusSm}" Padding="12" Margin="0,12,0,0"
                 Visibility="{Binding MissedNote, Converter={StaticResource NullToCollapsed}}">
           <DockPanel>
-            <Button DockPanel.Dock="Right" Content="✕" Command="{Binding DismissMissedNoteCommand}"
+            <Button DockPanel.Dock="Right" Content="&#xE711;" Command="{Binding DismissMissedNoteCommand}"
+                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                     AutomationProperties.Name="Dismiss missed note" Style="{StaticResource QuietAction}"/>
             <TextBlock Text="{Binding MissedNote}" Foreground="{StaticResource TextMuted}" TextWrapping="Wrap"
                        VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite"/>
@@ -185,12 +188,14 @@
               <Border Background="{StaticResource CardBg}" CornerRadius="{StaticResource RadiusSm}"
                       Padding="12" Margin="0,0,0,8" AutomationProperties.Name="{Binding AccessibleName}">
                 <DockPanel>
-                  <Button DockPanel.Dock="Right" Content="✕"
+                  <Button DockPanel.Dock="Right" Content="&#xE711;"
+                          FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                           Command="{Binding DataContext.DeleteAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                           CommandParameter="{Binding}"
                           AutomationProperties.Name="{Binding DeleteLabel}" ToolTip="{Binding DeleteLabel}"
                           Style="{StaticResource QuietAction}"/>
-                  <Button DockPanel.Dock="Right" Content="✎"
+                  <Button DockPanel.Dock="Right" Content="&#xE70F;"
+                          FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                           Command="{Binding DataContext.BeginEditAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                           CommandParameter="{Binding}"
                           AutomationProperties.Name="{Binding EditLabel}" ToolTip="{Binding EditLabel}"
