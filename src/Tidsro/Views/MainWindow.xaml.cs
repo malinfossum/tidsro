@@ -73,12 +73,12 @@ public partial class MainWindow : Window
             Grid.SetRow(QuickPanel, 0); Grid.SetColumn(QuickPanel, 0);
             Grid.SetRow(Divider, 0); Grid.SetColumn(Divider, 1);
             Grid.SetRow(DayPanel, 0); Grid.SetColumn(DayPanel, 2);
-            QuickPanel.Margin = new Thickness(0, 0, 16, 0);
-            DayPanel.Margin = new Thickness(16, 0, 0, 0);
+            QuickPanel.Margin = new Thickness(0, 0, 20, 0);
+            DayPanel.Margin = new Thickness(20, 0, 0, 0);
             Divider.Width = 1; Divider.Height = double.NaN;
             Divider.HorizontalAlignment = HorizontalAlignment.Center;
             Divider.VerticalAlignment = VerticalAlignment.Stretch;
-            Divider.Margin = new Thickness(0);
+            Divider.Margin = new Thickness(0, 8, 0, 8);
         }
         else
         {
@@ -93,7 +93,7 @@ public partial class MainWindow : Window
             Divider.Width = double.NaN; Divider.Height = 1;
             Divider.HorizontalAlignment = HorizontalAlignment.Stretch;
             Divider.VerticalAlignment = VerticalAlignment.Center;
-            Divider.Margin = new Thickness(0, 12, 0, 12);
+            Divider.Margin = new Thickness(0, 16, 0, 16);
         }
     }
 

@@ -22,22 +22,22 @@
         <StackPanel x:Name="QuickPanel" Grid.Row="0">
 
         <TextBlock Text="Quick timers" FontSize="{StaticResource TextXl}" Margin="0,0,0,14"/>
-        <StackPanel Orientation="Horizontal">
-          <Button Content="5" Width="64" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}">
-            <Button.CommandParameter><sys:Int32>5</sys:Int32></Button.CommandParameter>
-          </Button>
-          <Button Content="30" Width="64" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}" Margin="10,0,0,0">
-            <Button.CommandParameter><sys:Int32>30</sys:Int32></Button.CommandParameter>
-          </Button>
-          <Button Content="60" Width="64" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}" Margin="10,0,0,0">
-            <Button.CommandParameter><sys:Int32>60</sys:Int32></Button.CommandParameter>
-          </Button>
-        </StackPanel>
 
         <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
-                CornerRadius="{StaticResource RadiusMd}" Padding="16" Margin="0,14,0,0">
+                CornerRadius="{StaticResource RadiusMd}" Padding="16" Margin="0">
           <StackPanel>
-            <Grid>
+            <StackPanel Orientation="Horizontal">
+              <Button Content="5" Width="64" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}">
+                <Button.CommandParameter><sys:Int32>5</sys:Int32></Button.CommandParameter>
+              </Button>
+              <Button Content="30" Width="64" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}" Margin="10,0,0,0">
+                <Button.CommandParameter><sys:Int32>30</sys:Int32></Button.CommandParameter>
+              </Button>
+              <Button Content="60" Width="64" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}" Margin="10,0,0,0">
+                <Button.CommandParameter><sys:Int32>60</sys:Int32></Button.CommandParameter>
+              </Button>
+            </StackPanel>
+            <Grid Margin="0,12,0,0">
               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
               <TextBox Grid.Column="0" Text="{Binding CustomInput, UpdateSourceTrigger=PropertyChanged}"
                        AutomationProperties.Name="Custom duration" ToolTip="e.g. 25, 5:00, 1:30:00" Tag="25 min">
