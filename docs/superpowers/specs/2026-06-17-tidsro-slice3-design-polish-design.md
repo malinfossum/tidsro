@@ -141,7 +141,7 @@ Use the existing duration tokens: `DurationFast` 120ms, `DurationBase` 180ms, `D
 
 Entrance animations (Loaded storyboards), hover, paused cross-fade, popup slide, and banner reveals are all straightforward in WPF. True *exit* animation on list removal is harder (the item is already gone) and may need a small attached behaviour — implement only if cheap; otherwise the item simply removes without an exit transition.
 
-**Reduced motion (a11y):** when the OS has animations disabled (`SystemParameters.ClientAreaAnimation == false`), all transitions are instant. This is a hard requirement, not optional.
+**Reduced motion (a11y):** *movement* transitions — the completion-popup slide-up — are disabled when the OS has animations off (`SystemParameters.ClientAreaAnimation == false`), gated in code-behind (the popup already uses this check for its fade). The remaining transitions are subtle opacity/colour fades (≤180 ms, no translation) and always play — consistent with reduced-motion practice, which targets movement/parallax, not fades. Card entrance is therefore **fade-only** (no slide). (This supersedes the earlier "zero the durations via `DynamicResource`" idea, which is unreliable for storyboards inside sealed WPF templates.)
 
 ---
 

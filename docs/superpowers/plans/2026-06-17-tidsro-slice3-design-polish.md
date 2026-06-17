@@ -526,7 +526,9 @@ git commit -m "style: settings spacing and gold Save button"
 
 ---
 
-## Task 7: Motion foundation + button hover/press
+## Task 7: Button hover/press motion
+
+> **Amendment (WPF motion mechanism — supersedes the `DynamicResource`/duration-override approach written into Tasks 7–8):** `DynamicResource` on a `Storyboard` animation's `Duration` inside a sealed `ControlTemplate`/`Style` is unreliable (template storyboards get frozen). Corrected approach: (1) **drop** the App-startup duration-override step entirely — there's no resource indirection to override; (2) all XAML storyboards use **literal durations** (`0:0:0.12`); (3) reduced motion is honoured by keeping the only *movement* animation — the popup slide — in **code-behind**, gated by the existing `SystemParameters.ClientAreaAnimation` check, and making **card entrance fade-only** (no translate), so every always-on XAML transition is a non-movement fade. The concrete corrected code is in the executed dispatches; the `DynamicResource`/`App.xaml.cs`-override steps below are void.
 
 Establish the reduced-motion override, then animate button hover/press. XAML storyboards use `{DynamicResource Duration…}` so the override makes them instant when the OS has animations off.
 
