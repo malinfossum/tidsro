@@ -10,6 +10,7 @@ public partial class PopupViewModel : ObservableObject
     private readonly Func<TimerItem, TimerItem> _onSnooze;
     private readonly Func<TimerItem, TimerItem> _onRestart;
     private readonly Action<TimerItem> _onDismiss;
+    private readonly bool _isWarning;
     private bool _handled;   // debounce: one action per card
 
     [ObservableProperty] private string _title;
@@ -23,9 +24,28 @@ public partial class PopupViewModel : ObservableObject
         _title = string.IsNullOrWhiteSpace(item.Label) ? "Timer complete" : item.Label!;
     }
 
+    // Heads-up (5-minute warning) variant: informational and close-only — no Snooze/Restart, and Dismiss
+    // never disarms the alarm (it stays armed and still fires). App supplies the title (label, or "Alarm").
+    public PopupViewModel(TimerItem item, string title)
+    {
+        _item = item;
+        _title = title;
+        _isWarning = true;
+        _onSnooze = i => i;
+        _onRestart = i => i;
+        _onDismiss = _ => { };   // close-only
+    }
+
     public TimerItem Item => _item;
-    /// <summary>Restart re-runs a duration; it has no meaning for a one-shot alarm, so the card hides it.</summary>
-    public bool ShowRestart => _item.TriggerType == TriggerType.Countdown;
+    public bool IsWarning => _isWarning;
+    /// <summary>Snooze (+5) is a completion action; the heads-up hides it.</summary>
+    public bool ShowSnooze => !_isWarning;
+    /// <summary>Restart re-runs a duration; meaningless for an alarm or a heads-up, so the card hides it.</summary>
+    public bool ShowRestart => !_isWarning && _item.TriggerType == TriggerType.Countdown;
+    /// <summary>The faint status line after the glyph (leading space matches the layout): " complete" / " in 5 minutes".</summary>
+    public string HeaderText => _isWarning ? " in 5 minutes" : " complete";
+    /// <summary>What the card announces to a screen reader on appear.</summary>
+    public string AnnouncementText => _isWarning ? $"{Title} in 5 minutes" : $"{Title} complete";
     public event EventHandler? CloseRequested;
 
     [RelayCommand] private void Plus5()   { if (Begin()) { _onSnooze(_item);  Close(); } }
