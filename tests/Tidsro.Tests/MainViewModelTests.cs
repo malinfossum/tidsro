@@ -841,4 +841,18 @@ public class MainViewModelTests
 
         Assert.True(Assert.Single(vm.Alarms).Item.WarnBefore);
     }
+
+    [Fact]
+    public void AddAlarm_with_warning_on_and_recurring_days_arms_a_recurring_alarm_that_warns_before()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "07:00";
+        vm.AlarmRepeat = RepeatOption.Weekdays;
+        vm.AlarmWarnBefore = true;
+        vm.AddAlarmCommand.Execute(null);
+
+        var row = Assert.Single(vm.Alarms);
+        Assert.Equal(TriggerType.Recurring, row.Item.TriggerType);
+        Assert.True(row.Item.WarnBefore);
+    }
 }

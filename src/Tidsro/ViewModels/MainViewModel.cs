@@ -214,7 +214,7 @@ public partial class MainViewModel : ObservableObject
         if (days == Weekdays.None)
         {
             var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
-            _scheduler.ArmClockAlarm(fireAt, clean, sound, id, warnBefore);
+            _scheduler.ArmClockAlarm(fireAt, clean, sound, id, warnBefore: warnBefore);
             Announce($"Alarm updated for {fireAt:HH\\:mm}");
         }
         else
