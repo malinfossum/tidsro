@@ -9,14 +9,14 @@ public class EditAlarmViewModelTests
     private static readonly SoundChoice[] Options =
         { SoundChoice.None, SoundChoice.SoftChime, SoundChoice.Marimba, SoundChoice.Bell };
 
-    private static EditAlarmViewModel New(string timeInput, out List<(Guid id, int h, int m, string? label, SoundChoice sound)> applied,
-        out FakeSoundService sound, Guid? id = null)
+    private static EditAlarmViewModel New(string timeInput, out List<(Guid id, int h, int m, Weekdays days, string? label, SoundChoice sound)> applied,
+        out FakeSoundService sound, Guid? id = null, Weekdays days = Weekdays.None)
     {
-        var captured = new List<(Guid, int, int, string?, SoundChoice)>();
+        var captured = new List<(Guid, int, int, Weekdays, string?, SoundChoice)>();
         applied = captured;
         sound = new FakeSoundService();
-        return new EditAlarmViewModel(id ?? Guid.NewGuid(), timeInput, "Tea", SoundChoice.Bell,
-            Options, (i, h, m, l, s) => captured.Add((i, h, m, l, s)), sound);
+        return new EditAlarmViewModel(id ?? Guid.NewGuid(), timeInput, "Tea", SoundChoice.Bell, days,
+            Options, (i, h, m, d, l, s) => captured.Add((i, h, m, d, l, s)), sound);
     }
 
     [Fact]
@@ -76,5 +76,26 @@ public class EditAlarmViewModelTests
         Assert.True(vm.PreviewSoundCommand.CanExecute(null));
         vm.PreviewSoundCommand.Execute(null);
         Assert.Equal(SoundChoice.Marimba, sound.LastPlayed);
+    }
+
+    [Fact]
+    public void Constructed_from_a_recurring_alarm_preselects_the_repeat_option()
+    {
+        var weekdays = Weekdays.Mon | Weekdays.Tue | Weekdays.Wed | Weekdays.Thu | Weekdays.Fri;
+        var vm = New("07:00", out var applied, out _, days: weekdays);
+        Assert.Equal(RepeatOption.Weekdays, vm.Repeat);
+        Assert.False(vm.ShowCustomDays);
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal(weekdays, Assert.Single(applied).days);
+    }
+
+    [Fact]
+    public void Save_passes_none_for_a_one_shot_edit()
+    {
+        var vm = New("11:15", out var applied, out _);   // days defaults to None -> Once
+        vm.SaveCommand.Execute(null);
+        Assert.Equal(Weekdays.None, Assert.Single(applied).days);
     }
 }

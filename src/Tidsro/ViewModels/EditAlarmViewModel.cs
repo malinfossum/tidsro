@@ -13,30 +13,46 @@ namespace Tidsro.ViewModels;
 public partial class EditAlarmViewModel : ObservableObject
 {
     private readonly Guid _id;
-    private readonly Action<Guid, int, int, string?, SoundChoice> _apply;
+    private readonly Action<Guid, int, int, Weekdays, string?, SoundChoice> _apply;
     private readonly ISoundService _sound;
 
     public SoundChoice[] SoundOptions { get; }
 
+    public RepeatOption[] RepeatOptions { get; } =
+        { RepeatOption.Once, RepeatOption.Daily, RepeatOption.Weekdays, RepeatOption.Weekends, RepeatOption.Custom };
+    public IReadOnlyList<DayToggleViewModel> DayToggles { get; }
+
     [ObservableProperty] private string _timeInput;
     [ObservableProperty] private string _label;
     [ObservableProperty] private SoundChoice _selectedSound;
+    [ObservableProperty] private RepeatOption _repeat;
     [ObservableProperty] private string? _error;
+
+    public bool ShowCustomDays => Repeat == RepeatOption.Custom;
+    partial void OnRepeatChanged(RepeatOption value) => OnPropertyChanged(nameof(ShowCustomDays));
 
     /// <summary>Raised when the dialog should close. true = saved, false = cancelled.</summary>
     public event EventHandler<bool>? CloseRequested;
 
-    public EditAlarmViewModel(Guid id, string timeInput, string label, SoundChoice sound,
-        SoundChoice[] soundOptions, Action<Guid, int, int, string?, SoundChoice> apply, ISoundService soundSvc)
+    public EditAlarmViewModel(Guid id, string timeInput, string label, SoundChoice sound, Weekdays days,
+        SoundChoice[] soundOptions, Action<Guid, int, int, Weekdays, string?, SoundChoice> apply, ISoundService soundSvc)
     {
         _id = id;
         _timeInput = timeInput;
         _label = label;
         _selectedSound = sound;
+        _repeat = RecurrenceRules.OptionFor(days);
+        DayToggles = DayToggleViewModel.Week();
+        foreach (var t in DayToggles) t.IsSelected = (days & t.Flag) != 0;
         SoundOptions = soundOptions;
         _apply = apply;
         _sound = soundSvc;
     }
+
+    // Custom uses the picked toggles; every other option is a fixed preset (Once -> None -> one-shot).
+    private Weekdays ResolveDays() => Repeat == RepeatOption.Custom
+        ? DayToggles.Where(t => t.IsSelected).Aggregate(Weekdays.None, (acc, t) => acc | t.Flag)
+        : RecurrenceRules.DaysFor(Repeat, Weekdays.None);
 
     // Save validates the time (same rules as the add path); a bad time shows the error and keeps the dialog open.
     [RelayCommand]
@@ -44,7 +60,7 @@ public partial class EditAlarmViewModel : ObservableObject
     {
         if (!ClockTimeRules.TryParse(TimeInput, out var h, out var m, out var err)) { Error = err; return; }
         Error = null;
-        _apply(_id, h, m, Label, SelectedSound);
+        _apply(_id, h, m, ResolveDays(), Label, SelectedSound);
         CloseRequested?.Invoke(this, true);
     }
 

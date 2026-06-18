@@ -267,7 +267,7 @@ public class MainViewModelTests
         var originalId = vm.Alarms[0].Item.Id;
         var changed = 0; vm.AlarmsChanged += (_, _) => changed++;
 
-        vm.ApplyAlarmEdit(originalId, 11, 15, "coffee", SoundChoice.Marimba);
+        vm.ApplyAlarmEdit(originalId, 11, 15, Weekdays.None, "coffee", SoundChoice.Marimba);
 
         var row = Assert.Single(vm.Alarms);                // still one alarm, not a duplicate
         Assert.Single(sched.Alarms);                       // scheduler holds exactly one armed alarm
@@ -288,7 +288,7 @@ public class MainViewModelTests
         var id = vm.Alarms[0].Item.Id;
         string? announced = null; vm.Announcement += (_, m) => announced = m;
 
-        vm.ApplyAlarmEdit(id, 12, 45, null, SoundChoice.None);
+        vm.ApplyAlarmEdit(id, 12, 45, Weekdays.None, null, SoundChoice.None);
 
         Assert.NotNull(announced);
         Assert.Contains("12:45", announced);
@@ -301,7 +301,7 @@ public class MainViewModelTests
         vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Tea"; vm.AddAlarmCommand.Execute(null);
         var id = vm.Alarms[0].Item.Id;
 
-        vm.ApplyAlarmEdit(id, 11, 0, "   ", SoundChoice.None);
+        vm.ApplyAlarmEdit(id, 11, 0, Weekdays.None, "   ", SoundChoice.None);
 
         Assert.Null(vm.Alarms[0].Item.Label);
     }
@@ -687,5 +687,21 @@ public class MainViewModelTests
 
         Assert.Equal(RepeatOption.Once, vm.AlarmRepeat);
         Assert.All(vm.AlarmDayToggles, t => Assert.False(t.IsSelected));
+    }
+
+    [Fact]
+    public void ApplyAlarmEdit_can_turn_a_one_shot_into_a_recurring_alarm()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AddAlarmCommand.Execute(null);
+        var id = vm.Alarms[0].Item.Id;
+        var weekdays = Weekdays.Mon | Weekdays.Tue | Weekdays.Wed | Weekdays.Thu | Weekdays.Fri;
+
+        vm.ApplyAlarmEdit(id, 7, 0, weekdays, "Stand-up", SoundChoice.None);
+
+        var row = Assert.Single(vm.Alarms);
+        Assert.Equal(id, row.Item.Id);                       // same identity
+        Assert.Equal(TriggerType.Recurring, row.Item.TriggerType);
+        Assert.Equal("Weekdays", row.CadenceText);
     }
 }

@@ -124,7 +124,8 @@ public partial class App : Application
     {
         Func<AlarmItemViewModel, EditAlarmWindow> editFactory = row => new EditAlarmWindow(
             new EditAlarmViewModel(row.Item.Id, row.Item.EndsAt?.ToString("HH\\:mm") ?? "",
-                row.Item.Label ?? "", row.Item.Sound, _mainVm.SoundOptions, _mainVm.ApplyAlarmEdit, _sound));
+                row.Item.Label ?? "", row.Item.Sound, row.Item.RecurringDays ?? Weekdays.None,
+                _mainVm.SoundOptions, _mainVm.ApplyAlarmEdit, _sound));
         _main ??= new MainWindow(_mainVm, () => new SettingsWindow(
                 new SettingsViewModel(_settings, new StartupService(StartupService.CurrentExePath),
                     SaveData, _mainVm.SetDefaultSound)),
