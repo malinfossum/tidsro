@@ -257,14 +257,14 @@ public partial class MainViewModel : ObservableObject
         }
         else if (item.RecurringDays is { } days && item.EndsAt is { } next)
         {
-            _scheduler.ArmRecurringAlarm(next.Hour, next.Minute, days, item.Label, item.Sound, item.Id, next);
+            _scheduler.ArmRecurringAlarm(next.Hour, next.Minute, days, item.Label, item.Sound, item.Id, next, item.WarnBefore);
             RebuildAgenda();
             Announce("Alarm restored");
             // No persist needed: the record was never removed from disk.
         }
         else if (item.EndsAt is { } fireAt)
         {
-            _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id);   // re-arm; next tick re-checks grace if past
+            _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id, item.WarnBefore);   // re-arm; next tick re-checks grace if past
             RebuildAgenda();
             Announce("Alarm restored");
             // No persist needed: the record was never removed from disk.

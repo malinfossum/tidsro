@@ -828,4 +828,17 @@ public class MainViewModelTests
         vm.AddAlarmCommand.Execute(null);
         Assert.False(vm.AlarmWarnBefore);   // editor cleared, like the rest
     }
+
+    [Fact]
+    public void UndoDelete_restores_an_alarm_with_its_warning_setting_intact()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmWarnBefore = true;
+        vm.AddAlarmCommand.Execute(null);
+
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
+        vm.UndoDeleteCommand.Execute(null);
+
+        Assert.True(Assert.Single(vm.Alarms).Item.WarnBefore);
+    }
 }
