@@ -7,6 +7,9 @@ public sealed class TimerItem
     public TriggerType TriggerType { get; init; } = TriggerType.Countdown;
     public SoundChoice Sound { get; set; } = SoundChoice.None;
 
+    // Recurring runtime (Slice 3): the weekday set this alarm repeats on. Null for countdowns and one-shots.
+    public Weekdays? RecurringDays { get; set; }
+
     // Countdown runtime (Slice 1)
     public TimeSpan OriginalDuration { get; set; }
     public TimeSpan? Duration { get; set; }

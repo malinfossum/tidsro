@@ -225,4 +225,109 @@ public class SchedulerServiceTests
         Assert.Single(s.Alarms);                           // alarm untouched
         Assert.Equal(TimerState.Running, alarm.State);
     }
+
+    [Fact]
+    public void ArmRecurringAlarm_adds_a_recurring_alarm_with_its_next_occurrence()
+    {
+        var (s, c) = New();   // Thu 2026-01-01 09:00
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, "Stand-up", SoundChoice.Bell);
+        Assert.Same(alarm, Assert.Single(s.Alarms));
+        Assert.Equal(TriggerType.Recurring, alarm.TriggerType);
+        Assert.Equal(RecurrenceRules.AllDays, alarm.RecurringDays);
+        Assert.Equal(new DateTimeOffset(2026, 1, 1, 10, 0, 0, TimeSpan.Zero), alarm.EndsAt);
+    }
+
+    [Fact]
+    public void Tick_fires_a_recurring_alarm_and_advances_to_the_next_occurrence()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None);
+        var fired = 0; s.Fired += (_, _) => fired++;
+
+        c.Advance(TimeSpan.FromMinutes(61));   // 10:01 Thu
+        s.Tick();
+
+        Assert.Equal(1, fired);
+        Assert.Same(alarm, Assert.Single(s.Alarms));            // stays armed (not removed)
+        Assert.Equal(TimerState.Running, alarm.State);          // never permanently Fired
+        Assert.Equal(new DateTimeOffset(2026, 1, 2, 10, 0, 0, TimeSpan.Zero), alarm.EndsAt);   // advanced to Fri
+    }
+
+    [Fact]
+    public void Tick_does_not_refire_a_recurring_alarm_after_it_advances()
+    {
+        var (s, c) = New();
+        s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None);
+        var fired = 0; s.Fired += (_, _) => fired++;
+
+        c.Advance(TimeSpan.FromMinutes(61));
+        s.Tick(); s.Tick();                 // a sleep-induced double tick
+
+        Assert.Equal(1, fired);             // advancing EndsAt is the dedup
+    }
+
+    [Fact]
+    public void Tick_fires_a_recurring_alarm_within_grace()
+    {
+        var (s, c) = New();
+        s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None);
+        TimerItem? fired = null; s.Fired += (_, i) => fired = i;
+
+        c.Advance(TimeSpan.FromMinutes(63));   // 10:03, 3 min late -> within grace
+        s.Tick();
+
+        Assert.NotNull(fired);
+        Assert.Equal(new DateTimeOffset(2026, 1, 1, 10, 0, 0, TimeSpan.Zero), fired!.EndsAt);  // the occurrence
+    }
+
+    [Fact]
+    public void Tick_expires_a_recurring_alarm_past_grace_without_firing_and_advances()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, "Stand-up", SoundChoice.Bell);
+        var fired = 0; s.Fired += (_, _) => fired++;
+        TimerItem? expired = null; s.Expired += (_, i) => expired = i;
+
+        c.Advance(TimeSpan.FromMinutes(66));   // 10:06, 6 min late -> past grace
+        s.Tick();
+
+        Assert.Equal(0, fired);
+        Assert.NotNull(expired);
+        Assert.Same(alarm, Assert.Single(s.Alarms));            // still armed
+        Assert.Equal(new DateTimeOffset(2026, 1, 2, 10, 0, 0, TimeSpan.Zero), alarm.EndsAt);   // advanced to Fri
+    }
+
+    [Fact]
+    public void A_fired_recurring_occurrence_is_a_transient_copy_so_dismiss_cannot_delete_the_alarm()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, "Stand-up", SoundChoice.Bell);
+        TimerItem? fired = null; s.Fired += (_, i) => fired = i;
+
+        c.Advance(TimeSpan.FromMinutes(61));
+        s.Tick();
+
+        Assert.NotSame(alarm, fired);                              // the card gets a copy...
+        Assert.Equal(TriggerType.ClockTime, fired!.TriggerType);   // ...typed so the card shows Snooze/Dismiss
+        s.Cancel(fired);                                           // Dismiss cancels the snapshot
+        Assert.Same(alarm, Assert.Single(s.Alarms));              // the live recurring alarm survives
+    }
+
+    [Fact]
+    public void Tick_collapses_many_missed_occurrences_into_one_expiry_and_advances_to_the_future()
+    {
+        var (s, c) = New();   // Thu 2026-01-01 09:00
+        // Restore a next occurrence a week in the past, as if the app was closed for a week.
+        var past = new DateTimeOffset(2025, 12, 25, 10, 0, 0, TimeSpan.Zero);
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, "Stand-up", SoundChoice.None, nextFireAt: past);
+        var fired = 0; s.Fired += (_, _) => fired++;
+        var expired = 0; s.Expired += (_, _) => expired++;
+
+        s.Tick();   // most recent 10:00 was yesterday (well past grace)
+
+        Assert.Equal(0, fired);
+        Assert.Equal(1, expired);                                  // one quiet note, not one per missed day
+        Assert.Same(alarm, Assert.Single(s.Alarms));
+        Assert.Equal(new DateTimeOffset(2026, 1, 1, 10, 0, 0, TimeSpan.Zero), alarm.EndsAt);   // advanced to today 10:00
+    }
 }
