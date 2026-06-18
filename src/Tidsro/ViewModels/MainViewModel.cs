@@ -236,6 +236,13 @@ public partial class MainViewModel : ObservableObject
             Running.Add(new TimerItemViewModel(restored, _scheduler));
             Announce("Timer restored");
         }
+        else if (item.RecurringDays is { } days && item.EndsAt is { } next)
+        {
+            _scheduler.ArmRecurringAlarm(next.Hour, next.Minute, days, item.Label, item.Sound, item.Id, next);
+            RebuildAgenda();
+            Announce("Alarm restored");
+            // No persist needed: the record was never removed from disk.
+        }
         else if (item.EndsAt is { } fireAt)
         {
             _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id);   // re-arm; next tick re-checks grace if past
@@ -253,7 +260,7 @@ public partial class MainViewModel : ObservableObject
     public void CommitPendingDelete()
     {
         if (_pendingDelete is not { } item) return;
-        var wasAlarm = item.TriggerType == TriggerType.ClockTime;
+        var wasAlarm = item.TriggerType is TriggerType.ClockTime or TriggerType.Recurring;
         _pendingDelete = null;
         _pendingDeleteRemaining = null;
         PendingDeleteLabel = null;

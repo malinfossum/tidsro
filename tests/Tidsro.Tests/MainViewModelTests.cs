@@ -704,4 +704,37 @@ public class MainViewModelTests
         Assert.Equal(TriggerType.Recurring, row.Item.TriggerType);
         Assert.Equal("Weekdays", row.CadenceText);
     }
+
+    [Fact]
+    public void UndoDelete_restores_a_recurring_alarm_as_recurring()
+    {
+        var vm = New(out _, out var sched);
+        vm.AlarmTimeInput = "07:00"; vm.AlarmLabel = "Stand-up";
+        vm.AlarmRepeat = RepeatOption.Weekdays;
+        vm.AddAlarmCommand.Execute(null);
+        var id = vm.Alarms[0].Item.Id;
+
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
+        vm.UndoDeleteCommand.Execute(null);
+
+        var row = Assert.Single(vm.Alarms);
+        Assert.Equal(id, row.Item.Id);
+        Assert.Equal(TriggerType.Recurring, row.Item.TriggerType);   // not downgraded to a one-shot
+        Assert.Equal("Weekdays", row.CadenceText);
+        Assert.Single(sched.Alarms);
+    }
+
+    [Fact]
+    public void CommitPendingDelete_persists_a_recurring_alarm_removal()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "07:00"; vm.AlarmRepeat = RepeatOption.Daily;
+        vm.AddAlarmCommand.Execute(null);
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
+        var committed = 0; vm.AlarmsChanged += (_, _) => committed++;
+
+        vm.CommitPendingDelete();
+
+        Assert.Equal(1, committed);   // a committed recurring delete must reach disk
+    }
 }
