@@ -238,6 +238,15 @@ public class SchedulerServiceTests
     }
 
     [Fact]
+    public void ArmRecurringAlarm_preserves_a_supplied_id()
+    {
+        var (s, c) = New();
+        var id = Guid.NewGuid();
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None, id);
+        Assert.Equal(id, alarm.Id);
+    }
+
+    [Fact]
     public void Tick_fires_a_recurring_alarm_and_advances_to_the_next_occurrence()
     {
         var (s, c) = New();
@@ -270,7 +279,7 @@ public class SchedulerServiceTests
     public void Tick_fires_a_recurring_alarm_within_grace()
     {
         var (s, c) = New();
-        s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None);
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None);
         TimerItem? fired = null; s.Fired += (_, i) => fired = i;
 
         c.Advance(TimeSpan.FromMinutes(63));   // 10:03, 3 min late -> within grace
@@ -278,6 +287,7 @@ public class SchedulerServiceTests
 
         Assert.NotNull(fired);
         Assert.Equal(new DateTimeOffset(2026, 1, 1, 10, 0, 0, TimeSpan.Zero), fired!.EndsAt);  // the occurrence
+        Assert.Equal(new DateTimeOffset(2026, 1, 2, 10, 0, 0, TimeSpan.Zero), alarm.EndsAt);   // live alarm advanced to Fri
     }
 
     [Fact]
