@@ -162,4 +162,30 @@ public class PersistenceServiceTests : IDisposable
         Assert.Empty(data.RecurringAlarms);   // missing key -> empty, settings preserved
         Assert.NotNull(data.Settings);
     }
+
+    [Fact]
+    public void Save_then_Load_round_trips_the_warn_before_flag()
+    {
+        var svc = new PersistenceService(_path);
+        svc.Save(new TidsroData
+        {
+            Settings = new AppSettings(),
+            Alarms = { new AlarmRecord { Id = Guid.NewGuid(), FireAt = new DateTime(2026, 6, 17, 14, 0, 0, DateTimeKind.Local), Label = "Lunch", Sound = SoundChoice.Bell, WarnBefore = true } },
+            RecurringAlarms = { new RecurringAlarmRecord { Id = Guid.NewGuid(), Hour = 7, Minute = 0, Days = Weekdays.Mon, Label = "Stand-up", Sound = SoundChoice.Bell, NextFireAt = new DateTime(2026, 6, 19, 7, 0, 0, DateTimeKind.Local), WarnBefore = true } },
+        });
+
+        var data = svc.Load();
+        Assert.True(Assert.Single(data.Alarms).WarnBefore);
+        Assert.True(Assert.Single(data.RecurringAlarms).WarnBefore);
+    }
+
+    [Fact]
+    public void Load_an_alarm_saved_without_warn_before_defaults_it_to_false()
+    {
+        File.WriteAllText(_path,
+            "{\"SchemaVersion\":3,\"Settings\":{\"DefaultSound\":0},\"Alarms\":[" +
+            "{\"Id\":\"" + Guid.NewGuid() + "\",\"FireAt\":\"2026-06-17T14:00:00\",\"Label\":\"ok\",\"Sound\":3}]}");
+        var data = new PersistenceService(_path).Load();
+        Assert.False(Assert.Single(data.Alarms).WarnBefore);   // missing key -> false (back-compat)
+    }
 }

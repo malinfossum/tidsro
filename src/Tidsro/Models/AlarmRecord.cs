@@ -7,4 +7,5 @@ public sealed class AlarmRecord
     public DateTime FireAt { get; set; }   // local; absolute date + time
     public string? Label { get; set; }
     public SoundChoice Sound { get; set; } = SoundChoice.None;
+    public bool WarnBefore { get; set; }
 }
