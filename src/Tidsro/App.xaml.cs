@@ -28,6 +28,7 @@ public partial class App : Application
     private DispatcherTimer _timer = null!;
     private MainWindow? _main;
     private readonly List<CompletionPopup> _openPopups = new();
+    private readonly Dictionary<CompletionPopup, DateTimeOffset> _warningFireTimes = new();
     private Mutex? _instanceMutex;
     private EventWaitHandle? _showEvent;
 
@@ -62,10 +63,11 @@ public partial class App : Application
         startup.RefreshIfEnabled();          // self-heal a stale Run-key path
 
         _scheduler.Fired += OnTimerFired;
+        _scheduler.Warning += OnAlarmWarning;
         _scheduler.Expired += (_, item) => { _mainVm.AddMissed(item); SaveData(); };
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
-        _timer.Tick += (_, _) => { _scheduler.Tick(); _mainVm.RefreshAll(); };
+        _timer.Tick += (_, _) => { _scheduler.Tick(); _mainVm.RefreshAll(); CloseFiredWarnings(); };
         _timer.Start();
 
         _hotkey = new HotkeyService();
@@ -103,6 +105,31 @@ public partial class App : Application
         popup.Show();   // ShowActivated=false -> appears without stealing focus
 
         if (item.TriggerType == TriggerType.ClockTime) SaveData();   // a one-shot left the armed set, or a recurring fire advanced its next occurrence — mirror to disk
+    }
+
+    private void OnAlarmWarning(object? sender, TimerItem item)
+    {
+        // Mirror the alarm's sound choice: a soft chime only when the alarm itself is sounded; silent otherwise.
+        if (item.Sound != SoundChoice.None) _sound.Play(SoundChoice.SoftChime);
+
+        var head = string.IsNullOrWhiteSpace(item.Label) ? "Alarm" : item.Label!.Trim();
+        var popup = new CompletionPopup(new PopupViewModel(item, head));   // heads-up (close-only) variant
+        popup.Closed += (_, _) => { _openPopups.Remove(popup); _warningFireTimes.Remove(popup); RestackPopups(); };
+        popup.ContentRendered += (_, _) => RestackPopups();
+        _openPopups.Add(popup);
+        _warningFireTimes[popup] = item.EndsAt ?? _scheduler.Now;   // capture this occurrence's fire time
+        PositionPopup(popup, _openPopups.Count - 1);
+        popup.Show();   // ShowActivated=false -> appears without stealing focus
+    }
+
+    // The heads-up gives way to the completion card: close any warning whose alarm has reached its fire time.
+    // Decoupled from Fired, so it works for one-shots and recurring alike (the captured fire time is the
+    // occurrence's, not the live alarm's already-advanced EndsAt).
+    private void CloseFiredWarnings()
+    {
+        var now = _scheduler.Now;
+        foreach (var (popup, fireAt) in _warningFireTimes.ToList())
+            if (now >= fireAt) popup.Close();   // Closed handler removes it from both collections and restacks
     }
 
     private void PositionPopup(CompletionPopup popup, int indexFromBottom)
@@ -166,6 +193,7 @@ public partial class App : Application
         FireAt = a.EndsAt?.LocalDateTime ?? default,
         Label = a.Label,
         Sound = a.Sound,
+        WarnBefore = a.WarnBefore,
     };
 
     private static RecurringAlarmRecord ToRecurringRecord(TimerItem a) => new()
@@ -176,6 +204,7 @@ public partial class App : Application
         Days = a.RecurringDays ?? Weekdays.None,
         Label = a.Label,
         Sound = a.Sound,
+        WarnBefore = a.WarnBefore,
         NextFireAt = a.EndsAt?.LocalDateTime ?? default,   // the next occurrence — the durable dedup marker
     };
 
@@ -186,7 +215,7 @@ public partial class App : Application
             try
             {
                 var fireAt = new DateTimeOffset(DateTime.SpecifyKind(r.FireAt, DateTimeKind.Local));
-                _scheduler.ArmClockAlarm(fireAt, r.Label, r.Sound, r.Id);
+                _scheduler.ArmClockAlarm(fireAt, r.Label, r.Sound, r.Id, r.WarnBefore);
             }
             catch { /* a residual bad record must never stop launch (spec §4) */ }
         }
@@ -201,7 +230,7 @@ public partial class App : Application
                 // Restore the persisted next occurrence so a quick relaunch doesn't re-fire within grace;
                 // the first tick reconciles any occurrence missed while the app was closed.
                 var next = new DateTimeOffset(DateTime.SpecifyKind(r.NextFireAt, DateTimeKind.Local));
-                _scheduler.ArmRecurringAlarm(r.Hour, r.Minute, r.Days, r.Label, r.Sound, r.Id, next);
+                _scheduler.ArmRecurringAlarm(r.Hour, r.Minute, r.Days, r.Label, r.Sound, r.Id, next, r.WarnBefore);
             }
             catch { /* a residual bad record must never stop launch (spec §4) */ }
         }
