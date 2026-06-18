@@ -54,8 +54,16 @@ public class RecurrenceRulesTests
         Assert.Equal(At(2, 10, 0), prev);   // Mon 08:00, 10:00 not yet -> back past weekend -> Fri 10:00
     }
 
+    [Fact]
+    public void MostRecentOccurrence_includes_an_exact_now_match()
+    {
+        var prev = RecurrenceRules.MostRecentOccurrence(At(1, 10, 0), 10, 0, RecurrenceRules.AllDays);
+        Assert.Equal(At(1, 10, 0), prev);   // exactly now counts as "at or before"
+    }
+
     [Theory]
     [InlineData(RepeatOption.Once, Weekdays.None)]
+    [InlineData(RepeatOption.Daily, Weekdays.Mon | Weekdays.Tue | Weekdays.Wed | Weekdays.Thu | Weekdays.Fri | Weekdays.Sat | Weekdays.Sun)]
     [InlineData(RepeatOption.Weekends, Weekdays.Sat | Weekdays.Sun)]
     public void DaysFor_resolves_presets(RepeatOption option, Weekdays expected)
     {
