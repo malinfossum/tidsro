@@ -600,4 +600,22 @@ public class MainViewModelTests
         vm.AddAlarmCommand.Execute(null);
         Assert.Null(vm.Alarms[0].Item.Label);
     }
+
+    [Fact]
+    public void RefreshAll_reorders_when_a_recurring_alarm_fires_and_advances()
+    {
+        var vm = New(out var clock, out var sched);     // Thu 2026-01-01 09:00
+        sched.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, "A", SoundChoice.None);
+        sched.ArmRecurringAlarm(11, 0, RecurrenceRules.AllDays, "B", SoundChoice.None);
+        vm.RefreshAll();
+        Assert.Equal("A", vm.Alarms[0].DisplayLabel);   // 10:00 is the next to fire
+
+        clock.Advance(TimeSpan.FromMinutes(61));          // 10:01 — A fires and advances to tomorrow 10:00
+        sched.Tick();
+        vm.RefreshAll();
+
+        Assert.Equal("B", vm.Alarms[0].DisplayLabel);     // 11:00 today is now next
+        Assert.True(vm.Alarms[0].IsNext);
+        Assert.Equal("A", vm.Alarms[1].DisplayLabel);     // A (tomorrow) sorts after
+    }
 }

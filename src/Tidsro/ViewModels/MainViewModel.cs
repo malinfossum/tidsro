@@ -31,6 +31,12 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty] private string? _missedNote;
 
+    // Snapshot of (id, fire-time) the agenda was last built from. A recurring alarm advances its
+    // EndsAt on firing without changing its id, so reconciling on ids alone would leave a stale row.
+    private HashSet<(Guid Id, DateTimeOffset? EndsAt)> _agendaSignature = new();
+    private HashSet<(Guid Id, DateTimeOffset? EndsAt)> AgendaSignature() =>
+        _scheduler.Alarms.Select(a => (a.Id, a.EndsAt)).ToHashSet();
+
     private TimerItem? _pendingDelete;
     private TimeSpan? _pendingDeleteRemaining;   // non-null when the pending item is a cancelled countdown
     [ObservableProperty] private string? _pendingDeleteLabel;
@@ -123,11 +129,10 @@ public partial class MainViewModel : ObservableObject
             if (!Running.Any(vm => vm.Item == item))
                 Running.Add(new TimerItemViewModel(item, _scheduler));
 
-        // Reconcile the alarm agenda only when the armed set changed (fired/expired drops rows),
-        // so the collection isn't rebuilt every second (which would disrupt focus and announcements).
-        var live = _scheduler.Alarms.Select(a => a.Id).ToHashSet();
-        var shown = Alarms.Select(a => a.Item.Id).ToHashSet();
-        if (!live.SetEquals(shown)) RebuildAgenda();
+        // Reconcile the alarm agenda only when it actually changed — an add/remove/one-shot fire (ids)
+        // or a recurring roll-forward (EndsAt). Otherwise leave the collection alone so focus and
+        // announcements aren't disrupted every second.
+        if (!AgendaSignature().SetEquals(_agendaSignature)) RebuildAgenda();
     }
 
     // Add-only now: editing happens in the modal Edit-alarm dialog (see BeginEditAlarm / ApplyAlarmEdit).
@@ -266,5 +271,6 @@ public partial class MainViewModel : ObservableObject
             Alarms.Add(new AlarmItemViewModel(a, isTomorrow, isNext: i == 0));
         }
         OnPropertyChanged(nameof(IsDayEmpty));
+        _agendaSignature = AgendaSignature();
     }
 }
