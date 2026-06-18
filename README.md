@@ -4,6 +4,12 @@ A calm, dark-mode-first desktop timer for Windows — countdown timers and clock
 
 > **Tidsro** is Norwegian: *tid* (time) + *ro* (calm / peace) — roughly *"calm time."* The name is the whole idea: a timer that's visible when you need it and invisible when you don't.
 
+## Who it's for
+
+Anyone who works or studies at a computer and wants to hold their focus through the day without reaching for a phone or juggling several apps. Set your day — or your whole week — once, then forget it: Tidsro runs quietly in the background and keeps you on track, so your phone can stay on Do Not Disturb or in another room. It's built to *hold* your attention, not grab it — no flashy notifications, nothing loud unless you ask for it. Every alarm is yours to shape: silent or with a chime, one-off or repeating.
+
+**Why I built it.** I went looking for a focus tool while studying and couldn't find one that did both timers *and* recurring alarms while staying clean and minimal — so I built the one I wish I'd had before I started school. It turns out to be just as useful in a workday as a study day.
+
 ## Status
 
 **v1.2.0 is released** — see the [Releases page](https://github.com/malinfossum/tidsro/releases). Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, and a per-timer sound) and **clock-time alarms** — a **"Your day" agenda** where you set one-shot fire-at-HH:MM alarms with an optional label and per-alarm sound, edit them in a dialog, and delete with an undo window. Firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**. v1.2 is a design + interaction polish release: a responsive layout, refreshed dark visuals with gentle motion, and snappier timers.
