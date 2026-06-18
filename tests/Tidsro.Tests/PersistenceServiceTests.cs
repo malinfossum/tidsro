@@ -124,4 +124,42 @@ public class PersistenceServiceTests : IDisposable
         Assert.Equal(123.5, data.Settings!.WindowLeft);
         Assert.Equal(45.0, data.Settings!.WindowTop);
     }
+
+    [Fact]
+    public void Save_then_Load_round_trips_a_recurring_alarm()
+    {
+        var svc = new PersistenceService(_path);
+        var id = Guid.NewGuid();
+        svc.Save(new TidsroData
+        {
+            Settings = new AppSettings(),
+            RecurringAlarms =
+            {
+                new RecurringAlarmRecord
+                {
+                    Id = id, Hour = 7, Minute = 0,
+                    Days = Weekdays.Mon | Weekdays.Wed | Weekdays.Fri,
+                    Label = "Stand-up", Sound = SoundChoice.Bell,
+                    NextFireAt = new DateTime(2026, 6, 19, 7, 0, 0, DateTimeKind.Local),
+                },
+            },
+        });
+
+        var data = svc.Load();
+        var r = Assert.Single(data.RecurringAlarms);
+        Assert.Equal(id, r.Id);
+        Assert.Equal(7, r.Hour);
+        Assert.Equal(Weekdays.Mon | Weekdays.Wed | Weekdays.Fri, r.Days);
+        Assert.Equal(SoundChoice.Bell, r.Sound);
+    }
+
+    [Fact]
+    public void Load_a_v2_file_with_no_recurring_list_yields_an_empty_recurring_list()
+    {
+        File.WriteAllText(_path,
+            "{\"SchemaVersion\":2,\"Settings\":{\"DefaultSound\":0},\"Alarms\":[]}");
+        var data = new PersistenceService(_path).Load();
+        Assert.Empty(data.RecurringAlarms);   // missing key -> empty, settings preserved
+        Assert.NotNull(data.Settings);
+    }
 }

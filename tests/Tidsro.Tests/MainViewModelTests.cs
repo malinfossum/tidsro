@@ -267,7 +267,7 @@ public class MainViewModelTests
         var originalId = vm.Alarms[0].Item.Id;
         var changed = 0; vm.AlarmsChanged += (_, _) => changed++;
 
-        vm.ApplyAlarmEdit(originalId, 11, 15, "coffee", SoundChoice.Marimba);
+        vm.ApplyAlarmEdit(originalId, 11, 15, Weekdays.None, "coffee", SoundChoice.Marimba);
 
         var row = Assert.Single(vm.Alarms);                // still one alarm, not a duplicate
         Assert.Single(sched.Alarms);                       // scheduler holds exactly one armed alarm
@@ -288,7 +288,7 @@ public class MainViewModelTests
         var id = vm.Alarms[0].Item.Id;
         string? announced = null; vm.Announcement += (_, m) => announced = m;
 
-        vm.ApplyAlarmEdit(id, 12, 45, null, SoundChoice.None);
+        vm.ApplyAlarmEdit(id, 12, 45, Weekdays.None, null, SoundChoice.None);
 
         Assert.NotNull(announced);
         Assert.Contains("12:45", announced);
@@ -301,7 +301,7 @@ public class MainViewModelTests
         vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Tea"; vm.AddAlarmCommand.Execute(null);
         var id = vm.Alarms[0].Item.Id;
 
-        vm.ApplyAlarmEdit(id, 11, 0, "   ", SoundChoice.None);
+        vm.ApplyAlarmEdit(id, 11, 0, Weekdays.None, "   ", SoundChoice.None);
 
         Assert.Null(vm.Alarms[0].Item.Label);
     }
@@ -599,5 +599,142 @@ public class MainViewModelTests
         vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "";
         vm.AddAlarmCommand.Execute(null);
         Assert.Null(vm.Alarms[0].Item.Label);
+    }
+
+    [Fact]
+    public void RefreshAll_reorders_when_a_recurring_alarm_fires_and_advances()
+    {
+        var vm = New(out var clock, out var sched);     // Thu 2026-01-01 09:00
+        sched.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, "A", SoundChoice.None);
+        sched.ArmRecurringAlarm(11, 0, RecurrenceRules.AllDays, "B", SoundChoice.None);
+        vm.RefreshAll();
+        Assert.Equal("A", vm.Alarms[0].DisplayLabel);   // 10:00 is the next to fire
+
+        clock.Advance(TimeSpan.FromMinutes(61));          // 10:01 — A fires and advances to tomorrow 10:00
+        sched.Tick();
+        vm.RefreshAll();
+
+        Assert.Equal("B", vm.Alarms[0].DisplayLabel);     // 11:00 today is now next
+        Assert.True(vm.Alarms[0].IsNext);
+        Assert.Equal("A", vm.Alarms[1].DisplayLabel);     // A (tomorrow) sorts after
+    }
+
+    [Fact]
+    public void AddAlarm_with_a_weekdays_repeat_creates_a_recurring_alarm()
+    {
+        var vm = New(out _, out var sched);          // Thu 2026-01-01 09:00
+        vm.AlarmTimeInput = "07:00";
+        vm.AlarmLabel = "Stand-up";
+        vm.AlarmRepeat = RepeatOption.Weekdays;
+
+        vm.AddAlarmCommand.Execute(null);
+
+        var row = Assert.Single(vm.Alarms);
+        Assert.Equal("Weekdays", row.CadenceText);
+        Assert.Equal(TriggerType.Recurring, row.Item.TriggerType);
+        var weekdays = Weekdays.Mon | Weekdays.Tue | Weekdays.Wed | Weekdays.Thu | Weekdays.Fri;
+        Assert.Equal(weekdays, row.Item.RecurringDays);
+        Assert.Equal(weekdays, Assert.Single(sched.Alarms).RecurringDays);
+    }
+
+    [Fact]
+    public void AddAlarm_with_a_custom_day_set_creates_a_recurring_alarm()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "08:00";
+        vm.AlarmRepeat = RepeatOption.Custom;
+        foreach (var t in vm.AlarmDayToggles)
+            t.IsSelected = t.Flag is Weekdays.Mon or Weekdays.Wed or Weekdays.Fri;
+
+        vm.AddAlarmCommand.Execute(null);
+
+        Assert.Equal("Mon Wed Fri", Assert.Single(vm.Alarms).CadenceText);
+    }
+
+    [Fact]
+    public void AddAlarm_with_once_still_creates_a_one_shot()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:30";
+        vm.AlarmRepeat = RepeatOption.Once;   // the default
+        vm.AddAlarmCommand.Execute(null);
+
+        var row = Assert.Single(vm.Alarms);
+        Assert.Equal(TriggerType.ClockTime, row.Item.TriggerType);
+        Assert.Null(row.Item.RecurringDays);
+    }
+
+    [Fact]
+    public void ShowCustomDays_tracks_the_repeat_choice()
+    {
+        var vm = New(out _, out _);
+        Assert.False(vm.ShowCustomDays);
+        vm.AlarmRepeat = RepeatOption.Custom;
+        Assert.True(vm.ShowCustomDays);
+        vm.AlarmRepeat = RepeatOption.Daily;
+        Assert.False(vm.ShowCustomDays);
+    }
+
+    [Fact]
+    public void AddAlarm_resets_the_repeat_editor_after_adding()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "07:00";
+        vm.AlarmRepeat = RepeatOption.Custom;
+        vm.AlarmDayToggles[0].IsSelected = true;
+
+        vm.AddAlarmCommand.Execute(null);
+
+        Assert.Equal(RepeatOption.Once, vm.AlarmRepeat);
+        Assert.All(vm.AlarmDayToggles, t => Assert.False(t.IsSelected));
+    }
+
+    [Fact]
+    public void ApplyAlarmEdit_can_turn_a_one_shot_into_a_recurring_alarm()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AddAlarmCommand.Execute(null);
+        var id = vm.Alarms[0].Item.Id;
+        var weekdays = Weekdays.Mon | Weekdays.Tue | Weekdays.Wed | Weekdays.Thu | Weekdays.Fri;
+
+        vm.ApplyAlarmEdit(id, 7, 0, weekdays, "Stand-up", SoundChoice.None);
+
+        var row = Assert.Single(vm.Alarms);
+        Assert.Equal(id, row.Item.Id);                       // same identity
+        Assert.Equal(TriggerType.Recurring, row.Item.TriggerType);
+        Assert.Equal("Weekdays", row.CadenceText);
+    }
+
+    [Fact]
+    public void UndoDelete_restores_a_recurring_alarm_as_recurring()
+    {
+        var vm = New(out _, out var sched);
+        vm.AlarmTimeInput = "07:00"; vm.AlarmLabel = "Stand-up";
+        vm.AlarmRepeat = RepeatOption.Weekdays;
+        vm.AddAlarmCommand.Execute(null);
+        var id = vm.Alarms[0].Item.Id;
+
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
+        vm.UndoDeleteCommand.Execute(null);
+
+        var row = Assert.Single(vm.Alarms);
+        Assert.Equal(id, row.Item.Id);
+        Assert.Equal(TriggerType.Recurring, row.Item.TriggerType);   // not downgraded to a one-shot
+        Assert.Equal("Weekdays", row.CadenceText);
+        Assert.Single(sched.Alarms);
+    }
+
+    [Fact]
+    public void CommitPendingDelete_persists_a_recurring_alarm_removal()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "07:00"; vm.AlarmRepeat = RepeatOption.Daily;
+        vm.AddAlarmCommand.Execute(null);
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
+        var committed = 0; vm.AlarmsChanged += (_, _) => committed++;
+
+        vm.CommitPendingDelete();
+
+        Assert.Equal(1, committed);   // a committed recurring delete must reach disk
     }
 }

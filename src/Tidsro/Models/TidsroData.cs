@@ -3,7 +3,7 @@ namespace Tidsro.Models;
 /// <summary>Root persistence document (schema v2): app settings plus the saved alarms.</summary>
 public sealed class TidsroData
 {
-    public const int CurrentSchema = 2;
+    public const int CurrentSchema = 3;
     private const int MaxLabel = 200;
 
     public int SchemaVersion { get; set; } = CurrentSchema;
@@ -12,6 +12,8 @@ public sealed class TidsroData
     public AppSettings? Settings { get; set; }
 
     public List<AlarmRecord> Alarms { get; set; } = new();
+
+    public List<RecurringAlarmRecord> RecurringAlarms { get; set; } = new();
 
     public static TidsroData Defaults() => new() { Settings = AppSettings.Defaults() };
 
@@ -36,11 +38,36 @@ public sealed class TidsroData
             });
         }
 
+        var recSeen = new HashSet<Guid>();
+        var recurring = new List<RecurringAlarmRecord>();
+        foreach (var r in RecurringAlarms ?? new List<RecurringAlarmRecord>())
+        {
+            if (r is null) continue;
+            var days = r.Days & RecurrenceRules.AllDays;       // strip any unknown bits
+            if (days == Weekdays.None) continue;               // a recurring alarm needs at least one day
+            if (r.Hour is < 0 or > 23) continue;
+            if (r.Minute is < 0 or > 59) continue;
+            if (!Enum.IsDefined(r.Sound)) continue;            // unknown enum
+            if (r.NextFireAt == default || !IsRepresentable(r.NextFireAt)) continue;
+            if (!recSeen.Add(r.Id)) continue;                  // duplicate id -> keep the first only
+            recurring.Add(new RecurringAlarmRecord
+            {
+                Id = r.Id,
+                Hour = r.Hour,
+                Minute = r.Minute,
+                Days = days,
+                Label = NormaliseLabel(r.Label),
+                Sound = r.Sound,
+                NextFireAt = r.NextFireAt,
+            });
+        }
+
         return new TidsroData
         {
             SchemaVersion = CurrentSchema,
             Settings = (Settings ?? AppSettings.Defaults()).Sanitized(),
             Alarms = alarms,
+            RecurringAlarms = recurring,
         };
     }
 

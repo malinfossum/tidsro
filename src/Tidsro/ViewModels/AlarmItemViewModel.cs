@@ -22,9 +22,19 @@ public sealed class AlarmItemViewModel
     public string SoundText => HasSound ? "chime" : "silent";
     public string TomorrowText => IsTomorrow ? "tomorrow" : "";
 
-    // Sound state and the tomorrow/next cues are carried as text, never colour alone (spec §7).
+    // Recurring alarms show their cadence ("Daily", "Weekdays", "Mon Wed Fri"); a one-shot shows
+    // "tomorrow" or nothing. This is the single tag the agenda row binds to.
+    public string CadenceText => Item.RecurringDays is { } d
+        ? RecurrenceRules.CadenceLabel(d)
+        : (IsTomorrow ? "tomorrow" : "");
+
+    // Sound state and the cadence/next cues are carried as text, never colour alone (spec §7).
     public string AccessibleName =>
-        $"Alarm at {TimeText}{(IsTomorrow ? " tomorrow" : "")}, {DisplayLabel}, {SoundText}{(IsNext ? ", next" : "")}";
+        $"Alarm at {TimeText}{CadencePhrase}, {DisplayLabel}, {SoundText}{(IsNext ? ", next" : "")}";
+
+    private string CadencePhrase => Item.RecurringDays is { } d
+        ? $" {RecurrenceRules.CadenceLabel(d).ToLowerInvariant()}"
+        : (IsTomorrow ? " tomorrow" : "");
 
     public string EditLabel => $"Edit alarm at {TimeText}";
     public string DeleteLabel => $"Delete alarm at {TimeText}";

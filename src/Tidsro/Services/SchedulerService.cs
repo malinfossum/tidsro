@@ -38,6 +38,36 @@ public sealed class SchedulerService
 
     public void RemoveAlarm(TimerItem item) => _alarms.Remove(item);
 
+    /// <summary>Arm a recurring alarm. Pass <paramref name="nextFireAt"/> to restore a persisted alarm's next occurrence.</summary>
+    public TimerItem ArmRecurringAlarm(int hour, int minute, Weekdays days, string? label, SoundChoice sound,
+        Guid? id = null, DateTimeOffset? nextFireAt = null)
+    {
+        var item = new TimerItem
+        {
+            Id = id ?? Guid.NewGuid(),
+            TriggerType = TriggerType.Recurring,
+            Label = label,
+            Sound = sound,
+            RecurringDays = days,
+            EndsAt = nextFireAt ?? RecurrenceRules.NextOccurrence(_clock.Now, hour, minute, days),
+            State = TimerState.Running,
+        };
+        _alarms.Add(item);
+        return item;
+    }
+
+    // A transient, list-less copy of one occurrence. The completion card's Snooze/Dismiss act on THIS,
+    // so the live recurring alarm (still in _alarms, already advanced) is never cancelled. Typed ClockTime
+    // so the card shows Snooze +5 / Dismiss (no Restart).
+    private static TimerItem OccurrenceSnapshot(TimerItem alarm, DateTimeOffset occurrence) => new()
+    {
+        TriggerType = TriggerType.ClockTime,
+        Label = alarm.Label,
+        Sound = alarm.Sound,
+        EndsAt = occurrence,
+        State = TimerState.Fired,
+    };
+
     public TimerItem StartCountdown(TimeSpan duration, string? label, SoundChoice sound)
     {
         var item = new TimerItem
@@ -78,6 +108,17 @@ public sealed class SchedulerService
         foreach (var alarm in _alarms.ToList())
         {
             if (alarm.State != TimerState.Running || alarm.EndsAt is not { } end || now < end) continue;
+
+            if (alarm.TriggerType == TriggerType.Recurring && alarm.RecurringDays is { } days)
+            {
+                var prev = RecurrenceRules.MostRecentOccurrence(now, end.Hour, end.Minute, days);
+                alarm.EndsAt = RecurrenceRules.NextOccurrence(now, end.Hour, end.Minute, days);  // advance first: in-session dedup
+                if (now - prev <= Grace)
+                    Fired?.Invoke(this, OccurrenceSnapshot(alarm, prev));    // transient copy -> card can't mutate the live alarm
+                else
+                    Expired?.Invoke(this, OccurrenceSnapshot(alarm, prev));  // quiet missed-while-away note
+                continue;
+            }
 
             _alarms.Remove(alarm);                 // one-shot leaves the armed set whether it fires or expires
             if (now - end <= Grace)

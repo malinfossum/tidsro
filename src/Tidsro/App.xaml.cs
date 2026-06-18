@@ -55,6 +55,7 @@ public partial class App : Application
         _sound = new SoundService();
         _mainVm = new MainViewModel(_scheduler, _sound, _settings.DefaultSound);
         ArmLoadedAlarms(_data.Alarms);
+        ArmLoadedRecurring(_data.RecurringAlarms);
         _mainVm.AlarmsChanged += (_, _) => SaveData();
 
         var startup = new StartupService(StartupService.CurrentExePath);
@@ -101,7 +102,7 @@ public partial class App : Application
         PositionPopup(popup, _openPopups.Count - 1);
         popup.Show();   // ShowActivated=false -> appears without stealing focus
 
-        if (item.TriggerType == TriggerType.ClockTime) SaveData();   // the one-shot left the armed set; mirror to disk
+        if (item.TriggerType == TriggerType.ClockTime) SaveData();   // a one-shot left the armed set, or a recurring fire advanced its next occurrence — mirror to disk
     }
 
     private void PositionPopup(CompletionPopup popup, int indexFromBottom)
@@ -124,7 +125,8 @@ public partial class App : Application
     {
         Func<AlarmItemViewModel, EditAlarmWindow> editFactory = row => new EditAlarmWindow(
             new EditAlarmViewModel(row.Item.Id, row.Item.EndsAt?.ToString("HH\\:mm") ?? "",
-                row.Item.Label ?? "", row.Item.Sound, _mainVm.SoundOptions, _mainVm.ApplyAlarmEdit, _sound));
+                row.Item.Label ?? "", row.Item.Sound, row.Item.RecurringDays ?? Weekdays.None,
+                _mainVm.SoundOptions, _mainVm.ApplyAlarmEdit, _sound));
         _main ??= new MainWindow(_mainVm, () => new SettingsWindow(
                 new SettingsViewModel(_settings, new StartupService(StartupService.CurrentExePath),
                     SaveData, _mainVm.SetDefaultSound)),
@@ -147,10 +149,12 @@ public partial class App : Application
 
     private void SaveData()
     {
+        var armed = _scheduler.Alarms;
         var data = new TidsroData
         {
             Settings = _settings,
-            Alarms = _scheduler.Alarms.Select(ToRecord).ToList(),
+            Alarms = armed.Where(a => a.TriggerType == TriggerType.ClockTime).Select(ToRecord).ToList(),
+            RecurringAlarms = armed.Where(a => a.TriggerType == TriggerType.Recurring).Select(ToRecurringRecord).ToList(),
         };
         try { _persistence.Save(data); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* non-critical */ }
@@ -164,6 +168,17 @@ public partial class App : Application
         Sound = a.Sound,
     };
 
+    private static RecurringAlarmRecord ToRecurringRecord(TimerItem a) => new()
+    {
+        Id = a.Id,
+        Hour = a.EndsAt?.Hour ?? 0,
+        Minute = a.EndsAt?.Minute ?? 0,
+        Days = a.RecurringDays ?? Weekdays.None,
+        Label = a.Label,
+        Sound = a.Sound,
+        NextFireAt = a.EndsAt?.LocalDateTime ?? default,   // the next occurrence — the durable dedup marker
+    };
+
     private void ArmLoadedAlarms(IEnumerable<AlarmRecord> records)
     {
         foreach (var r in records)
@@ -172,6 +187,21 @@ public partial class App : Application
             {
                 var fireAt = new DateTimeOffset(DateTime.SpecifyKind(r.FireAt, DateTimeKind.Local));
                 _scheduler.ArmClockAlarm(fireAt, r.Label, r.Sound, r.Id);
+            }
+            catch { /* a residual bad record must never stop launch (spec §4) */ }
+        }
+    }
+
+    private void ArmLoadedRecurring(IEnumerable<RecurringAlarmRecord> records)
+    {
+        foreach (var r in records)
+        {
+            try
+            {
+                // Restore the persisted next occurrence so a quick relaunch doesn't re-fire within grace;
+                // the first tick reconciles any occurrence missed while the app was closed.
+                var next = new DateTimeOffset(DateTime.SpecifyKind(r.NextFireAt, DateTimeKind.Local));
+                _scheduler.ArmRecurringAlarm(r.Hour, r.Minute, r.Days, r.Label, r.Sound, r.Id, next);
             }
             catch { /* a residual bad record must never stop launch (spec §4) */ }
         }

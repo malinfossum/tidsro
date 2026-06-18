@@ -29,7 +29,23 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string? _alarmError;
     [ObservableProperty] private SoundChoice _alarmSound;
 
+    public RepeatOption[] RepeatOptions { get; } =
+        { RepeatOption.Once, RepeatOption.Daily, RepeatOption.Weekdays, RepeatOption.Weekends, RepeatOption.Custom };
+
+    [ObservableProperty] private RepeatOption _alarmRepeat = RepeatOption.Once;
+
+    public IReadOnlyList<DayToggleViewModel> AlarmDayToggles { get; } = DayToggleViewModel.Week();
+
+    public bool ShowCustomDays => AlarmRepeat == RepeatOption.Custom;
+    partial void OnAlarmRepeatChanged(RepeatOption value) => OnPropertyChanged(nameof(ShowCustomDays));
+
     [ObservableProperty] private string? _missedNote;
+
+    // Snapshot of (id, fire-time) the agenda was last built from. A recurring alarm advances its
+    // EndsAt on firing without changing its id, so reconciling on ids alone would leave a stale row.
+    private HashSet<(Guid Id, DateTimeOffset? EndsAt)> _agendaSignature = new();
+    private HashSet<(Guid Id, DateTimeOffset? EndsAt)> AgendaSignature() =>
+        _scheduler.Alarms.Select(a => (a.Id, a.EndsAt)).ToHashSet();
 
     private TimerItem? _pendingDelete;
     private TimeSpan? _pendingDeleteRemaining;   // non-null when the pending item is a cancelled countdown
@@ -123,11 +139,10 @@ public partial class MainViewModel : ObservableObject
             if (!Running.Any(vm => vm.Item == item))
                 Running.Add(new TimerItemViewModel(item, _scheduler));
 
-        // Reconcile the alarm agenda only when the armed set changed (fired/expired drops rows),
-        // so the collection isn't rebuilt every second (which would disrupt focus and announcements).
-        var live = _scheduler.Alarms.Select(a => a.Id).ToHashSet();
-        var shown = Alarms.Select(a => a.Item.Id).ToHashSet();
-        if (!live.SetEquals(shown)) RebuildAgenda();
+        // Reconcile the alarm agenda only when it actually changed — an add/remove/one-shot fire (ids)
+        // or a recurring roll-forward (EndsAt). Otherwise leave the collection alone so focus and
+        // announcements aren't disrupted every second.
+        if (!AgendaSignature().SetEquals(_agendaSignature)) RebuildAgenda();
     }
 
     // Add-only now: editing happens in the modal Edit-alarm dialog (see BeginEditAlarm / ApplyAlarmEdit).
@@ -140,14 +155,28 @@ public partial class MainViewModel : ObservableObject
         AlarmError = null;
 
         var label = string.IsNullOrWhiteSpace(AlarmLabel) ? null : CapitalizeFirst(AlarmLabel.Trim());
-        var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
-        _scheduler.ArmClockAlarm(fireAt, label, AlarmSound);
+        var days = ResolveDays();
+        if (days == Weekdays.None)
+        {
+            var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
+            _scheduler.ArmClockAlarm(fireAt, label, AlarmSound);
+            Announce($"Alarm added for {fireAt:HH\\:mm}");
+        }
+        else
+        {
+            _scheduler.ArmRecurringAlarm(hour, minute, days, label, AlarmSound);
+            Announce($"Alarm added for {hour:00}:{minute:00}, {RecurrenceRules.CadenceLabel(days)}");
+        }
 
         RebuildAgenda();
         ClearEditor();
         AlarmsChanged?.Invoke(this, EventArgs.Empty);
-        Announce($"Alarm added for {fireAt:HH\\:mm}");
     }
+
+    // Custom uses the picked toggles; every other option is a fixed preset (Once -> None -> one-shot).
+    private Weekdays ResolveDays() => AlarmRepeat == RepeatOption.Custom
+        ? AlarmDayToggles.Where(t => t.IsSelected).Aggregate(Weekdays.None, (acc, t) => acc | t.Flag)
+        : RecurrenceRules.DaysFor(AlarmRepeat, Weekdays.None);
 
     [RelayCommand]
     private void BeginEditAlarm(AlarmItemViewModel? row)
@@ -159,15 +188,23 @@ public partial class MainViewModel : ObservableObject
 
     // Called by the Edit-alarm dialog on Save. Replaces the alarm in place (same Id), normalizing the
     // label like the add path. Mirrors the former in-place edit branch.
-    public void ApplyAlarmEdit(Guid id, int hour, int minute, string? label, SoundChoice sound)
+    public void ApplyAlarmEdit(Guid id, int hour, int minute, Weekdays days, string? label, SoundChoice sound)
     {
         var existing = _scheduler.Alarms.FirstOrDefault(a => a.Id == id);
         if (existing is not null) _scheduler.RemoveAlarm(existing);
         var clean = string.IsNullOrWhiteSpace(label) ? null : CapitalizeFirst(label.Trim());
-        var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
-        _scheduler.ArmClockAlarm(fireAt, clean, sound, id);
+        if (days == Weekdays.None)
+        {
+            var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
+            _scheduler.ArmClockAlarm(fireAt, clean, sound, id);
+            Announce($"Alarm updated for {fireAt:HH\\:mm}");
+        }
+        else
+        {
+            _scheduler.ArmRecurringAlarm(hour, minute, days, clean, sound, id);
+            Announce($"Alarm updated for {hour:00}:{minute:00}, {RecurrenceRules.CadenceLabel(days)}");
+        }
         RebuildAgenda();
-        Announce($"Alarm updated for {fireAt:HH\\:mm}");
         AlarmsChanged?.Invoke(this, EventArgs.Empty);
     }
 
@@ -199,6 +236,13 @@ public partial class MainViewModel : ObservableObject
             Running.Add(new TimerItemViewModel(restored, _scheduler));
             Announce("Timer restored");
         }
+        else if (item.RecurringDays is { } days && item.EndsAt is { } next)
+        {
+            _scheduler.ArmRecurringAlarm(next.Hour, next.Minute, days, item.Label, item.Sound, item.Id, next);
+            RebuildAgenda();
+            Announce("Alarm restored");
+            // No persist needed: the record was never removed from disk.
+        }
         else if (item.EndsAt is { } fireAt)
         {
             _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id);   // re-arm; next tick re-checks grace if past
@@ -216,7 +260,7 @@ public partial class MainViewModel : ObservableObject
     public void CommitPendingDelete()
     {
         if (_pendingDelete is not { } item) return;
-        var wasAlarm = item.TriggerType == TriggerType.ClockTime;
+        var wasAlarm = item.TriggerType is TriggerType.ClockTime or TriggerType.Recurring;
         _pendingDelete = null;
         _pendingDeleteRemaining = null;
         PendingDeleteLabel = null;
@@ -229,6 +273,8 @@ public partial class MainViewModel : ObservableObject
         AlarmTimeInput = "";
         AlarmLabel = "";
         AlarmError = null;
+        AlarmRepeat = RepeatOption.Once;
+        foreach (var t in AlarmDayToggles) t.IsSelected = false;
     }
 
     private void Announce(string message) => Announcement?.Invoke(this, message);
@@ -266,5 +312,6 @@ public partial class MainViewModel : ObservableObject
             Alarms.Add(new AlarmItemViewModel(a, isTomorrow, isNext: i == 0));
         }
         OnPropertyChanged(nameof(IsDayEmpty));
+        _agendaSignature = AgendaSignature();
     }
 }

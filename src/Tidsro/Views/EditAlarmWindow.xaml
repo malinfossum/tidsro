@@ -27,6 +27,23 @@
               FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" AutomationProperties.Name="Preview sound"
               ToolTip="Preview sound" Style="{StaticResource QuietAction}" Margin="8,0,0,0"/>
     </Grid>
+    <Grid Margin="0,12,0,0">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+      <TextBlock Grid.Column="0" Text="Repeat" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" Margin="0,0,8,0"/>
+      <ComboBox Grid.Column="1" ItemsSource="{Binding RepeatOptions}" SelectedItem="{Binding Repeat}"
+                AutomationProperties.Name="Repeat"/>
+    </Grid>
+    <ItemsControl ItemsSource="{Binding DayToggles}" Margin="0,10,0,0"
+                  Visibility="{Binding ShowCustomDays, Converter={StaticResource BoolToVisible}}"
+                  AutomationProperties.Name="Repeat on">
+      <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate>
+          <CheckBox Content="{Binding Short}" IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                    AutomationProperties.Name="{Binding Full}" MinWidth="36" Margin="0,0,8,8"/>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
     <TextBlock Text="{Binding Error}" Foreground="{StaticResource Danger}" FontSize="{StaticResource TextXs}"
                Margin="0,8,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"
                Visibility="{Binding Error, Converter={StaticResource NullToCollapsed}}"/>

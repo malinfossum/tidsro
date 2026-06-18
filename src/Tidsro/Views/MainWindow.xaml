@@ -128,7 +128,7 @@
         <Border x:Name="Divider" Grid.Row="1" Background="{StaticResource Border}" Height="1" Margin="0,12,0,12"/>
         <StackPanel x:Name="DayPanel" Grid.Row="2" Margin="0,24,0,0">
 
-        <TextBlock Text="Your day" FontSize="{StaticResource TextXl}" Margin="0,0,0,14"/>
+        <TextBlock Text="Schedule" FontSize="{StaticResource TextXl}" Margin="0,0,0,14"/>
 
         <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
                 CornerRadius="{StaticResource RadiusMd}" Padding="16">
@@ -155,6 +155,23 @@
                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" AutomationProperties.Name="Preview sound"
                       ToolTip="Preview sound" Style="{StaticResource QuietAction}" Margin="8,0,0,0"/>
             </Grid>
+            <Grid Margin="0,12,0,0">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="Repeat" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" Margin="0,0,8,0"/>
+              <ComboBox Grid.Column="1" ItemsSource="{Binding RepeatOptions}" SelectedItem="{Binding AlarmRepeat}"
+                        AutomationProperties.Name="Repeat"/>
+            </Grid>
+            <ItemsControl ItemsSource="{Binding AlarmDayToggles}" Margin="0,10,0,0"
+                          Visibility="{Binding ShowCustomDays, Converter={StaticResource BoolToVisible}}"
+                          AutomationProperties.Name="Repeat on">
+              <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <CheckBox Content="{Binding Short}" IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                            AutomationProperties.Name="{Binding Full}" MinWidth="36" Margin="0,0,8,8"/>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
             <Button Content="Add" Command="{Binding AddAlarmCommand}" Style="{StaticResource GoldAction}"
                     HorizontalAlignment="Right" Margin="0,14,0,0" AutomationProperties.Name="Add alarm"/>
             <TextBlock Text="{Binding AlarmError}" Foreground="{StaticResource Danger}" FontSize="{StaticResource TextXs}"
@@ -217,7 +234,7 @@
                     <StackPanel>
                       <StackPanel Orientation="Horizontal">
                         <TextBlock Text="{Binding TimeText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource TextLg}" Foreground="{StaticResource Text}"/>
-                        <TextBlock Text="{Binding TomorrowText}" Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        <TextBlock Text="{Binding CadenceText}" Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}" VerticalAlignment="Center" Margin="8,0,0,0"/>
                       </StackPanel>
                       <TextBlock Text="{Binding DisplayLabel}" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"/>
                       <StackPanel Orientation="Horizontal" Margin="0,2,0,0">

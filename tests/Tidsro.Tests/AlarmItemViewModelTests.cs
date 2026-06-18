@@ -47,4 +47,31 @@ public class AlarmItemViewModelTests
         Assert.Equal("Edit alarm at 14:00", vm.EditLabel);
         Assert.Equal("Delete alarm at 14:00", vm.DeleteLabel);
     }
+
+    private static TimerItem Recurring(string? label, Weekdays days, int hour, int minute) => new()
+    {
+        TriggerType = TriggerType.Recurring,
+        Label = label,
+        RecurringDays = days,
+        EndsAt = new DateTimeOffset(2026, 6, 17, hour, minute, 0, TimeSpan.Zero),
+        State = TimerState.Running,
+    };
+
+    [Fact]
+    public void Recurring_alarm_shows_its_cadence_tag_and_speaks_it()
+    {
+        var weekdays = Weekdays.Mon | Weekdays.Tue | Weekdays.Wed | Weekdays.Thu | Weekdays.Fri;
+        var vm = new AlarmItemViewModel(Recurring("Stand-up", weekdays, 7, 0), isTomorrow: true, isNext: false);
+        Assert.Equal("Weekdays", vm.CadenceText);          // cadence wins over the tomorrow cue
+        Assert.Contains("weekdays", vm.AccessibleName);     // folded into the spoken name, lower-cased
+    }
+
+    [Fact]
+    public void One_shot_alarm_shows_tomorrow_or_nothing_as_its_cadence()
+    {
+        var today = new AlarmItemViewModel(Alarm("Lunch", SoundChoice.Bell, 14, 0), isTomorrow: false, isNext: false);
+        Assert.Equal("", today.CadenceText);
+        var tomorrow = new AlarmItemViewModel(Alarm("Lunch", SoundChoice.Bell, 14, 0), isTomorrow: true, isNext: false);
+        Assert.Equal("tomorrow", tomorrow.CadenceText);
+    }
 }
