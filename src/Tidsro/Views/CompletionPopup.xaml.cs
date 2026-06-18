@@ -48,7 +48,7 @@ public partial class CompletionPopup : Window
 
         Loaded += (_, _) =>
         {
-            UiaNotifier.Announce(this, $"{_vm.Title} complete");
+            UiaNotifier.Announce(this, _vm.AnnouncementText);
             if (!SystemParameters.ClientAreaAnimation)   // reduced motion -> no fade/slide
             {
                 Opacity = 1;

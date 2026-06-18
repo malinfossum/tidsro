@@ -183,6 +183,9 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+            <CheckBox Content="Warn me 5 minutes before" IsChecked="{Binding AlarmWarnBefore}"
+                      Foreground="{StaticResource Text}" Margin="0,12,0,0"
+                      AutomationProperties.Name="Warn me 5 minutes before"/>
             <Button Content="Add" Command="{Binding AddAlarmCommand}" Style="{StaticResource GoldAction}"
                     HorizontalAlignment="Right" Margin="0,14,0,0" AutomationProperties.Name="Add alarm"/>
             <TextBlock Text="{Binding AlarmError}" Foreground="{StaticResource Danger}" FontSize="{StaticResource TextXs}"
