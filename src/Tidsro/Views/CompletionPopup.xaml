@@ -16,7 +16,7 @@
     <StackPanel>
       <DockPanel>
         <TextBlock Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}" VerticalAlignment="Center">
-          <Run FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Text="&#xE73E;"/><Run Text="{Binding HeaderText}"/>
+          <Run FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Text="&#xE73E;"/><Run Text="{Binding HeaderText, Mode=OneWay}"/>
         </TextBlock>
         <Button x:Name="DismissX" DockPanel.Dock="Right" Content="&#xE711;"
                 FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
