@@ -12,9 +12,9 @@ Anyone who works or studies at a computer and wants to hold their focus through 
 
 ## Status
 
-**v1.2.0 is released** — see the [Releases page](https://github.com/malinfossum/tidsro/releases). Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, and a per-timer sound) and **clock-time alarms** — a **"Your day" agenda** where you set one-shot fire-at-HH:MM alarms with an optional label and per-alarm sound, edit them in a dialog, and delete with an undo window. Firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**. v1.2 is a design + interaction polish release: a responsive layout, refreshed dark visuals with gentle motion, and snappier timers.
+**v1.3.0 is released** — see the [Releases page](https://github.com/malinfossum/tidsro/releases). Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms** — fire once at an HH:MM time, or repeat on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms are edited in a dialog and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**.
 
-The latest design spec (the v1.2 polish pass) lives in [`docs/superpowers/specs/2026-06-17-tidsro-slice3-design-polish-design.md`](docs/superpowers/specs/2026-06-17-tidsro-slice3-design-polish-design.md).
+See the [changelog](CHANGELOG.md) for what's new in each release.
 
 ## Install
 
@@ -42,18 +42,18 @@ Launching Tidsro opens its window — it remembers where you last placed it and 
   - Press **Ctrl+Alt+T** to bring the latest card into keyboard focus; Tab reaches the buttons; Enter activates; focus returns to your previous app on dismiss.
   - Multiple finished cards stack upward and dismiss independently.
 
-**Your day** (clock-time alarms) lives below the countdown list. Type a time — `14:30`, or shorthand like `9`, `930`, or `1430` (24-hour) — an optional label, choose a sound, and click **Add** (or press **Enter**). The alarm is saved immediately and fires once at the given time.
+The **Schedule** lives below the countdown list. Type a time — `14:30`, or shorthand like `9`, `930`, or `1430` (24-hour) — an optional label, choose a sound, set **Repeat** (Once, or a weekday set), and click **Add** (or press **Enter**). The alarm is saved immediately. Turn on **Warn me 5 minutes before** for a quiet heads-up ahead of the alarm.
 
+- A one-shot alarm fires once; a recurring alarm repeats on its days, and the Schedule stays sorted by what's next.
 - If Tidsro isn't running when an alarm time passes, it fires within a 5-minute grace window on next launch.
-- Each alarm row shows its fire time, label, and sound. Click **Edit** (pencil) to change it in a dialog; **Save** commits, **Cancel** discards.
+- Each alarm row shows its time, cadence, label, and sound. Click **Edit** (pencil) to change it in a dialog; **Save** commits, **Cancel** discards.
 - **Delete** removes the alarm with a brief undo window — click **Undo** in the bar at the bottom to restore it.
-- When an alarm fires, the same quiet bottom-right card appears, with **Snooze +5** (arms a 5-minute countdown) and **Dismiss**.
+- When an alarm fires, the same quiet bottom-right card appears, with **Snooze +5** (re-arms it 5 minutes later in the Schedule) and **Dismiss**.
 
 - Open **Settings** (bottom-left of the main window) to toggle launch-at-startup and choose a default sound. Changes apply when you click **Save**; **Cancel**, **Esc**, or closing the window discards them.
 
 ## Roadmap
 
-- Recurring (weekday) alarms
 - An optional label per countdown timer
 - Cloud sync / backup
 
