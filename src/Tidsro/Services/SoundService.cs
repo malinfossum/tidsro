@@ -1,4 +1,3 @@
-using System.IO;
 using System.Linq;
 using System.Media;
 using System.Reflection;
@@ -13,7 +12,8 @@ public sealed class SoundService : ISoundService
     // Held so the player isn't collected while a memory-backed sound is still playing async.
     private SoundPlayer? _player;
 
-    private static string? FileFor(SoundChoice c) => c switch
+    // internal for tests
+    internal static string? FileFor(SoundChoice c) => c switch
     {
         SoundChoice.SoftChime           => "soft-chime.wav",
         SoundChoice.Marimba             => "marimba.wav",
@@ -24,21 +24,27 @@ public sealed class SoundService : ISoundService
         _ => null,   // None = silent
     };
 
-    private static Stream? Open(string file)
+    /// <summary>Resolve the embedded resource name for a choice (null = silent or missing). internal for tests.</summary>
+    internal static string? ResourceNameFor(SoundChoice choice)
     {
-        var name = Asm.GetManifestResourceNames()
-            .FirstOrDefault(n => n.EndsWith(file, System.StringComparison.OrdinalIgnoreCase));
-        return name is null ? null : Asm.GetManifestResourceStream(name);
+        var file = FileFor(choice);
+        if (file is null) return null;
+
+        // Match ".<file>" — the leading dot is the namespace/path separator, so a short
+        // name like "Piano-Jingle.wav" can't also match "Electric-Piano-Jingle.wav".
+        var suffix = "." + file;
+        return Asm.GetManifestResourceNames()
+            .FirstOrDefault(n => n.EndsWith(suffix, System.StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>Play the chosen sound once. Silent and never throws.</summary>
     public void Play(SoundChoice choice)
     {
-        var file = FileFor(choice);
-        if (file is null) return;
+        var name = ResourceNameFor(choice);
+        if (name is null) return;
         try
         {
-            using var stream = Open(file);
+            using var stream = Asm.GetManifestResourceStream(name);
             if (stream is null) return;
 
             _player?.Dispose();

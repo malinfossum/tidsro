@@ -36,4 +36,8 @@
     <EmbeddedResource Include="Assets\sounds\*.wav" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="Tidsro.Tests" />
+  </ItemGroup>
+
 </Project>
