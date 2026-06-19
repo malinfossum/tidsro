@@ -53,4 +53,37 @@ public class PopupViewModelTests
         var vm = new PopupViewModel(item, _ => item, _ => item, _ => { });
         Assert.False(vm.ShowRestart);   // Restart is meaningless for a one-shot alarm
     }
+
+    [Fact]
+    public void Warning_variant_uses_the_given_title_hides_completion_actions_and_speaks_the_lead()
+    {
+        var item = new TimerItem { TriggerType = TriggerType.ClockTime, Label = "Stand-up" };
+        var vm = new PopupViewModel(item, "Stand-up");
+        Assert.True(vm.IsWarning);
+        Assert.Equal("Stand-up", vm.Title);
+        Assert.False(vm.ShowSnooze);
+        Assert.False(vm.ShowRestart);
+        Assert.Equal(" in 5 minutes", vm.HeaderText);
+        Assert.Equal("Stand-up in 5 minutes", vm.AnnouncementText);
+    }
+
+    [Fact]
+    public void Warning_dismiss_closes_the_card_without_a_scheduler_callback()
+    {
+        var item = new TimerItem { TriggerType = TriggerType.ClockTime, Label = "Stand-up" };
+        var vm = new PopupViewModel(item, "Stand-up");
+        var closed = 0; vm.CloseRequested += (_, _) => closed++;
+        vm.DismissCommand.Execute(null);
+        Assert.Equal(1, closed);   // close-only: nothing to cancel, the alarm stays armed
+    }
+
+    [Fact]
+    public void Completion_variant_keeps_its_header_actions_and_announcement()
+    {
+        var vm = new PopupViewModel(Item("focus"), _ => Item(), _ => Item(), _ => { });
+        Assert.False(vm.IsWarning);
+        Assert.True(vm.ShowSnooze);
+        Assert.Equal(" complete", vm.HeaderText);
+        Assert.Equal("focus complete", vm.AnnouncementText);
+    }
 }

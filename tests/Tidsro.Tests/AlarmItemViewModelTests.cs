@@ -74,4 +74,24 @@ public class AlarmItemViewModelTests
         var tomorrow = new AlarmItemViewModel(Alarm("Lunch", SoundChoice.Bell, 14, 0), isTomorrow: true, isNext: false);
         Assert.Equal("tomorrow", tomorrow.CadenceText);
     }
+
+    [Fact]
+    public void Warning_enabled_alarm_exposes_a_text_cue_and_speaks_it()
+    {
+        var item = Alarm("Stand-up", SoundChoice.Bell, 7, 0);
+        item.WarnBefore = true;
+        var vm = new AlarmItemViewModel(item, isTomorrow: false, isNext: false);
+        Assert.True(vm.WarnBefore);
+        Assert.Equal("5-min warning", vm.WarnText);
+        Assert.Contains("warns 5 minutes before", vm.AccessibleName);
+    }
+
+    [Fact]
+    public void Alarm_without_warning_has_an_empty_cue_and_no_warning_phrase()
+    {
+        var vm = new AlarmItemViewModel(Alarm("Lunch", SoundChoice.Bell, 14, 0), isTomorrow: false, isNext: false);
+        Assert.False(vm.WarnBefore);
+        Assert.Equal("", vm.WarnText);
+        Assert.DoesNotContain("warns", vm.AccessibleName);
+    }
 }

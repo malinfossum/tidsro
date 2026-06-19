@@ -15,7 +15,8 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private SoundChoice _defaultSound;
 
     public SoundChoice[] SoundOptions { get; } =
-        { SoundChoice.None, SoundChoice.SoftChime, SoundChoice.Marimba, SoundChoice.Bell };
+        { SoundChoice.None, SoundChoice.SoftChime, SoundChoice.Marimba, SoundChoice.Bell,
+          SoundChoice.PianoJingle, SoundChoice.ElectricPianoJingle, SoundChoice.BellJingle };
 
     public SettingsViewModel(AppSettings settings, StartupService startup,
         Action save, Action<SoundChoice> onDefaultSoundChanged)

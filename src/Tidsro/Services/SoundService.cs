@@ -15,9 +15,12 @@ public sealed class SoundService : ISoundService
 
     private static string? FileFor(SoundChoice c) => c switch
     {
-        SoundChoice.SoftChime => "soft-chime.wav",
-        SoundChoice.Marimba   => "marimba.wav",
-        SoundChoice.Bell      => "bell.wav",
+        SoundChoice.SoftChime           => "soft-chime.wav",
+        SoundChoice.Marimba             => "marimba.wav",
+        SoundChoice.Bell                => "bell.wav",
+        SoundChoice.PianoJingle         => "Piano-Jingle.wav",
+        SoundChoice.ElectricPianoJingle => "Electric-Piano-Jingle.wav",
+        SoundChoice.BellJingle          => "Bell-Jingle.wav",
         _ => null,   // None = silent
     };
 

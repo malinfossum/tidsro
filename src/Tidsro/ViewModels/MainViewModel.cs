@@ -15,7 +15,8 @@ public partial class MainViewModel : ObservableObject
     public int[] Presets { get; } = { 15, 30, 60 };
 
     public SoundChoice[] SoundOptions { get; } =
-        { SoundChoice.None, SoundChoice.SoftChime, SoundChoice.Marimba, SoundChoice.Bell };
+        { SoundChoice.None, SoundChoice.SoftChime, SoundChoice.Marimba, SoundChoice.Bell,
+          SoundChoice.PianoJingle, SoundChoice.ElectricPianoJingle, SoundChoice.BellJingle };
 
     [ObservableProperty] private string _customInput = "";
     [ObservableProperty] private string _label = "";
@@ -33,6 +34,7 @@ public partial class MainViewModel : ObservableObject
         { RepeatOption.Once, RepeatOption.Daily, RepeatOption.Weekdays, RepeatOption.Weekends, RepeatOption.Custom };
 
     [ObservableProperty] private RepeatOption _alarmRepeat = RepeatOption.Once;
+    [ObservableProperty] private bool _alarmWarnBefore;
 
     public IReadOnlyList<DayToggleViewModel> AlarmDayToggles { get; } = DayToggleViewModel.Week();
 
@@ -94,7 +96,7 @@ public partial class MainViewModel : ObservableObject
         { CustomError = error; return; }
         CustomError = null;
         Add(d);
-        CustomInput = ""; Label = "";
+        CustomInput = "";
     }
 
     private void Add(TimeSpan duration)
@@ -102,10 +104,24 @@ public partial class MainViewModel : ObservableObject
         var label = string.IsNullOrWhiteSpace(Label) ? null : CapitalizeFirst(Label.Trim());
         var item = _scheduler.StartCountdown(duration, label, SelectedSound);
         Running.Add(new TimerItemViewModel(item, _scheduler));
+        Label = "";   // consumed by this timer — clear so it can't carry into the next one (preset or custom)
+        MarkNextRunning();
     }
 
     private static string CapitalizeFirst(string s) =>
         s.Length == 0 ? s : char.ToUpper(s[0]) + s[1..];
+
+    // Flag the active timer that will reach zero soonest, so the View highlights it like the agenda's
+    // "next" alarm. Only Running timers qualify — a paused or already-fired countdown isn't what fires next.
+    private void MarkNextRunning()
+    {
+        var next = Running
+            .Where(vm => vm.Item.State == TimerState.Running)
+            .OrderBy(vm => _scheduler.Remaining(vm.Item))
+            .FirstOrDefault();
+        foreach (var vm in Running)
+            vm.IsNext = ReferenceEquals(vm, next);
+    }
 
     [RelayCommand]
     private void CancelTimer(TimerItemViewModel? row)
@@ -116,6 +132,7 @@ public partial class MainViewModel : ObservableObject
         var remaining = _scheduler.Remaining(item);  // capture BEFORE cancelling
         _scheduler.Cancel(item);
         Running.Remove(row);                         // instant removal — no 1s tick lag
+        MarkNextRunning();                           // highlight jumps to the new soonest at once
         _pendingDelete = item;
         _pendingDeleteRemaining = remaining;
         PendingDeleteLabel = $"Timer cancelled{(string.IsNullOrEmpty(item.Label) ? "" : $" · {item.Label}")}";
@@ -139,6 +156,8 @@ public partial class MainViewModel : ObservableObject
             if (!Running.Any(vm => vm.Item == item))
                 Running.Add(new TimerItemViewModel(item, _scheduler));
 
+        MarkNextRunning();   // keep the "next" highlight current as timers count down, pause, or fire
+
         // Reconcile the alarm agenda only when it actually changed — an add/remove/one-shot fire (ids)
         // or a recurring roll-forward (EndsAt). Otherwise leave the collection alone so focus and
         // announcements aren't disrupted every second.
@@ -159,12 +178,12 @@ public partial class MainViewModel : ObservableObject
         if (days == Weekdays.None)
         {
             var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
-            _scheduler.ArmClockAlarm(fireAt, label, AlarmSound);
+            _scheduler.ArmClockAlarm(fireAt, label, AlarmSound, warnBefore: AlarmWarnBefore);
             Announce($"Alarm added for {fireAt:HH\\:mm}");
         }
         else
         {
-            _scheduler.ArmRecurringAlarm(hour, minute, days, label, AlarmSound);
+            _scheduler.ArmRecurringAlarm(hour, minute, days, label, AlarmSound, warnBefore: AlarmWarnBefore);
             Announce($"Alarm added for {hour:00}:{minute:00}, {RecurrenceRules.CadenceLabel(days)}");
         }
 
@@ -188,7 +207,7 @@ public partial class MainViewModel : ObservableObject
 
     // Called by the Edit-alarm dialog on Save. Replaces the alarm in place (same Id), normalizing the
     // label like the add path. Mirrors the former in-place edit branch.
-    public void ApplyAlarmEdit(Guid id, int hour, int minute, Weekdays days, string? label, SoundChoice sound)
+    public void ApplyAlarmEdit(Guid id, int hour, int minute, Weekdays days, string? label, SoundChoice sound, bool warnBefore)
     {
         var existing = _scheduler.Alarms.FirstOrDefault(a => a.Id == id);
         if (existing is not null) _scheduler.RemoveAlarm(existing);
@@ -196,12 +215,12 @@ public partial class MainViewModel : ObservableObject
         if (days == Weekdays.None)
         {
             var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
-            _scheduler.ArmClockAlarm(fireAt, clean, sound, id);
+            _scheduler.ArmClockAlarm(fireAt, clean, sound, id, warnBefore: warnBefore);
             Announce($"Alarm updated for {fireAt:HH\\:mm}");
         }
         else
         {
-            _scheduler.ArmRecurringAlarm(hour, minute, days, clean, sound, id);
+            _scheduler.ArmRecurringAlarm(hour, minute, days, clean, sound, id, warnBefore: warnBefore);
             Announce($"Alarm updated for {hour:00}:{minute:00}, {RecurrenceRules.CadenceLabel(days)}");
         }
         RebuildAgenda();
@@ -234,18 +253,19 @@ public partial class MainViewModel : ObservableObject
         {
             var restored = _scheduler.StartCountdown(_pendingDeleteRemaining ?? TimeSpan.Zero, item.Label, item.Sound);
             Running.Add(new TimerItemViewModel(restored, _scheduler));
+            MarkNextRunning();
             Announce("Timer restored");
         }
         else if (item.RecurringDays is { } days && item.EndsAt is { } next)
         {
-            _scheduler.ArmRecurringAlarm(next.Hour, next.Minute, days, item.Label, item.Sound, item.Id, next);
+            _scheduler.ArmRecurringAlarm(next.Hour, next.Minute, days, item.Label, item.Sound, item.Id, next, item.WarnBefore);
             RebuildAgenda();
             Announce("Alarm restored");
             // No persist needed: the record was never removed from disk.
         }
         else if (item.EndsAt is { } fireAt)
         {
-            _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id);   // re-arm; next tick re-checks grace if past
+            _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id, item.WarnBefore);   // re-arm; next tick re-checks grace if past
             RebuildAgenda();
             Announce("Alarm restored");
             // No persist needed: the record was never removed from disk.
@@ -275,6 +295,7 @@ public partial class MainViewModel : ObservableObject
         AlarmError = null;
         AlarmRepeat = RepeatOption.Once;
         foreach (var t in AlarmDayToggles) t.IsSelected = false;
+        AlarmWarnBefore = false;
     }
 
     private void Announce(string message) => Announcement?.Invoke(this, message);

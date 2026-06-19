@@ -9,14 +9,14 @@ public class EditAlarmViewModelTests
     private static readonly SoundChoice[] Options =
         { SoundChoice.None, SoundChoice.SoftChime, SoundChoice.Marimba, SoundChoice.Bell };
 
-    private static EditAlarmViewModel New(string timeInput, out List<(Guid id, int h, int m, Weekdays days, string? label, SoundChoice sound)> applied,
-        out FakeSoundService sound, Guid? id = null, Weekdays days = Weekdays.None)
+    private static EditAlarmViewModel New(string timeInput, out List<(Guid id, int h, int m, Weekdays days, string? label, SoundChoice sound, bool warnBefore)> applied,
+        out FakeSoundService sound, Guid? id = null, Weekdays days = Weekdays.None, bool warnBefore = false)
     {
-        var captured = new List<(Guid, int, int, Weekdays, string?, SoundChoice)>();
+        var captured = new List<(Guid, int, int, Weekdays, string?, SoundChoice, bool)>();
         applied = captured;
         sound = new FakeSoundService();
-        return new EditAlarmViewModel(id ?? Guid.NewGuid(), timeInput, "Tea", SoundChoice.Bell, days,
-            Options, (i, h, m, d, l, s) => captured.Add((i, h, m, d, l, s)), sound);
+        return new EditAlarmViewModel(id ?? Guid.NewGuid(), timeInput, "Tea", SoundChoice.Bell, days, warnBefore,
+            Options, (i, h, m, d, l, s, w) => captured.Add((i, h, m, d, l, s, w)), sound);
     }
 
     [Fact]
@@ -108,5 +108,21 @@ public class EditAlarmViewModelTests
         Assert.True(vm.ShowCustomDays);
         vm.SaveCommand.Execute(null);
         Assert.Equal(custom, Assert.Single(applied).days);   // pre-selected toggles round-trip through ResolveDays
+    }
+
+    [Fact]
+    public void Save_passes_the_warn_before_flag_through()
+    {
+        var vm = New("11:15", out var applied, out _, warnBefore: true);
+        vm.SaveCommand.Execute(null);
+        Assert.True(Assert.Single(applied).warnBefore);
+    }
+
+    [Fact]
+    public void Save_passes_false_when_the_warning_is_off()
+    {
+        var vm = New("11:15", out var applied, out _);   // warnBefore defaults false
+        vm.SaveCommand.Execute(null);
+        Assert.False(Assert.Single(applied).warnBefore);
     }
 }

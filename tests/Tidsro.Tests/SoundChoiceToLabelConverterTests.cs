@@ -11,6 +11,9 @@ public class SoundChoiceToLabelConverterTests
     [InlineData(SoundChoice.SoftChime, "Soft chime")]
     [InlineData(SoundChoice.Marimba, "Marimba")]
     [InlineData(SoundChoice.Bell, "Bell")]
+    [InlineData(SoundChoice.PianoJingle, "Piano jingle")]
+    [InlineData(SoundChoice.ElectricPianoJingle, "Electric piano jingle")]
+    [InlineData(SoundChoice.BellJingle, "Bell jingle")]
     public void Converts_each_choice_to_a_friendly_label(SoundChoice choice, string expected)
     {
         var converter = new SoundChoiceToLabelConverter();

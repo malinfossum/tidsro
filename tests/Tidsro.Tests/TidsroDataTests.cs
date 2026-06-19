@@ -125,4 +125,20 @@ public class TidsroDataTests
         var clean = new TidsroData { Settings = new(), RecurringAlarms = { first, second } }.Sanitized();
         Assert.Equal("first", Assert.Single(clean.RecurringAlarms).Label);
     }
+
+    [Fact]
+    public void Sanitized_preserves_the_warn_before_flag_on_a_clock_alarm()
+    {
+        var a = Good(); a.WarnBefore = true;
+        var clean = new TidsroData { Settings = new(), Alarms = { a } }.Sanitized();
+        Assert.True(Assert.Single(clean.Alarms).WarnBefore);
+    }
+
+    [Fact]
+    public void Sanitized_preserves_the_warn_before_flag_on_a_recurring_alarm()
+    {
+        var r = GoodRec(); r.WarnBefore = true;
+        var clean = new TidsroData { Settings = new(), RecurringAlarms = { r } }.Sanitized();
+        Assert.True(Assert.Single(clean.RecurringAlarms).WarnBefore);
+    }
 }

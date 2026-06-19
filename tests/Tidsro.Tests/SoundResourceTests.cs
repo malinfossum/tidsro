@@ -14,6 +14,9 @@ public class SoundResourceTests
     [InlineData("soft-chime.wav")]
     [InlineData("marimba.wav")]
     [InlineData("bell.wav")]
+    [InlineData("Piano-Jingle.wav")]
+    [InlineData("Electric-Piano-Jingle.wav")]
+    [InlineData("Bell-Jingle.wav")]
     public void Each_chime_is_embedded_in_the_app_assembly(string file)
     {
         var name = App.GetManifestResourceNames()

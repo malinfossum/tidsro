@@ -16,6 +16,7 @@ public partial class TimerItemViewModel : ObservableObject
 
     [ObservableProperty] private string _remainingText = "00:00";
     [ObservableProperty] private bool _isPaused;
+    [ObservableProperty] private bool _isNext;   // soonest-finishing active timer — the parent sets this
     [ObservableProperty] private string _pauseResumeGlyph = PauseGlyph;
     [ObservableProperty] private string _pauseResumeLabel = "Pause";
 

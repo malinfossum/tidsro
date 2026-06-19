@@ -27,6 +27,9 @@ public sealed class SoundChoiceToLabelConverter : IValueConverter
         SoundChoice.SoftChime => "Soft chime",
         SoundChoice.Marimba => "Marimba",
         SoundChoice.Bell => "Bell",
+        SoundChoice.PianoJingle => "Piano jingle",
+        SoundChoice.ElectricPianoJingle => "Electric piano jingle",
+        SoundChoice.BellJingle => "Bell jingle",
         _ => "",
     };
     public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();

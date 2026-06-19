@@ -176,6 +176,7 @@
     <Setter Property="Background" Value="{StaticResource InteractiveBg}"/>
     <Setter Property="Foreground" Value="{StaticResource Text}"/>
     <Setter Property="CaretBrush" Value="{StaticResource Text}"/>
+    <Setter Property="MinHeight" Value="34"/>
     <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
     <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="Padding" Value="8,6"/>
@@ -236,6 +237,7 @@
     <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
     <Setter Property="Padding" Value="8,6"/>
     <Setter Property="ItemContainerStyle" Value="{StaticResource ComboItem}"/>
+    <Setter Property="MinHeight" Value="34"/>
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="ComboBox">
@@ -270,6 +272,76 @@
               </Border>
             </Popup>
           </Grid>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Day-of-week toggle chip: Custom-day picker in the Schedule editor. Selected = gold fill (a fill
+       change, not colour alone); each chip keeps its full-day AutomationProperties.Name + ToggleButton
+       pressed state for screen readers. -->
+  <Style x:Key="DayChip" TargetType="ToggleButton">
+    <Setter Property="FocusVisualStyle" Value="{StaticResource ActionFocusVisual}"/>
+    <Setter Property="Height" Value="34"/>
+    <Setter Property="Margin" Value="3,0"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
+    <Setter Property="FontSize" Value="{StaticResource TextSm}"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ToggleButton">
+          <Border x:Name="chip" CornerRadius="{StaticResource RadiusSm}" BorderThickness="1"
+                  Background="{StaticResource InteractiveBg}" BorderBrush="{StaticResource Border}">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="chip" Property="Background" Value="{StaticResource Accent}"/>
+              <Setter TargetName="chip" Property="BorderBrush" Value="{StaticResource Accent}"/>
+              <Setter Property="Foreground" Value="{StaticResource PageBg}"/>
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="chip" Property="BorderBrush" Value="{StaticResource AccentStrong}"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Toggle switch for boolean settings (warn-before, launch-at-startup). Restyles CheckBox so the
+       IsChecked binding and screen-reader checked/unchecked semantics carry over unchanged. State reads
+       from thumb POSITION (not colour alone); gold-when-on echoes the primary action. -->
+  <Style x:Key="ToggleSwitch" TargetType="CheckBox">
+    <Setter Property="FocusVisualStyle" Value="{StaticResource ActionFocusVisual}"/>
+    <Setter Property="Foreground" Value="{StaticResource Text}"/>
+    <Setter Property="FontSize" Value="{StaticResource TextSm}"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="CheckBox">
+          <StackPanel Orientation="Horizontal" Background="Transparent">
+            <Border x:Name="track" Width="42" Height="24" CornerRadius="12" VerticalAlignment="Center"
+                    Background="{StaticResource InteractiveBg}" BorderBrush="{StaticResource Border}" BorderThickness="1">
+              <Ellipse x:Name="thumb" Width="16" Height="16" HorizontalAlignment="Left" VerticalAlignment="Center"
+                       Margin="3,0,0,0" Fill="{StaticResource TextMuted}"/>
+            </Border>
+            <ContentPresenter VerticalAlignment="Center" Margin="10,0,0,0"
+                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+          </StackPanel>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="track" Property="Background" Value="{StaticResource Accent}"/>
+              <Setter TargetName="track" Property="BorderBrush" Value="{StaticResource Accent}"/>
+              <Setter TargetName="thumb" Property="Fill" Value="{StaticResource PageBg}"/>
+              <Setter TargetName="thumb" Property="HorizontalAlignment" Value="Right"/>
+              <Setter TargetName="thumb" Property="Margin" Value="0,0,3,0"/>
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="track" Property="BorderBrush" Value="{StaticResource AccentStrong}"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
         </ControlTemplate>
       </Setter.Value>
     </Setter>

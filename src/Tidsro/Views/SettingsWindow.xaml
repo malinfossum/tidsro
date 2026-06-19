@@ -6,7 +6,7 @@
         FontFamily="{StaticResource FontSans}">
   <StackPanel Margin="24">
     <CheckBox Content="Launch Tidsro at startup" IsChecked="{Binding LaunchAtStartup}"
-              Foreground="{StaticResource Text}"
+              Style="{StaticResource ToggleSwitch}"
               AutomationProperties.Name="Launch at startup" Margin="0,0,0,20"/>
     <TextBlock Text="Default sound for new timers" Margin="0,0,0,8"/>
     <ComboBox ItemsSource="{Binding SoundOptions}" SelectedItem="{Binding DefaultSound}"

@@ -13,7 +13,7 @@ namespace Tidsro.ViewModels;
 public partial class EditAlarmViewModel : ObservableObject
 {
     private readonly Guid _id;
-    private readonly Action<Guid, int, int, Weekdays, string?, SoundChoice> _apply;
+    private readonly Action<Guid, int, int, Weekdays, string?, SoundChoice, bool> _apply;
     private readonly ISoundService _sound;
 
     public SoundChoice[] SoundOptions { get; }
@@ -27,6 +27,7 @@ public partial class EditAlarmViewModel : ObservableObject
     [ObservableProperty] private SoundChoice _selectedSound;
     [ObservableProperty] private RepeatOption _repeat;
     [ObservableProperty] private string? _error;
+    [ObservableProperty] private bool _warnBefore;
 
     public bool ShowCustomDays => Repeat == RepeatOption.Custom;
     partial void OnRepeatChanged(RepeatOption value) => OnPropertyChanged(nameof(ShowCustomDays));
@@ -34,14 +35,15 @@ public partial class EditAlarmViewModel : ObservableObject
     /// <summary>Raised when the dialog should close. true = saved, false = cancelled.</summary>
     public event EventHandler<bool>? CloseRequested;
 
-    public EditAlarmViewModel(Guid id, string timeInput, string label, SoundChoice sound, Weekdays days,
-        SoundChoice[] soundOptions, Action<Guid, int, int, Weekdays, string?, SoundChoice> apply, ISoundService soundSvc)
+    public EditAlarmViewModel(Guid id, string timeInput, string label, SoundChoice sound, Weekdays days, bool warnBefore,
+        SoundChoice[] soundOptions, Action<Guid, int, int, Weekdays, string?, SoundChoice, bool> apply, ISoundService soundSvc)
     {
         _id = id;
         _timeInput = timeInput;
         _label = label;
         _selectedSound = sound;
         _repeat = RecurrenceRules.OptionFor(days);
+        _warnBefore = warnBefore;
         DayToggles = DayToggleViewModel.Week();
         foreach (var t in DayToggles) t.IsSelected = (days & t.Flag) != 0;
         SoundOptions = soundOptions;
@@ -60,7 +62,7 @@ public partial class EditAlarmViewModel : ObservableObject
     {
         if (!ClockTimeRules.TryParse(TimeInput, out var h, out var m, out var err)) { Error = err; return; }
         Error = null;
-        _apply(_id, h, m, ResolveDays(), Label, SelectedSound);
+        _apply(_id, h, m, ResolveDays(), Label, SelectedSound, WarnBefore);
         CloseRequested?.Invoke(this, true);
     }
 

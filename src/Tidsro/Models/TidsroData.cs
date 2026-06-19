@@ -35,6 +35,7 @@ public sealed class TidsroData
                 FireAt = a.FireAt,
                 Label = NormaliseLabel(a.Label),
                 Sound = a.Sound,
+                WarnBefore = a.WarnBefore,
             });
         }
 
@@ -59,6 +60,7 @@ public sealed class TidsroData
                 Label = NormaliseLabel(r.Label),
                 Sound = r.Sound,
                 NextFireAt = r.NextFireAt,
+                WarnBefore = r.WarnBefore,
             });
         }
 

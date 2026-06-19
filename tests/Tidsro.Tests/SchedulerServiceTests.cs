@@ -71,6 +71,23 @@ public class SchedulerServiceTests
     }
 
     [Fact]
+    public void Snooze_on_an_alarm_returns_it_to_the_schedule_not_quick_timers()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmClockAlarm(c.Now + TimeSpan.FromMinutes(1), "Lunch", SoundChoice.Bell);
+        c.Advance(TimeSpan.FromMinutes(2)); s.Tick();        // fires + leaves the armed set (one-shot)
+
+        var snoozed = s.Snooze(alarm, TimeSpan.FromMinutes(5));
+
+        Assert.Equal(TriggerType.ClockTime, snoozed.TriggerType);   // re-armed as an alarm, not a countdown
+        Assert.Contains(snoozed, s.Alarms);                          // shows in the Schedule
+        Assert.Empty(s.Running);                                     // not parked in Quick timers
+        Assert.Equal("Lunch", snoozed.Label);
+        Assert.Equal(SoundChoice.Bell, snoozed.Sound);
+        Assert.Equal(c.Now + TimeSpan.FromMinutes(5), snoozed.EndsAt);
+    }
+
+    [Fact]
     public void Cancel_removes_the_item()
     {
         var (s, _) = New();
@@ -339,5 +356,92 @@ public class SchedulerServiceTests
         Assert.Equal(1, expired);                                  // one quiet note, not one per missed day
         Assert.Same(alarm, Assert.Single(s.Alarms));
         Assert.Equal(new DateTimeOffset(2026, 1, 1, 10, 0, 0, TimeSpan.Zero), alarm.EndsAt);   // advanced to today 10:00
+    }
+
+    // ── Pre-alarm warning (heads-up 5 minutes before) ──
+
+    [Fact]
+    public void Tick_raises_Warning_once_when_crossing_into_the_last_five_minutes()
+    {
+        var (s, c) = New();
+        s.ArmClockAlarm(c.Now + TimeSpan.FromMinutes(10), "lunch", SoundChoice.Bell, warnBefore: true); // fires +10, warns +5
+        var warned = 0; s.Warning += (_, _) => warned++;
+
+        c.Advance(TimeSpan.FromMinutes(6));   // 6 min in -> inside [+5, +10)
+        s.Tick(); s.Tick();                    // two ticks in the window
+
+        Assert.Equal(1, warned);               // once per occurrence
+    }
+
+    [Fact]
+    public void Tick_does_not_raise_Warning_when_warn_before_is_off()
+    {
+        var (s, c) = New();
+        s.ArmClockAlarm(c.Now + TimeSpan.FromMinutes(10), null, SoundChoice.Bell); // warnBefore defaults false
+        var warned = 0; s.Warning += (_, _) => warned++;
+
+        c.Advance(TimeSpan.FromMinutes(6));
+        s.Tick();
+
+        Assert.Equal(0, warned);
+    }
+
+    [Fact]
+    public void Tick_does_not_raise_Warning_at_or_after_the_fire_time()
+    {
+        var (s, c) = New();
+        s.ArmClockAlarm(c.Now + TimeSpan.FromMinutes(10), null, SoundChoice.None, warnBefore: true);
+        var warned = 0; s.Warning += (_, _) => warned++;
+
+        c.Advance(TimeSpan.FromMinutes(10));   // exactly the fire time
+        s.Tick();                               // fires; not a warning
+
+        Assert.Equal(0, warned);
+    }
+
+    [Fact]
+    public void An_alarm_armed_inside_the_last_five_minutes_does_not_warn()
+    {
+        var (s, c) = New();
+        s.ArmClockAlarm(c.Now + TimeSpan.FromMinutes(3), null, SoundChoice.Bell, warnBefore: true); // already inside the window
+        var warned = 0; s.Warning += (_, _) => warned++;
+
+        c.Advance(TimeSpan.FromMinutes(1));    // 1 min in, still before fire
+        s.Tick();
+
+        Assert.Equal(0, warned);               // suppressed: WarningSent initialised true at arm
+    }
+
+    [Fact]
+    public void Warning_carries_the_live_alarm_so_the_app_can_mirror_its_sound()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmClockAlarm(c.Now + TimeSpan.FromMinutes(10), "lunch", SoundChoice.Bell, warnBefore: true);
+        TimerItem? warned = null; s.Warning += (_, i) => warned = i;
+
+        c.Advance(TimeSpan.FromMinutes(6));
+        s.Tick();
+
+        Assert.Same(alarm, warned);
+        Assert.Equal(SoundChoice.Bell, warned!.Sound);
+    }
+
+    [Fact]
+    public void A_recurring_alarm_warns_before_each_occurrence()
+    {
+        var (s, c) = New();   // Thu 2026-01-01 09:00
+        s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.Bell, warnBefore: true); // today 10:00
+        var warned = 0; s.Warning += (_, _) => warned++;
+
+        c.Advance(TimeSpan.FromMinutes(56));   // 09:56 -> inside [09:55, 10:00)
+        s.Tick();
+        Assert.Equal(1, warned);
+
+        c.Advance(TimeSpan.FromMinutes(5));    // 10:01 -> fires, advances to Fri 10:00, resets the heads-up
+        s.Tick();
+
+        c.Advance(TimeSpan.FromHours(23) + TimeSpan.FromMinutes(55));   // Fri 09:56
+        s.Tick();
+        Assert.Equal(2, warned);               // warned again for the next occurrence
     }
 }

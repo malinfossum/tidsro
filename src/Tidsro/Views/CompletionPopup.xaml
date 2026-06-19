@@ -4,7 +4,7 @@
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowActivated="False" Topmost="True" ShowInTaskbar="False"
         SizeToContent="WidthAndHeight" ResizeMode="NoResize"
-        AutomationProperties.Name="Timer complete"
+        AutomationProperties.Name="{Binding AnnouncementText}"
         FontFamily="{StaticResource FontSans}">
   <Border x:Name="Root" Background="{StaticResource CardBg}" CornerRadius="{StaticResource RadiusMd}"
           BorderBrush="{StaticResource Border}" BorderThickness="1"
@@ -16,7 +16,7 @@
     <StackPanel>
       <DockPanel>
         <TextBlock Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}" VerticalAlignment="Center">
-          <Run FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Text="&#xE73E;"/><Run Text=" complete"/>
+          <Run FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Text="&#xE73E;"/><Run Text="{Binding HeaderText, Mode=OneWay}"/>
         </TextBlock>
         <Button x:Name="DismissX" DockPanel.Dock="Right" Content="&#xE711;"
                 FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
@@ -31,7 +31,8 @@
       <!-- Actions: hidden for mouse-at-rest, shown on hover OR when the card has keyboard focus -->
       <StackPanel x:Name="Actions" Orientation="Horizontal" Opacity="0">
         <Button Content="+5 min" Command="{Binding Plus5Command}"
-                AutomationProperties.Name="Add 5 minutes" Style="{StaticResource QuietAction}"/>
+                AutomationProperties.Name="Add 5 minutes" Style="{StaticResource QuietAction}"
+                Visibility="{Binding ShowSnooze, Converter={StaticResource BoolToVisible}}"/>
         <Button Content="Restart" Command="{Binding RestartCommand}"
                 AutomationProperties.Name="Restart timer" Style="{StaticResource QuietAction}" Margin="8,0,0,0"
                 Visibility="{Binding ShowRestart, Converter={StaticResource BoolToVisible}}"/>

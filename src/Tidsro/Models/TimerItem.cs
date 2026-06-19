@@ -16,4 +16,9 @@ public sealed class TimerItem
     public DateTimeOffset? EndsAt { get; set; }
     public TimeSpan? PausedRemaining { get; set; }
     public TimerState State { get; set; } = TimerState.Idle;
+
+    // Pre-alarm warning (heads-up): the persisted per-alarm opt-in, plus a transient per-occurrence guard
+    // (managed inside SchedulerService; never persisted).
+    public bool WarnBefore { get; set; }
+    public bool WarningSent { get; set; }
 }

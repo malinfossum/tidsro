@@ -16,12 +16,18 @@ public sealed class SchedulerService
     /// <summary>Within this window after FireAt, a missed alarm still fires; beyond it, it expires quietly.</summary>
     public static readonly TimeSpan Grace = TimeSpan.FromMinutes(5);
 
+    /// <summary>How long before an alarm a WarnBefore heads-up fires.</summary>
+    public static readonly TimeSpan WarningLead = TimeSpan.FromMinutes(5);
+
     public IReadOnlyList<TimerItem> Alarms => _alarms;
     public DateTimeOffset Now => _clock.Now;
     public event EventHandler<TimerItem>? Expired;
 
+    /// <summary>Raised once, WarningLead before an alarm with WarnBefore on, so the App can show a heads-up.</summary>
+    public event EventHandler<TimerItem>? Warning;
+
     /// <summary>Arm a one-shot clock-time alarm. Pass <paramref name="id"/> to restore a persisted alarm's identity.</summary>
-    public TimerItem ArmClockAlarm(DateTimeOffset fireAt, string? label, SoundChoice sound, Guid? id = null)
+    public TimerItem ArmClockAlarm(DateTimeOffset fireAt, string? label, SoundChoice sound, Guid? id = null, bool warnBefore = false)
     {
         var item = new TimerItem
         {
@@ -31,6 +37,8 @@ public sealed class SchedulerService
             Sound = sound,
             EndsAt = fireAt,
             State = TimerState.Running,
+            WarnBefore = warnBefore,
+            WarningSent = warnBefore && _clock.Now >= fireAt - WarningLead,   // armed inside the window -> no insta-warn
         };
         _alarms.Add(item);
         return item;
@@ -40,8 +48,9 @@ public sealed class SchedulerService
 
     /// <summary>Arm a recurring alarm. Pass <paramref name="nextFireAt"/> to restore a persisted alarm's next occurrence.</summary>
     public TimerItem ArmRecurringAlarm(int hour, int minute, Weekdays days, string? label, SoundChoice sound,
-        Guid? id = null, DateTimeOffset? nextFireAt = null)
+        Guid? id = null, DateTimeOffset? nextFireAt = null, bool warnBefore = false)
     {
+        var ends = nextFireAt ?? RecurrenceRules.NextOccurrence(_clock.Now, hour, minute, days);
         var item = new TimerItem
         {
             Id = id ?? Guid.NewGuid(),
@@ -49,8 +58,10 @@ public sealed class SchedulerService
             Label = label,
             Sound = sound,
             RecurringDays = days,
-            EndsAt = nextFireAt ?? RecurrenceRules.NextOccurrence(_clock.Now, hour, minute, days),
+            EndsAt = ends,
             State = TimerState.Running,
+            WarnBefore = warnBefore,
+            WarningSent = warnBefore && _clock.Now >= ends - WarningLead,
         };
         _alarms.Add(item);
         return item;
@@ -107,12 +118,22 @@ public sealed class SchedulerService
 
         foreach (var alarm in _alarms.ToList())
         {
-            if (alarm.State != TimerState.Running || alarm.EndsAt is not { } end || now < end) continue;
+            if (alarm.State != TimerState.Running || alarm.EndsAt is not { } end) continue;
+
+            // Heads-up: raise Warning once when we cross into the last WarningLead before the alarm.
+            if (alarm.WarnBefore && !alarm.WarningSent && now >= end - WarningLead && now < end)
+            {
+                alarm.WarningSent = true;
+                Warning?.Invoke(this, alarm);      // App: soft chime (if sounded) + a heads-up card
+            }
+
+            if (now < end) continue;               // not yet fire time
 
             if (alarm.TriggerType == TriggerType.Recurring && alarm.RecurringDays is { } days)
             {
                 var prev = RecurrenceRules.MostRecentOccurrence(now, end.Hour, end.Minute, days);
                 alarm.EndsAt = RecurrenceRules.NextOccurrence(now, end.Hour, end.Minute, days);  // advance first: in-session dedup
+                alarm.WarningSent = false;         // re-arm the heads-up for the next occurrence
                 if (now - prev <= Grace)
                     Fired?.Invoke(this, OccurrenceSnapshot(alarm, prev));    // transient copy -> card can't mutate the live alarm
                 else
@@ -154,7 +175,10 @@ public sealed class SchedulerService
     public TimerItem Snooze(TimerItem item, TimeSpan by)
     {
         Cancel(item);
-        return StartCountdown(by, item.Label, item.Sound);
+        // An alarm snoozes back into the Schedule as a clock-time alarm; a countdown stays a Quick timer.
+        return item.TriggerType == TriggerType.Countdown
+            ? StartCountdown(by, item.Label, item.Sound)
+            : ArmClockAlarm(_clock.Now + by, item.Label, item.Sound);
     }
 
     public TimerItem Restart(TimerItem item)
