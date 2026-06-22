@@ -530,14 +530,14 @@ public class MainViewModelTests
     // ── Quick-timer "next" highlight: the soonest active timer is flagged ──
 
     [Fact]
-    public void The_soonest_finishing_running_timer_is_marked_next()
+    public void The_soonest_finishing_running_timer_sorts_to_the_top_and_is_marked_next()
     {
         var vm = New(out _, out _);
-        vm.StartPresetCommand.Execute(60);   // Running[0] — finishes later
-        vm.StartPresetCommand.Execute(15);   // Running[1] — finishes first
+        vm.StartPresetCommand.Execute(60);   // added first, finishes later
+        vm.StartPresetCommand.Execute(15);   // added second, finishes first
 
-        Assert.False(vm.Running[0].IsNext);
-        Assert.True(vm.Running[1].IsNext);
+        Assert.True(vm.Running[0].IsNext);    // the 15 sorts above the 60 and is next
+        Assert.False(vm.Running[1].IsNext);
     }
 
     [Fact]
@@ -547,23 +547,41 @@ public class MainViewModelTests
         vm.StartPresetCommand.Execute(60);
         vm.StartPresetCommand.Execute(15);
 
-        vm.CancelTimerCommand.Execute(vm.Running[1]);    // cancel the soonest (15)
+        vm.CancelTimerCommand.Execute(vm.Running[0]);    // the soonest (15) now sorts to the top — cancel it
 
         Assert.True(Assert.Single(vm.Running).IsNext);   // the 60 is now next
     }
 
     [Fact]
-    public void A_paused_timer_is_not_marked_next_while_an_active_timer_runs()
+    public void A_paused_timer_parks_below_the_active_timer_and_is_not_marked_next()
     {
         var vm = New(out _, out _);
-        vm.StartPresetCommand.Execute(15);   // Running[0] — soonest, but about to pause
-        vm.StartPresetCommand.Execute(60);   // Running[1] — keeps running
+        vm.StartPresetCommand.Execute(15);   // soonest, but about to pause
+        vm.StartPresetCommand.Execute(60);   // keeps running
 
-        vm.Running[0].PauseResumeCommand.Execute(null);   // pause the 15
-        vm.RefreshAll();                                   // "next" is re-evaluated on the tick
+        vm.Running[0].PauseResumeCommand.Execute(null);   // pause the 15 (currently on top)
+        vm.RefreshAll();                                   // order + "next" re-evaluated on the tick
 
-        Assert.False(vm.Running[0].IsNext);   // paused — it won't fire next
-        Assert.True(vm.Running[1].IsNext);    // the active timer is next
+        Assert.Equal(TimerState.Running, vm.Running[0].Item.State);   // active timer rises to the top...
+        Assert.True(vm.Running[0].IsNext);                            // ...and is marked next
+        Assert.Equal(TimerState.Paused, vm.Running[1].Item.State);    // paused timer parks below
+        Assert.False(vm.Running[1].IsNext);                           // and isn't next
+    }
+
+    // ── Quick-timer ordering: soonest-finishing on top, paused parked below ──
+
+    [Fact]
+    public void Running_timers_are_ordered_soonest_first()
+    {
+        var vm = New(out _, out var sched);
+        vm.StartPresetCommand.Execute(60);   // added first, finishes last
+        vm.StartPresetCommand.Execute(15);   // added second, finishes first
+        vm.StartPresetCommand.Execute(30);
+
+        Assert.Collection(vm.Running,
+            r => Assert.Equal(TimeSpan.FromMinutes(15), sched.Remaining(r.Item)),
+            r => Assert.Equal(TimeSpan.FromMinutes(30), sched.Remaining(r.Item)),
+            r => Assert.Equal(TimeSpan.FromMinutes(60), sched.Remaining(r.Item)));
     }
 
     // ── Label auto-capitalization ─────────────────────────────────────────
