@@ -36,19 +36,41 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        // Single instance: a second launch signals the first to surface its window, then exits.
+        if (!TryClaimSingleInstance())   // a second launch surfaces the first window, then exits
+            return;
+
+        LoadStateAndServices();
+        WireSchedulerEvents();
+        StartTickLoop();
+        RegisterHotkey();
+        _tray = TrayBuilder.Create(ShowMainWindow, FocusLatestAlert, Quit);
+        ShowWindowUnlessBootLaunch(e);
+    }
+
+    // Claim the single-instance mutex. Returns false for a second launch — after signalling the first
+    // instance to surface its window — so OnStartup bails out. The first instance registers the wait that
+    // brings its window forward when a later launch signals it.
+    private bool TryClaimSingleInstance()
+    {
         _instanceMutex = new Mutex(initiallyOwned: true, SingleInstanceMutexName, out var isFirst);
         if (!isFirst)
         {
             try { EventWaitHandle.OpenExisting(ShowWindowEventName).Set(); }
             catch { /* the first instance may be mid-exit; nothing useful to do */ }
             Shutdown();
-            return;
+            return false;
         }
+
         _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowWindowEventName);
         ThreadPool.RegisterWaitForSingleObject(_showEvent,
             (_, _) => Dispatcher.Invoke(ShowMainWindow), null, Timeout.Infinite, executeOnlyOnce: false);
+        return true;
+    }
 
+    // Load persisted data, build the services and main view-model, arm the saved alarms, and self-heal a
+    // stale launch-at-startup Run-key path.
+    private void LoadStateAndServices()
+    {
         _persistence = new PersistenceService(PersistenceService.DefaultPath);
         _data = _persistence.Load();
         _settings = _data.Settings ?? AppSettings.Defaults();
@@ -59,26 +81,39 @@ public partial class App : Application
         ArmLoadedRecurring(_data.RecurringAlarms);
         _mainVm.AlarmsChanged += (_, _) => SaveData();
 
-        var startup = new StartupService(StartupService.CurrentExePath);
-        startup.RefreshIfEnabled();          // self-heal a stale Run-key path
+        new StartupService(StartupService.CurrentExePath).RefreshIfEnabled();
+    }
 
+    // Connect the scheduler's events to the UI: fired cards, pre-alarm warnings, and missed alarms.
+    private void WireSchedulerEvents()
+    {
         _scheduler.Fired += OnTimerFired;
         _scheduler.Warning += OnAlarmWarning;
         _scheduler.Expired += (_, item) => { _mainVm.AddMissed(item); SaveData(); };
+    }
 
+    // The 250 ms heartbeat: advance the scheduler, refresh the UI, and retire fired warning cards.
+    private void StartTickLoop()
+    {
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _timer.Tick += (_, _) => { _scheduler.Tick(); _mainVm.RefreshAll(); CloseFiredWarnings(); };
         _timer.Start();
+    }
 
+    // Register the global show/focus hotkey. Best-effort — the tray "Focus latest alert" item is the
+    // keyboard fallback when the chord is already taken.
+    private void RegisterHotkey()
+    {
         _hotkey = new HotkeyService();
         _hotkey.Pressed += (_, _) => FocusLatestAlert();
-        _hotkey.Register();   // best-effort; the tray "Focus latest alert" item is the keyboard fallback if the chord is taken
+        _hotkey.Register();
+    }
 
-        _tray = TrayBuilder.Create(ShowMainWindow, FocusLatestAlert, Quit);
-
-        // Surface the window on a normal launch so it's discoverable; stay in the tray when auto-started at boot.
-        // On a boot launch the window isn't built yet, so a missed-while-away alarm's UIA announcement is
-        // best-effort — the visible MissedNote still persists and is shown (and read) once the window opens.
+    // Surface the window on a normal launch so it's discoverable; stay in the tray when auto-started at boot.
+    // On a boot launch the window isn't built yet, so a missed-while-away alarm's UIA announcement is
+    // best-effort — the visible MissedNote still persists and is shown (and read) once the window opens.
+    private void ShowWindowUnlessBootLaunch(StartupEventArgs e)
+    {
         if (!e.Args.Contains(StartupService.StartupArg))
             ShowMainWindow();
     }
@@ -91,18 +126,10 @@ public partial class App : Application
     {
         _sound.Play(item.Sound);
 
-        var vm = new PopupViewModel(item,
+        ShowCard(new PopupViewModel(item,
             onSnooze: i => { var r = _scheduler.Snooze(i, TimeSpan.FromMinutes(5)); _mainVm.RefreshAll(); SaveData(); return r; },
             onRestart: i => { var r = _scheduler.Restart(i); _mainVm.RefreshAll(); return r; },
-            onDismiss: i => _scheduler.Cancel(i));
-
-        var popup = new CompletionPopup(vm);
-        popup.Closed += (_, _) => { _openPopups.Remove(popup); RestackPopups(); };
-        // first placement uses an estimated height; reposition the stack once the card has actually measured
-        popup.ContentRendered += (_, _) => RestackPopups();
-        _openPopups.Add(popup);
-        PositionPopup(popup, _openPopups.Count - 1);
-        popup.Show();   // ShowActivated=false -> appears without stealing focus
+            onDismiss: i => _scheduler.Cancel(i)));
 
         if (item.TriggerType == TriggerType.ClockTime) SaveData();   // a one-shot left the armed set, or a recurring fire advanced its next occurrence — mirror to disk
     }
@@ -113,13 +140,23 @@ public partial class App : Application
         if (item.Sound != SoundChoice.None) _sound.Play(SoundChoice.SoftChime);
 
         var head = string.IsNullOrWhiteSpace(item.Label) ? "Alarm" : item.Label!.Trim();
-        var popup = new CompletionPopup(new PopupViewModel(item, head));   // heads-up (close-only) variant
+        var popup = ShowCard(new PopupViewModel(item, head));   // heads-up (close-only) variant
+        _warningFireTimes[popup] = item.EndsAt ?? _scheduler.Now;   // capture this occurrence's fire time
+    }
+
+    // Show a completion card bottom-right without stealing focus, track it in the stack, and keep the
+    // stack tidy as cards open and close. Returns the popup so a caller can track extra state (a warning's
+    // fire time). Removing from _warningFireTimes on close is a no-op for ordinary fired cards.
+    private CompletionPopup ShowCard(PopupViewModel vm)
+    {
+        var popup = new CompletionPopup(vm);
         popup.Closed += (_, _) => { _openPopups.Remove(popup); _warningFireTimes.Remove(popup); RestackPopups(); };
+        // first placement uses an estimated height; reposition the stack once the card has actually measured
         popup.ContentRendered += (_, _) => RestackPopups();
         _openPopups.Add(popup);
-        _warningFireTimes[popup] = item.EndsAt ?? _scheduler.Now;   // capture this occurrence's fire time
         PositionPopup(popup, _openPopups.Count - 1);
         popup.Show();   // ShowActivated=false -> appears without stealing focus
+        return popup;
     }
 
     // The heads-up gives way to the completion card: close any warning whose alarm has reached its fire time.
@@ -214,8 +251,7 @@ public partial class App : Application
         {
             try
             {
-                var fireAt = new DateTimeOffset(DateTime.SpecifyKind(r.FireAt, DateTimeKind.Local));
-                _scheduler.ArmClockAlarm(fireAt, r.Label, r.Sound, r.Id, r.WarnBefore);
+                _scheduler.ArmClockAlarm(LocalToOffset(r.FireAt), r.Label, r.Sound, r.Id, r.WarnBefore);
             }
             catch { /* a residual bad record must never stop launch (spec §4) */ }
         }
@@ -229,12 +265,17 @@ public partial class App : Application
             {
                 // Restore the persisted next occurrence so a quick relaunch doesn't re-fire within grace;
                 // the first tick reconciles any occurrence missed while the app was closed.
-                var next = new DateTimeOffset(DateTime.SpecifyKind(r.NextFireAt, DateTimeKind.Local));
+                var next = LocalToOffset(r.NextFireAt);
                 _scheduler.ArmRecurringAlarm(r.Hour, r.Minute, r.Days, r.Label, r.Sound, r.Id, next, r.WarnBefore);
             }
             catch { /* a residual bad record must never stop launch (spec §4) */ }
         }
     }
+
+    // A persisted alarm time is a wall-clock local time; tag it Local before lifting to DateTimeOffset so
+    // the scheduler compares against the right instant.
+    private static DateTimeOffset LocalToOffset(DateTime local) =>
+        new(DateTime.SpecifyKind(local, DateTimeKind.Local));
 
     protected override void OnExit(ExitEventArgs e)
     {
