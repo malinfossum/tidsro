@@ -105,6 +105,7 @@ public partial class MainViewModel : ObservableObject
         var item = _scheduler.StartCountdown(duration, label, SelectedSound);
         Running.Add(new TimerItemViewModel(item, _scheduler));
         Label = "";   // consumed by this timer — clear so it can't carry into the next one (preset or custom)
+        SortRunning();
         MarkNextRunning();
     }
 
@@ -121,6 +122,23 @@ public partial class MainViewModel : ObservableObject
             .FirstOrDefault();
         foreach (var vm in Running)
             vm.IsNext = ReferenceEquals(vm, next);
+    }
+
+    // Stack the active timers soonest-first, like the agenda; paused timers aren't counting down, so they
+    // park below the active ones. Reorder in place with Move so a focused row keeps focus and its
+    // screen-reader state — rebuilding the collection each tick would drop both. Running countdowns never
+    // change relative order, so this is a no-op on almost every tick (only an add, pause, or resume shifts it).
+    private void SortRunning()
+    {
+        var desired = Running
+            .OrderBy(vm => vm.Item.State == TimerState.Running ? 0 : 1)
+            .ThenBy(vm => _scheduler.Remaining(vm.Item))
+            .ToList();
+        for (var i = 0; i < desired.Count; i++)
+        {
+            var current = Running.IndexOf(desired[i]);
+            if (current != i) Running.Move(current, i);
+        }
     }
 
     [RelayCommand]
@@ -156,6 +174,7 @@ public partial class MainViewModel : ObservableObject
             if (!Running.Any(vm => vm.Item == item))
                 Running.Add(new TimerItemViewModel(item, _scheduler));
 
+        SortRunning();       // keep the soonest-first order current as timers are added, pause, or resume
         MarkNextRunning();   // keep the "next" highlight current as timers count down, pause, or fire
 
         // Reconcile the alarm agenda only when it actually changed — an add/remove/one-shot fire (ids)
@@ -253,6 +272,7 @@ public partial class MainViewModel : ObservableObject
         {
             var restored = _scheduler.StartCountdown(_pendingDeleteRemaining ?? TimeSpan.Zero, item.Label, item.Sound);
             Running.Add(new TimerItemViewModel(restored, _scheduler));
+            SortRunning();
             MarkNextRunning();
             Announce("Timer restored");
         }
