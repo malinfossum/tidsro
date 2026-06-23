@@ -23,6 +23,8 @@ public sealed class AlarmItemViewModel
     public string TomorrowText => IsTomorrow ? "tomorrow" : "";
     public bool WarnBefore => Item.WarnBefore;
     public string WarnText => WarnBefore ? "5-min warning" : "";
+    public bool IsEnabled => Item.IsEnabled;
+    public string ToggleLabel => $"Alarm at {TimeText}";
 
     // Recurring alarms show their cadence ("Daily", "Weekdays", "Mon Wed Fri"); a one-shot shows
     // "tomorrow" or nothing. This is the single tag the agenda row binds to.
@@ -32,7 +34,7 @@ public sealed class AlarmItemViewModel
 
     // Sound state and the cadence/next cues are carried as text, never colour alone (spec §7).
     public string AccessibleName =>
-        $"Alarm at {TimeText}{CadencePhrase}, {DisplayLabel}, {SoundText}{(WarnBefore ? ", warns 5 minutes before" : "")}{(IsNext ? ", next" : "")}";
+        $"Alarm at {TimeText}{CadencePhrase}, {DisplayLabel}, {SoundText}{(WarnBefore ? ", warns 5 minutes before" : "")}{(IsNext ? ", next" : "")}{(IsEnabled ? "" : ", off")}";
 
     private string CadencePhrase => Item.RecurringDays is { } d
         ? $" {RecurrenceRules.CadenceLabel(d).ToLowerInvariant()}"

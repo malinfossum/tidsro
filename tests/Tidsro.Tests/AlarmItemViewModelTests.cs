@@ -94,4 +94,23 @@ public class AlarmItemViewModelTests
         Assert.Equal("", vm.WarnText);
         Assert.DoesNotContain("warns", vm.AccessibleName);
     }
+
+    [Fact]
+    public void Disabled_alarm_exposes_its_off_state_in_the_accessible_name()
+    {
+        var item = Alarm("Lunch", SoundChoice.Bell, 14, 0);
+        item.IsEnabled = false;
+        var vm = new AlarmItemViewModel(item, isTomorrow: false, isNext: false);
+        Assert.False(vm.IsEnabled);
+        Assert.Contains("off", vm.AccessibleName);
+    }
+
+    [Fact]
+    public void Enabled_alarm_has_no_off_cue_and_exposes_a_toggle_label()
+    {
+        var vm = new AlarmItemViewModel(Alarm("Lunch", SoundChoice.Bell, 14, 0), isTomorrow: false, isNext: false);
+        Assert.True(vm.IsEnabled);
+        Assert.DoesNotContain("off", vm.AccessibleName);
+        Assert.Equal("Alarm at 14:00", vm.ToggleLabel);
+    }
 }
