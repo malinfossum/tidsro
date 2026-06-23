@@ -265,6 +265,18 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ToggleAlarm(AlarmItemViewModel? row)
+    {
+        if (row is null) return;
+        CommitPendingDelete();                          // settle any outstanding undo first
+        var item = row.Item;
+        _scheduler.SetEnabled(item, !item.IsEnabled);   // re-enable rolls a stale recurring alarm forward
+        RebuildAgenda();
+        AlarmsChanged?.Invoke(this, EventArgs.Empty);   // the on/off change is persisted
+        Announce($"Alarm at {row.TimeText} turned {(item.IsEnabled ? "on" : "off")}");
+    }
+
+    [RelayCommand]
     private void UndoDelete()
     {
         if (_pendingDelete is not { } item) return;
@@ -278,14 +290,14 @@ public partial class MainViewModel : ObservableObject
         }
         else if (item.RecurringDays is { } days && item.EndsAt is { } next)
         {
-            _scheduler.ArmRecurringAlarm(next.Hour, next.Minute, days, item.Label, item.Sound, item.Id, next, item.WarnBefore);
+            _scheduler.ArmRecurringAlarm(next.Hour, next.Minute, days, item.Label, item.Sound, item.Id, next, item.WarnBefore, item.IsEnabled);
             RebuildAgenda();
             Announce("Alarm restored");
             // No persist needed: the record was never removed from disk.
         }
         else if (item.EndsAt is { } fireAt)
         {
-            _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id, item.WarnBefore);   // re-arm; next tick re-checks grace if past
+            _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id, item.WarnBefore, item.IsEnabled);   // re-arm; next tick re-checks grace if past
             RebuildAgenda();
             Announce("Alarm restored");
             // No persist needed: the record was never removed from disk.

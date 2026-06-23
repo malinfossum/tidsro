@@ -873,4 +873,71 @@ public class MainViewModelTests
         Assert.Equal(TriggerType.Recurring, row.Item.TriggerType);
         Assert.True(row.Item.WarnBefore);
     }
+
+    [Fact]
+    public void ToggleAlarm_off_persists_and_announces()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AddAlarmCommand.Execute(null);
+        var changed = 0; vm.AlarmsChanged += (_, _) => changed++;
+        string? announced = null; vm.Announcement += (_, m) => announced = m;
+
+        vm.ToggleAlarmCommand.Execute(vm.Alarms[0]);
+
+        Assert.False(vm.Alarms[0].Item.IsEnabled);
+        Assert.Equal(1, changed);                       // persisted via the event
+        Assert.NotNull(announced);
+        Assert.Contains("10:00", announced);
+        Assert.Contains("off", announced);
+    }
+
+    [Fact]
+    public void ToggleAlarm_back_on_re_enables_and_announces_on()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AddAlarmCommand.Execute(null);
+        vm.ToggleAlarmCommand.Execute(vm.Alarms[0]);    // off
+        string? announced = null; vm.Announcement += (_, m) => announced = m;
+
+        vm.ToggleAlarmCommand.Execute(vm.Alarms[0]);    // on again
+
+        Assert.True(vm.Alarms[0].Item.IsEnabled);
+        Assert.NotNull(announced);
+        Assert.Contains("on", announced);
+    }
+
+    [Fact]
+    public void ToggleAlarm_with_null_row_does_nothing()
+    {
+        var vm = New(out _, out _);
+        var changed = 0; vm.AlarmsChanged += (_, _) => changed++;
+        vm.ToggleAlarmCommand.Execute(null);
+        Assert.Equal(0, changed);
+    }
+
+    [Fact]
+    public void ToggleAlarm_commits_an_outstanding_pending_delete_first()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AddAlarmCommand.Execute(null);
+        vm.AlarmTimeInput = "11:00"; vm.AddAlarmCommand.Execute(null);
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);    // 10:00 now pending-delete
+
+        vm.ToggleAlarmCommand.Execute(vm.Alarms[0]);    // toggling 11:00 settles the pending delete
+
+        Assert.False(vm.HasPendingDelete);
+        Assert.False(vm.Alarms.Single().Item.IsEnabled);   // only 11:00 remains, now off
+    }
+
+    [Fact]
+    public void Undo_restores_a_disabled_alarm_still_disabled()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AddAlarmCommand.Execute(null);
+        vm.ToggleAlarmCommand.Execute(vm.Alarms[0]);    // off
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);    // delete the disabled alarm
+        vm.UndoDeleteCommand.Execute(null);             // undo
+
+        Assert.False(Assert.Single(vm.Alarms).Item.IsEnabled);   // comes back still off
+    }
 }
