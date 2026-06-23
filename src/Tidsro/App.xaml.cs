@@ -231,6 +231,7 @@ public partial class App : Application
         Label = a.Label,
         Sound = a.Sound,
         WarnBefore = a.WarnBefore,
+        Enabled = a.IsEnabled,
     };
 
     private static RecurringAlarmRecord ToRecurringRecord(TimerItem a) => new()
@@ -242,6 +243,7 @@ public partial class App : Application
         Label = a.Label,
         Sound = a.Sound,
         WarnBefore = a.WarnBefore,
+        Enabled = a.IsEnabled,
         NextFireAt = a.EndsAt?.LocalDateTime ?? default,   // the next occurrence — the durable dedup marker
     };
 
@@ -251,7 +253,7 @@ public partial class App : Application
         {
             try
             {
-                _scheduler.ArmClockAlarm(LocalToOffset(r.FireAt), r.Label, r.Sound, r.Id, r.WarnBefore);
+                _scheduler.ArmClockAlarm(LocalToOffset(r.FireAt), r.Label, r.Sound, r.Id, r.WarnBefore, r.Enabled);
             }
             catch { /* a residual bad record must never stop launch (spec §4) */ }
         }
@@ -266,7 +268,7 @@ public partial class App : Application
                 // Restore the persisted next occurrence so a quick relaunch doesn't re-fire within grace;
                 // the first tick reconciles any occurrence missed while the app was closed.
                 var next = LocalToOffset(r.NextFireAt);
-                _scheduler.ArmRecurringAlarm(r.Hour, r.Minute, r.Days, r.Label, r.Sound, r.Id, next, r.WarnBefore);
+                _scheduler.ArmRecurringAlarm(r.Hour, r.Minute, r.Days, r.Label, r.Sound, r.Id, next, r.WarnBefore, r.Enabled);
             }
             catch { /* a residual bad record must never stop launch (spec §4) */ }
         }
