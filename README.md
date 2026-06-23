@@ -16,7 +16,7 @@ Anyone who works or studies at a computer and wants to hold their focus through 
 
 ## Status
 
-**v1.3.2 is released** — see the [Releases page](https://github.com/malinfossum/tidsro/releases). Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms** — fire once at an HH:MM time, or repeat on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms are edited in a dialog and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**.
+**v1.4.0 is released** — see the [Releases page](https://github.com/malinfossum/tidsro/releases). Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms** — fire once at an HH:MM time, or repeat on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms can be **switched off without deleting** (kept and parked at the bottom until switched back on), edited in a dialog, and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**.
 
 See the [changelog](CHANGELOG.md) for what's new in each release.
 
@@ -57,6 +57,7 @@ The **Schedule** lives below the countdown list. Type a time — `14:30`, or sho
 - If Tidsro isn't running when an alarm time passes, it fires within a 5-minute grace window on next launch.
 - Each alarm row shows its time, cadence, label, and sound. Click **Edit** (pencil) to change it in a dialog; **Save** commits, **Cancel** discards.
 - **Delete** removes the alarm with a brief undo window — click **Undo** in the bar at the bottom to restore it.
+- **Switch an alarm off** with the toggle on its row to keep it without it firing or warning — handy for pausing recurring alarms over a holiday — then switch it back on when you need it. Off alarms dim and drop to the bottom of the Schedule, and stay off across restarts.
 - When an alarm fires, the same quiet bottom-right card appears, with **Snooze +5** (re-arms it 5 minutes later in the Schedule) and **Dismiss**.
 
 <p align="center">
