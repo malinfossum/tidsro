@@ -351,18 +351,29 @@ public partial class MainViewModel : ObservableObject
     private void RebuildAgenda()
     {
         var today = _scheduler.Now.Date;
-        var ordered = _scheduler.Alarms
+
+        // Enabled alarms first, in fire-time order.
+        var enabled = _scheduler.Alarms
+            .Where(a => a.IsEnabled)
             .OrderBy(a => a.EndsAt)
             .ThenBy(a => a.Label)
-            .ThenBy(a => a.Id)
-            .ToList();
+            .ThenBy(a => a.Id);
+        // Disabled alarms park below, ordered by time-of-day — a disabled recurring alarm's date can
+        // be stale (frozen while off), so the full timestamp would mis-sort it.
+        var disabled = _scheduler.Alarms
+            .Where(a => !a.IsEnabled)
+            .OrderBy(a => a.EndsAt?.TimeOfDay)
+            .ThenBy(a => a.Label)
+            .ThenBy(a => a.Id);
+        var ordered = enabled.Concat(disabled).ToList();
 
         Alarms.Clear();
         for (var i = 0; i < ordered.Count; i++)
         {
             var a = ordered[i];
             var isTomorrow = a.EndsAt is { } e && e.Date != today;
-            Alarms.Add(new AlarmItemViewModel(a, isTomorrow, isNext: i == 0));
+            var isNext = i == 0 && a.IsEnabled;   // a disabled alarm is never "next"
+            Alarms.Add(new AlarmItemViewModel(a, isTomorrow, isNext));
         }
         OnPropertyChanged(nameof(IsDayEmpty));
         _agendaSignature = AgendaSignature();

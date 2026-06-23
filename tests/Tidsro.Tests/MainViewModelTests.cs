@@ -940,4 +940,52 @@ public class MainViewModelTests
 
         Assert.False(Assert.Single(vm.Alarms).Item.IsEnabled);   // comes back still off
     }
+
+    [Fact]
+    public void A_disabled_alarm_parks_below_the_enabled_ones()
+    {
+        var vm = New(out _, out _);                       // 09:00
+        vm.AlarmTimeInput = "11:00"; vm.AddAlarmCommand.Execute(null);
+        vm.AlarmTimeInput = "16:00"; vm.AddAlarmCommand.Execute(null);
+
+        vm.ToggleAlarmCommand.Execute(vm.Alarms[0]);      // turn off the 11:00 (currently on top)
+
+        Assert.Equal("16:00", vm.Alarms[0].TimeText);     // enabled 16:00 rises to the top...
+        Assert.True(vm.Alarms[0].IsNext);                 // ...and is next
+        Assert.Equal("11:00", vm.Alarms[1].TimeText);     // disabled 11:00 parks below
+        Assert.False(vm.Alarms[1].IsEnabled);
+        Assert.False(vm.Alarms[1].IsNext);
+    }
+
+    [Fact]
+    public void With_every_alarm_off_none_is_marked_next()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "11:00"; vm.AddAlarmCommand.Execute(null);
+
+        vm.ToggleAlarmCommand.Execute(vm.Alarms[0]);      // the only alarm, now off
+
+        var row = Assert.Single(vm.Alarms);
+        Assert.False(row.IsEnabled);
+        Assert.False(row.IsNext);                          // nothing is "next" when all are off
+    }
+
+    [Fact]
+    public void Re_enabling_a_recurring_alarm_returns_it_to_the_active_group()
+    {
+        var vm = New(out var clock, out _);               // Thu 2026-01-01 09:00
+        vm.AlarmTimeInput = "10:00"; vm.AlarmRepeat = RepeatOption.Daily;
+        vm.AddAlarmCommand.Execute(null);
+
+        vm.ToggleAlarmCommand.Execute(vm.Alarms[0]);      // off
+        Assert.False(vm.Alarms[0].Item.IsEnabled);
+
+        clock.Advance(TimeSpan.FromDays(1));               // Fri 09:00 — its frozen 10:00 occurrence has passed
+        vm.ToggleAlarmCommand.Execute(vm.Alarms[0]);      // back on
+
+        var row = Assert.Single(vm.Alarms);
+        Assert.True(row.Item.IsEnabled);
+        Assert.True(row.IsNext);                           // active again
+        Assert.Equal(new DateTimeOffset(2026, 1, 2, 10, 0, 0, TimeSpan.Zero), row.Item.EndsAt);   // rolled to Fri 10:00
+    }
 }
