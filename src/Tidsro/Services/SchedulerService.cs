@@ -120,7 +120,7 @@ public sealed class SchedulerService
 
         foreach (var alarm in _alarms.ToList())
         {
-            if (alarm.State != TimerState.Running || alarm.EndsAt is not { } end) continue;
+            if (alarm.State != TimerState.Running || !alarm.IsEnabled || alarm.EndsAt is not { } end) continue;
 
             // Heads-up: raise Warning once when we cross into the last WarningLead before the alarm.
             if (alarm.WarnBefore && !alarm.WarningSent && now >= end - WarningLead && now < end)

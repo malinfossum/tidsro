@@ -470,4 +470,46 @@ public class SchedulerServiceTests
         var alarm = s.ArmRecurringAlarm(7, 0, RecurrenceRules.AllDays, null, SoundChoice.None, enabled: false);
         Assert.False(alarm.IsEnabled);
     }
+
+    [Fact]
+    public void Tick_does_not_fire_a_disabled_clock_alarm_past_its_time()
+    {
+        var (s, c) = New();
+        s.ArmClockAlarm(c.Now + TimeSpan.FromMinutes(1), null, SoundChoice.None, enabled: false);
+        var fired = 0; s.Fired += (_, _) => fired++;
+
+        c.Advance(TimeSpan.FromMinutes(2));   // well past its time
+        s.Tick();
+
+        Assert.Equal(0, fired);
+        Assert.Single(s.Alarms);              // stays armed-but-off, not removed
+    }
+
+    [Fact]
+    public void Tick_does_not_warn_for_a_disabled_alarm()
+    {
+        var (s, c) = New();
+        s.ArmClockAlarm(c.Now + TimeSpan.FromMinutes(10), null, SoundChoice.Bell, warnBefore: true, enabled: false);
+        var warned = 0; s.Warning += (_, _) => warned++;
+
+        c.Advance(TimeSpan.FromMinutes(6));   // inside [+5, +10)
+        s.Tick();
+
+        Assert.Equal(0, warned);
+    }
+
+    [Fact]
+    public void Tick_does_not_fire_or_advance_a_disabled_recurring_alarm()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None, enabled: false);
+        var frozen = alarm.EndsAt;
+        var fired = 0; s.Fired += (_, _) => fired++;
+
+        c.Advance(TimeSpan.FromMinutes(61));   // past 10:00
+        s.Tick();
+
+        Assert.Equal(0, fired);
+        Assert.Equal(frozen, alarm.EndsAt);    // not advanced while off
+    }
 }
