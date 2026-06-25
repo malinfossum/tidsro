@@ -99,4 +99,14 @@ public class LogServiceTests : IDisposable
             .Log(new InvalidOperationException("boom"), "Test"));
         Assert.Null(thrown);
     }
+
+    [Fact]
+    public void Log_rolls_the_file_over_to_old_past_the_cap()
+    {
+        File.WriteAllText(_path, new string('x', 600 * 1024));      // > 512 KB
+        new LogService(_path, _clock).Log(new InvalidOperationException("boom"), "Test");
+
+        Assert.True(File.Exists(_path + ".old"));
+        Assert.True(new FileInfo(_path).Length < 512 * 1024);      // live file is fresh and small
+    }
 }

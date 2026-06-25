@@ -62,8 +62,20 @@ public sealed class LogService
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+            RollIfTooLarge();
             File.AppendAllText(_path, entry);
         }
         catch { /* logging must never throw — a logger that crashes while logging a crash is useless */ }
+    }
+
+    private void RollIfTooLarge()
+    {
+        try
+        {
+            var info = new FileInfo(_path);
+            if (info.Exists && info.Length > MaxBytes)
+                File.Move(_path, _path + ".old", overwrite: true);    // keep one previous generation
+        }
+        catch { /* a failed roll must not stop logging */ }
     }
 }
