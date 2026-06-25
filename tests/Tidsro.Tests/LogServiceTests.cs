@@ -36,4 +36,24 @@ public class LogServiceTests : IDisposable
         Assert.Contains("System.InvalidOperationException", text);
         Assert.Contains("boom", text);
     }
+
+    [Fact]
+    public void Log_appends_an_entry_to_the_file()
+    {
+        new LogService(_path, _clock).Log(new InvalidOperationException("boom"), "Test");
+
+        var text = File.ReadAllText(_path);
+        Assert.Contains("System.InvalidOperationException", text);
+        Assert.Contains("boom", text);
+    }
+
+    [Fact]
+    public void Log_two_distinct_errors_writes_two_entries()
+    {
+        var svc = new LogService(_path, _clock);
+        svc.Log(new InvalidOperationException("first"), "Test");
+        svc.Log(new InvalidOperationException("second"), "Test");
+
+        Assert.Equal(2, CountEntries(File.ReadAllText(_path)));
+    }
 }

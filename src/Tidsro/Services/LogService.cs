@@ -35,4 +35,24 @@ public sealed class LogService
         var ver = version is null ? "?" : $"v{version.Major}.{version.Minor}.{version.Build}";
         return $"===== {stamp} · {ver} · {source} ====={Environment.NewLine}{ex}{Environment.NewLine}{Environment.NewLine}";
     }
+
+    /// <summary>
+    /// Records one unhandled exception. Returns true when this is a fresh error worth surfacing to the
+    /// user (a balloon), false when it is a consecutive duplicate suppressed within the dedupe window.
+    /// The return reflects the throttle decision only — it stays true even if the file write fails,
+    /// because the user should still be told.
+    /// </summary>
+    public bool Log(Exception ex, string source)
+    {
+        var now = _clock.Now;
+        var version = Assembly.GetExecutingAssembly().GetName().Version;
+        Write(Format(now, ex, source, version));
+        return true;
+    }
+
+    private void Write(string entry)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+        File.AppendAllText(_path, entry);
+    }
 }
