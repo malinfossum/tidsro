@@ -16,6 +16,8 @@ public sealed class LogService
 
     private readonly string _path;
     private readonly IClock _clock;
+    private readonly object _gate = new();
+    private readonly Version? _version;
     private string? _lastSignature;
     private DateTimeOffset _lastWritten;
 
@@ -23,6 +25,7 @@ public sealed class LogService
     {
         _path = path;
         _clock = clock;
+        _version = Assembly.GetExecutingAssembly().GetName().Version;
     }
 
     public static string DefaultPath => Path.Combine(
@@ -44,17 +47,19 @@ public sealed class LogService
     /// </summary>
     public bool Log(Exception ex, string source)
     {
-        var now = _clock.Now;
-        var signature = $"{source}|{ex.GetType().FullName}|{ex.Message}";
-        if (signature == _lastSignature && now - _lastWritten < DedupeWindow)
-            return false;                                              // collapse a run of identical errors
+        lock (_gate)
+        {
+            var now = _clock.Now;
+            var signature = $"{source}|{ex.GetType().FullName}|{ex.Message}";
+            if (signature == _lastSignature && now - _lastWritten < DedupeWindow)
+                return false;                                          // collapse a run of identical errors
 
-        _lastSignature = signature;
-        _lastWritten = now;
+            _lastSignature = signature;
+            _lastWritten = now;
 
-        var version = Assembly.GetExecutingAssembly().GetName().Version;
-        Write(Format(now, ex, source, version));
-        return true;
+            Write(Format(now, ex, source, _version));
+            return true;
+        }
     }
 
     private void Write(string entry)

@@ -31,6 +31,7 @@ public class LogServiceTests : IDisposable
             "DispatcherUnhandledException", new Version(1, 4, 0));
 
         Assert.Contains("2026-06-25 14:32:01", text);
+        Assert.Contains("+02:00", text);
         Assert.Contains("v1.4.0", text);
         Assert.Contains("DispatcherUnhandledException", text);
         Assert.Contains("System.InvalidOperationException", text);
