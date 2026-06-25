@@ -45,6 +45,13 @@ public sealed class LogService
     public bool Log(Exception ex, string source)
     {
         var now = _clock.Now;
+        var signature = $"{source}|{ex.GetType().FullName}|{ex.Message}";
+        if (signature == _lastSignature && now - _lastWritten < DedupeWindow)
+            return false;                                              // collapse a run of identical errors
+
+        _lastSignature = signature;
+        _lastWritten = now;
+
         var version = Assembly.GetExecutingAssembly().GetName().Version;
         Write(Format(now, ex, source, version));
         return true;

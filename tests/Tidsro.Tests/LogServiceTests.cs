@@ -56,4 +56,35 @@ public class LogServiceTests : IDisposable
 
         Assert.Equal(2, CountEntries(File.ReadAllText(_path)));
     }
+
+    [Fact]
+    public void Log_suppresses_an_identical_error_within_the_window()
+    {
+        var svc = new LogService(_path, _clock);
+
+        Assert.True(svc.Log(new InvalidOperationException("boom"), "Test"));
+        Assert.False(svc.Log(new InvalidOperationException("boom"), "Test"));   // same signature, same instant
+        Assert.Equal(1, CountEntries(File.ReadAllText(_path)));
+    }
+
+    [Fact]
+    public void Log_writes_again_after_the_window_elapses()
+    {
+        var svc = new LogService(_path, _clock);
+
+        Assert.True(svc.Log(new InvalidOperationException("boom"), "Test"));
+        _clock.Advance(TimeSpan.FromSeconds(6));
+        Assert.True(svc.Log(new InvalidOperationException("boom"), "Test"));
+        Assert.Equal(2, CountEntries(File.ReadAllText(_path)));
+    }
+
+    [Fact]
+    public void Log_writes_a_different_signature_within_the_window()
+    {
+        var svc = new LogService(_path, _clock);
+
+        Assert.True(svc.Log(new InvalidOperationException("boom"), "Test"));
+        Assert.True(svc.Log(new InvalidOperationException("boom"), "Other"));   // different source -> different signature
+        Assert.Equal(2, CountEntries(File.ReadAllText(_path)));
+    }
 }
