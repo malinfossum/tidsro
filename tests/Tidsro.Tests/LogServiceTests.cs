@@ -108,6 +108,7 @@ public class LogServiceTests : IDisposable
         new LogService(_path, _clock).Log(new InvalidOperationException("boom"), "Test");
 
         Assert.True(File.Exists(_path + ".old"));
+        Assert.True(new FileInfo(_path + ".old").Length > 512 * 1024);   // the archive holds the prior log, not the new entry
         Assert.True(new FileInfo(_path).Length < 512 * 1024);      // live file is fresh and small
     }
 }
