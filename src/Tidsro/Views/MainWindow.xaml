@@ -105,6 +105,7 @@
                   <Ellipse DockPanel.Dock="Left" Width="9" Height="9" Margin="0,2,12,0" VerticalAlignment="Top" Fill="{StaticResource Accent}"/>
                   <StackPanel>
                     <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"/>
+                    <StackPanel Orientation="Horizontal">
                     <TextBlock Text="{Binding RemainingText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource Text2xl}">
                       <TextBlock.Foreground><SolidColorBrush Color="#F4F7FA"/></TextBlock.Foreground>
                       <TextBlock.Style>
@@ -126,6 +127,11 @@
                         </Style>
                       </TextBlock.Style>
                     </TextBlock>
+                      <TextBlock Text="{Binding FinishText}" Foreground="{StaticResource TextFaint}"
+                                 FontSize="{StaticResource TextXs}" VerticalAlignment="Center" Margin="10,0,0,0"
+                                 AutomationProperties.Name="{Binding FinishText}"
+                                 Visibility="{Binding ShowFinish, Converter={StaticResource BoolToVisible}}"/>
+                    </StackPanel>
                     <TextBlock Text="{Binding SoundTag}" Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}"/>
                   </StackPanel>
                 </DockPanel>
