@@ -93,4 +93,32 @@ public class TimerItemViewModelTests
 
         Assert.Equal("01:31", vm.RemainingText);
     }
+
+    [Fact]
+    public void FinishText_shows_absolute_finish_time_while_running()
+    {
+        var (s, _) = New();                    // FakeClock starts at 09:00
+        var item = s.StartCountdown(TimeSpan.FromMinutes(25), "focus", SoundChoice.None);
+        var vm = new TimerItemViewModel(item, s);
+
+        Assert.True(vm.ShowFinish);
+        Assert.Equal("done 09:25", vm.FinishText);
+    }
+
+    [Fact]
+    public void FinishText_hidden_while_paused_then_returns_pushed_out_on_resume()
+    {
+        var (s, c) = New();                    // 09:00
+        var item = s.StartCountdown(TimeSpan.FromMinutes(25), "focus", SoundChoice.None);
+        var vm = new TimerItemViewModel(item, s);
+
+        vm.PauseResumeCommand.Execute(null);   // pause -> no real finish time
+        Assert.False(vm.ShowFinish);
+
+        c.Advance(TimeSpan.FromMinutes(10));    // sit paused for 10 minutes
+        vm.PauseResumeCommand.Execute(null);   // resume at 09:10, 25 left -> 09:35
+
+        Assert.True(vm.ShowFinish);
+        Assert.Equal("done 09:35", vm.FinishText);
+    }
 }

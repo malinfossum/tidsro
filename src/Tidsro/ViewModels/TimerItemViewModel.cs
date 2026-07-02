@@ -19,6 +19,8 @@ public partial class TimerItemViewModel : ObservableObject
     [ObservableProperty] private bool _isNext;   // soonest-finishing active timer — the parent sets this
     [ObservableProperty] private string _pauseResumeGlyph = PauseGlyph;
     [ObservableProperty] private string _pauseResumeLabel = "Pause";
+    [ObservableProperty] private string _finishText = "";
+    [ObservableProperty] private bool _showFinish;
 
     public TimerItemViewModel(TimerItem item, SchedulerService scheduler)
     {
@@ -38,6 +40,16 @@ public partial class TimerItemViewModel : ObservableObject
         IsPaused = Item.State == TimerState.Paused;
         PauseResumeGlyph = IsPaused ? PlayGlyph : PauseGlyph;
         PauseResumeLabel = IsPaused ? "Resume" : "Pause";
+
+        if (Item.State == TimerState.Running && Item.EndsAt is { } end)
+        {
+            FinishText = "done " + end.ToString("HH\\:mm");
+            ShowFinish = true;
+        }
+        else
+        {
+            ShowFinish = false;
+        }
     }
 
     [RelayCommand] private void PauseResume()
