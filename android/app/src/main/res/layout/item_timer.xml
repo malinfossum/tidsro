@@ -24,6 +24,15 @@
             android:ellipsize="end" />
 
         <TextView
+            android:id="@+id/timer_finish"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="10dp"
+            android:textColor="@color/text_faint"
+            android:textSize="13sp"
+            android:visibility="gone" />
+
+        <TextView
             android:id="@+id/timer_remaining"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

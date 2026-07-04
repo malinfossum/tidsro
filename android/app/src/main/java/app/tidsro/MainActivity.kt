@@ -30,6 +30,9 @@ import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.google.android.material.snackbar.Snackbar
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
 
 class MainActivity : AppCompatActivity() {
 
@@ -270,6 +273,16 @@ class MainActivity : AppCompatActivity() {
             val tv = row.findViewById<TextView>(R.id.timer_remaining)
             tv.text = Rules.formatMs(t.remainingMs(now))
             tv.setTextColor(ContextCompat.getColor(this, if (t.running) R.color.accent else R.color.text_muted))
+            // The wall-clock finish time, hidden while paused since it depends on when the timer resumes.
+            val fv = row.findViewById<TextView>(R.id.timer_finish)
+            val ends = t.endsAt
+            if (ends != null) {
+                val z = ZonedDateTime.ofInstant(Instant.ofEpochMilli(ends), ZoneId.systemDefault())
+                fv.text = String.format("done %02d:%02d", z.hour, z.minute)
+                fv.visibility = View.VISIBLE
+            } else {
+                fv.visibility = View.GONE
+            }
         }
     }
 
