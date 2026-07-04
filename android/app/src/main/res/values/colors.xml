@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Same palette as the desktop app's tokens.xaml -->
+    <color name="page_bg">#0E141A</color>
+    <color name="panel_bg">#0A0F14</color>
+    <color name="card_bg">#161D27</color>
+    <color name="elevated_bg">#232C38</color>
+    <color name="interactive_bg">#1F2832</color>
+    <color name="interactive_hover">#28323E</color>
+
+    <color name="text">#F4F7FA</color>
+    <color name="text_muted">#B4BDC7</color>
+    <color name="text_faint">#87919C</color>
+
+    <color name="line">#2B3440</color>
+    <color name="line_strong">#3A4552</color>
+    <color name="line_soft">#1A222B</color>
+
+    <color name="accent">#E3B341</color>
+    <color name="accent_strong">#ECC25A</color>
+    <color name="accent_soft">#29E3B341</color>
+    <color name="danger">#A1837F</color>
+
+    <color name="icon_bg">#131820</color>
+</resources>

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Tidsro</string>
+    <string name="tagline">calm timers and alarms</string>
+
+    <string name="section_timers">TIMERS</string>
+    <string name="section_schedule">SCHEDULE</string>
+
+    <string name="preset_5">5 min</string>
+    <string name="preset_30">30 min</string>
+    <string name="preset_60">60 min</string>
+    <string name="hint_duration">25, 5:00, or 1:30:00</string>
+    <string name="hint_label">Label (optional)</string>
+    <string name="start">Start</string>
+    <string name="no_timers">No timers running.</string>
+    <string name="pause">Pause</string>
+    <string name="resume">Resume</string>
+    <string name="reset">Reset</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="hint_time">14:30, 930, or 9</string>
+    <string name="warn_before">Warn me 5 minutes before</string>
+    <string name="add">Add</string>
+    <string name="save">Save</string>
+    <string name="no_alarms">No alarms scheduled.</string>
+    <string name="edit_alarm">Edit alarm</string>
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
+    <string name="undo">Undo</string>
+    <string name="timer_cancelled">Timer cancelled</string>
+    <string name="alarm_deleted">Alarm deleted</string>
+
+    <string name="timer_finished">Timer finished</string>
+    <string name="alarm_title">Alarm</string>
+    <string name="warn_title">In 5 minutes</string>
+    <string name="action_plus5">+5 min</string>
+    <string name="action_restart">Restart</string>
+    <string name="action_snooze">Snooze +5</string>
+    <string name="action_dismiss">Dismiss</string>
+
+    <string name="pick_a_day">Pick at least one day.</string>
+    <string name="warns_before_short">warns 5 min before</string>
+
+    <string name="exact_alarm_hint">Tidsro needs the alarm permission to ring on time.</string>
+    <string name="allow">Allow</string>
+</resources>

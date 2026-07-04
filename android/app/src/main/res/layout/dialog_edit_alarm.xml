@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <EditText
+            android:id="@+id/edit_time"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_time"
+            android:inputType="text"
+            android:maxLines="1"
+            android:textColor="@color/text"
+            android:textColorHint="@color/text_faint" />
+
+        <EditText
+            android:id="@+id/edit_label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_label"
+            android:inputType="text"
+            android:maxLines="1"
+            android:textColor="@color/text"
+            android:textColorHint="@color/text_faint" />
+
+        <Spinner
+            android:id="@+id/edit_sound"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="@color/text_muted" />
+
+        <Spinner
+            android:id="@+id/edit_repeat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="@color/text_muted" />
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/edit_chips_days"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            app:singleSelection="false" />
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/edit_warn"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="@string/warn_before"
+            android:textColor="@color/text" />
+
+        <TextView
+            android:id="@+id/edit_error"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/danger"
+            android:textSize="13sp"
+            android:layout_marginTop="4dp"
+            android:visibility="gone" />
+    </LinearLayout>
+</ScrollView>
