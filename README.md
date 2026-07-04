@@ -32,6 +32,8 @@ Uninstall any time from **Settings → Apps → Installed apps → Tidsro**.
 
 **Prefer not to install?** Download **`Tidsro.exe`** (the portable build) from the same release and double-click it — it runs as-is, no installation. The same SmartScreen note applies.
 
+**On an Android phone?** Download **[Tidsro.apk](https://github.com/HenryElendheim/tidsro/releases/download/android-latest/Tidsro.apk)**, open the file, and allow the install when Android asks. That link always serves the newest build — it is rebuilt automatically on every change to the app — and the same APK sits on the [Releases page](https://github.com/HenryElendheim/tidsro/releases) as **Tidsro for Android (latest build)**. See [android/README.md](android/README.md) for details.
+
 Both builds are self-contained: they run on any 64-bit Windows PC with no .NET required. Your timers and settings stay on your machine in `%AppData%\Tidsro`.
 
 ## Using Tidsro

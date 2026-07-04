@@ -45,6 +45,6 @@ jobs:
           gh release view android-latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 || \
             gh release create android-latest --repo "$GITHUB_REPOSITORY" \
               --title "Tidsro for Android (latest build)" \
-              --notes "Always the newest APK. Download Tidsro.apk below, open it on your phone, and allow the install when asked." \
-              --prerelease
+              --notes "Always the newest APK. Download Tidsro.apk below, open it on your phone, and allow the install when asked."
+          gh release edit android-latest --repo "$GITHUB_REPOSITORY" --prerelease=false --latest
           gh release upload android-latest Tidsro.apk --repo "$GITHUB_REPOSITORY" --clobber
