@@ -2,6 +2,12 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
+## [1.5.0] — 2026-07-07
+
+### Added
+- **Crash logging** — unhandled errors are now caught and written to a rotating crash log, with a notification pointing to the log folder, instead of the app closing silently. Logging is hardened so it never brings the app down itself.
+- **Timer finish time** — a running countdown now shows the wall-clock time it will finish (e.g. *done 21:20*) beside the remaining time; hidden while paused. Contributed by Henry.
+
 ## [1.4.0] — 2026-06-23
 
 ### Added
@@ -39,6 +45,7 @@ Clock-time alarms — a "Your day" agenda with one-shot fire-at-HH:MM alarms, op
 ## [1.0.0] — 2026-06-16
 First release — countdown timers with presets or custom durations, pause/resume, reset, and per-timer sounds.
 
+[1.5.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.5.0
 [1.4.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.4.0
 [1.3.2]: https://github.com/malinfossum/tidsro/releases/tag/v1.3.2
 [1.3.1]: https://github.com/malinfossum/tidsro/releases/tag/v1.3.1
