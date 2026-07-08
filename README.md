@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/brand/tidsro-lockup.png" alt="Tidsro" width="480">
+</p>
+
 # Tidsro
 
 A calm, dark-mode-first desktop timer for Windows — countdown timers and clock-time alarms that nudge you with a quiet corner card instead of a flashy notification.
