@@ -9,7 +9,7 @@ A calm, dark-mode-first desktop timer for Windows — countdown timers and clock
 > **Tidsro** is Norwegian: *tid* (time) + *ro* (calm / peace) — roughly *"calm time."* The name is the whole idea: a timer that's visible when you need it and invisible when you don't.
 
 <p align="center">
-  <img src="docs/screenshots/main-window.png" alt="Tidsro main window: two Quick timers counting down on the left, and a Schedule of weekday alarms on the right — each row has an on/off toggle, with one alarm switched off and dimmed at the bottom — in a dark theme with gold accents." width="720">
+  <img src="docs/screenshots/main-window.png" alt="Tidsro main window: two Quick timers counting down on the left — each showing its remaining time alongside the wall-clock time it will finish (e.g. done 00:34) — and a Schedule of weekday alarms on the right, each row with an on/off toggle and one alarm switched off and dimmed at the bottom, in a dark theme with gold accents." width="720">
 </p>
 
 ## Who it's for
@@ -20,7 +20,7 @@ Anyone who works or studies at a computer and wants to hold their focus through 
 
 ## Status
 
-**v1.5.0 is released** — see the [Releases page](https://github.com/malinfossum/tidsro/releases). Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms** — fire once at an HH:MM time, or repeat on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms can be **switched off without deleting** (kept and parked at the bottom until switched back on), edited in a dialog, and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**.
+**v1.6.0 is released** — see the [Releases page](https://github.com/malinfossum/tidsro/releases). Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms** — fire once at an HH:MM time, or repeat on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms can be **switched off without deleting** (kept and parked at the bottom until switched back on), edited in a dialog, and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**.
 
 See the [changelog](CHANGELOG.md) for what's new in each release.
 

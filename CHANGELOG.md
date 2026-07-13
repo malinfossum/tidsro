@@ -2,6 +2,11 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
+## [1.6.0] — 2026-07-13
+
+### Changed
+- **New brand identity** — a custom pine-in-hourglass mark, drawn from the name *tid* + *ro* (*calm time*), replaces the generic clock icon and now appears in the window title bar, taskbar, system tray, and the Windows installer.
+
 ## [1.5.0] — 2026-07-07
 
 ### Added
@@ -45,6 +50,7 @@ Clock-time alarms — a "Your day" agenda with one-shot fire-at-HH:MM alarms, op
 ## [1.0.0] — 2026-06-16
 First release — countdown timers with presets or custom durations, pause/resume, reset, and per-timer sounds.
 
+[1.6.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.6.0
 [1.5.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.5.0
 [1.4.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.4.0
 [1.3.2]: https://github.com/malinfossum/tidsro/releases/tag/v1.3.2
