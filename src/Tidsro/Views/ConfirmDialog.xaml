@@ -7,11 +7,11 @@
         Background="{StaticResource PageBg}" Foreground="{StaticResource Text}"
         FontFamily="{StaticResource FontSans}">
   <StackPanel Margin="24">
-    <TextBlock x:Name="MessageText" TextWrapping="Wrap"
-               AutomationProperties.Name="Confirmation message"/>
+    <TextBlock x:Name="MessageText" TextWrapping="Wrap"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
       <Button Content="Yes" Style="{StaticResource GoldAction}"
               MinWidth="84" Margin="0,0,8,0" Click="Yes_Click"
+              KeyboardNavigation.AcceptsReturn="True"
               AutomationProperties.Name="Confirm"/>
       <Button x:Name="CancelButton" Content="Cancel" Style="{StaticResource QuietAction}"
               IsCancel="True" IsDefault="True" MinWidth="84"
