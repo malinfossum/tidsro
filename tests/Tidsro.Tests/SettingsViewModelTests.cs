@@ -11,7 +11,7 @@ public class SettingsViewModelTests
     public void Editing_a_setting_does_not_apply_until_Save()
     {
         var shared = new AppSettings { LaunchAtStartup = false, DefaultSound = SoundChoice.None };
-        var startup = new StartupService("Tidsro.exe");   // not exercised here
+        var startup = new FakeStartupService();
         var saves = 0;
         var vm = new SettingsViewModel(shared, startup, save: () => saves++, _ => { });
 
@@ -25,7 +25,7 @@ public class SettingsViewModelTests
     public void Save_applies_changes_to_the_shared_AppSettings_and_persists()
     {
         var shared = new AppSettings { LaunchAtStartup = false, DefaultSound = SoundChoice.None };
-        var startup = new StartupService("Tidsro.exe");   // not exercised: LaunchAtStartup unchanged
+        var startup = new FakeStartupService();
         var saves = 0;
         var vm = new SettingsViewModel(shared, startup, save: () => saves++, _ => { });
 

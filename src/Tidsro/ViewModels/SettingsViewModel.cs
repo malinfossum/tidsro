@@ -6,7 +6,7 @@ namespace Tidsro.ViewModels;
 
 public partial class SettingsViewModel : ObservableObject
 {
-    private readonly StartupService _startup;
+    private readonly IStartupService _startup;
     private readonly Action _save;                              // bundles settings + alarms at the App level
     private readonly Action<SoundChoice> _onDefaultSoundChanged;
     private readonly AppSettings _settings;   // the in-memory snapshot App reuses to open this window; keep it current
@@ -18,7 +18,7 @@ public partial class SettingsViewModel : ObservableObject
         { SoundChoice.None, SoundChoice.SoftChime, SoundChoice.Marimba, SoundChoice.Bell,
           SoundChoice.PianoJingle, SoundChoice.ElectricPianoJingle, SoundChoice.BellJingle };
 
-    public SettingsViewModel(AppSettings settings, StartupService startup,
+    public SettingsViewModel(AppSettings settings, IStartupService startup,
         Action save, Action<SoundChoice> onDefaultSoundChanged)
     {
         _settings = settings;
