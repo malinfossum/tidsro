@@ -255,7 +255,10 @@ public partial class App : Application
                 _mainVm.SoundOptions, _mainVm.ApplyAlarmEdit, _sound));
         _main ??= new MainWindow(_mainVm, () => new SettingsWindow(
                 new SettingsViewModel(_settings, new StartupService(StartupService.CurrentExePath),
-                    SaveData, _mainVm.SetDefaultSound)),
+                    SaveData, _mainVm.SetDefaultSound,
+                    _mainVm.ClearAllAlarms, () => _mainVm.Alarms.Count, () => { },
+                    (title, message) => MessageBox.Show(message, title, MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning) == MessageBoxResult.Yes)),
             editFactory, _settings, SaveData);
         Application.Current.MainWindow = _main;
         _main.Show();
