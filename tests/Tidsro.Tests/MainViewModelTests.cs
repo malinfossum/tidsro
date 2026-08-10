@@ -1049,6 +1049,47 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public void HasAnythingToClear_is_false_when_nothing_is_armed_or_missed()
+    {
+        var vm = New(out _, out _);
+        Assert.False(vm.HasAnythingToClear);
+    }
+
+    [Fact]
+    public void HasAnythingToClear_is_true_when_only_a_missed_note_remains()
+    {
+        // A one-shot alarm that expired while away leaves no armed alarms — only the missed note.
+        var vm = New(out var clock, out var sched);
+        var item = sched.ArmClockAlarm(clock.Now.AddMinutes(-30), "Lunch", SoundChoice.Bell);
+        sched.RemoveAlarm(item);   // simulate the scheduler having expired and disarmed it
+
+        vm.AddMissed(item);
+
+        Assert.Empty(sched.Alarms);
+        Assert.Empty(sched.Running);
+        Assert.True(vm.HasAnythingToClear);
+    }
+
+    [Fact]
+    public void HasAnythingToClear_is_true_when_an_alarm_is_armed()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "14:30";
+        vm.AddAlarmCommand.Execute(null);
+
+        Assert.True(vm.HasAnythingToClear);
+    }
+
+    [Fact]
+    public void HasAnythingToClear_is_true_when_a_timer_is_running()
+    {
+        var vm = New(out _, out _);
+        vm.StartPresetCommand.Execute(15);
+
+        Assert.True(vm.HasAnythingToClear);
+    }
+
+    [Fact]
     public void ClearAllAlarms_asks_for_open_popups_to_close_before_disarming()
     {
         var vm = New(out _, out var sched);

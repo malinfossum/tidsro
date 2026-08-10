@@ -13,6 +13,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly AppSettings _settings;   // the in-memory snapshot App reuses to open this window; keep it current
     private readonly Action _clearAllAlarms;
     private readonly Func<int> _alarmCount;
+    private readonly Func<bool> _hasAnythingToClear;
     private readonly Action _resetWindowPlacement;
     private readonly Func<string, string, bool> _confirm;   // (title, message) -> confirmed
 
@@ -25,12 +26,12 @@ public partial class SettingsViewModel : ObservableObject
 
     public SettingsViewModel(AppSettings settings, IStartupService startup,
         Action save, Action<SoundChoice> onDefaultSoundChanged,
-        Action clearAllAlarms, Func<int> alarmCount,
+        Action clearAllAlarms, Func<int> alarmCount, Func<bool> hasAnythingToClear,
         Action resetWindowPlacement, Func<string, string, bool> confirm)
     {
         _settings = settings;
         _startup = startup; _save = save; _onDefaultSoundChanged = onDefaultSoundChanged;
-        _clearAllAlarms = clearAllAlarms; _alarmCount = alarmCount;
+        _clearAllAlarms = clearAllAlarms; _alarmCount = alarmCount; _hasAnythingToClear = hasAnythingToClear;
         _resetWindowPlacement = resetWindowPlacement; _confirm = confirm;
         _launchAtStartup = settings.LaunchAtStartup;
         _defaultSound = settings.DefaultSound;
@@ -60,9 +61,16 @@ public partial class SettingsViewModel : ObservableObject
     [RelayCommand]
     private void ClearAlarms()
     {
+        // alarmCount excludes a leftover missed note (no armed alarm behind it), so the early return
+        // is gated on hasAnythingToClear instead — otherwise the button silently does nothing while
+        // a missed note is still on screen.
+        if (!_hasAnythingToClear()) return;
+
         var count = _alarmCount();
-        if (count == 0) return;                     // nothing to lose: don't ask a pointless question
-        if (!_confirm("Delete alarms?", $"Delete all {count} alarms? This cannot be undone.")) return;
+        var message = count == 1
+            ? "Delete this alarm? This cannot be undone."
+            : $"Delete all {count} alarms? This cannot be undone.";
+        if (!_confirm("Delete alarms?", message)) return;
 
         _clearAllAlarms();                          // raises AlarmsChanged, which persists via App
     }

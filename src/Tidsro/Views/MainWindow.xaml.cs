@@ -60,14 +60,16 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Return to the XAML defaults after a settings reset, so OnClosing can't re-save the
-    /// coordinates the reset just cleared.</summary>
+    /// coordinates the reset just cleared. WindowStartupLocation only takes effect before a window is
+    /// first shown, so this window (already visible) is centred manually — within the work area of the
+    /// monitor it's actually on, not SystemParameters.WorkArea (always the primary monitor).</summary>
     public void ResetPlacement()
     {
         Width = 440;
         Height = 600;
-        WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        Left = (SystemParameters.WorkArea.Width - Width) / 2 + SystemParameters.WorkArea.Left;
-        Top = (SystemParameters.WorkArea.Height - Height) / 2 + SystemParameters.WorkArea.Top;
+        var work = ScreenHelper.WorkAreaForWindow(this);
+        Left = (work.Width - Width) / 2 + work.Left;
+        Top = (work.Height - Height) / 2 + work.Top;
     }
 
     private const double WideBreakpoint = 760;

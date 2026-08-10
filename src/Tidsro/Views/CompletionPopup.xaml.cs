@@ -15,6 +15,7 @@ public partial class CompletionPopup : Window
 
     private readonly PopupViewModel _vm;
     private IntPtr _previousForeground;
+    private bool _suppressFocusRestore;
 
     public CompletionPopup(PopupViewModel vm)
     {
@@ -64,7 +65,16 @@ public partial class CompletionPopup : Window
                     new System.Windows.Media.Animation.DoubleAnimation(12, 0, dur)
                     { EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut } });
         };
-        Closed += (_, _) => NativeFocus.Restore(_previousForeground);
+        Closed += (_, _) => { if (!_suppressFocusRestore) NativeFocus.Restore(_previousForeground); };
+    }
+
+    /// <summary>Close without restoring the window that was foreground when this card appeared. Used
+    /// when a bulk wipe closes every open card at once — restoring each card's own captured foreground
+    /// (often a different, unrelated app) would push the modal Settings dialog behind it.</summary>
+    public void CloseWithoutRestoringFocus()
+    {
+        _suppressFocusRestore = true;
+        Close();
     }
 
     /// <summary>Called by the global hotkey: pull this card into keyboard focus on demand.</summary>

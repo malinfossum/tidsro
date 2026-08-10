@@ -67,6 +67,11 @@ public partial class MainViewModel : ObservableObject
 
     public bool IsDayEmpty => Alarms.Count == 0;
 
+    /// <summary>True when Settings' "Clear all alarms" would actually change anything: armed alarms,
+    /// running timers, or a missed note left over from a one-shot alarm that fired while away (the
+    /// note has no armed alarm behind it, so alarmCount alone would miss it).</summary>
+    public bool HasAnythingToClear => _scheduler.Alarms.Count + _scheduler.Running.Count > 0 || MissedNote is not null;
+
     public MainViewModel(SchedulerService scheduler, ISoundService sound, SoundChoice defaultSound)
     {
         _scheduler = scheduler;

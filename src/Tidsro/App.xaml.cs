@@ -145,7 +145,10 @@ public partial class App : Application
         _mainVm.ClosePopupsRequested += (_, _) =>
         {
             foreach (var popup in _openPopups.ToList())
-                if (popup.IsLoaded) popup.Close();   // IsLoaded: never re-close a window already closing
+                // IsLoaded: never re-close a window already closing. CloseWithoutRestoringFocus, not
+                // Close: a normal close restores the foreground window captured when the card appeared
+                // (often a different app), which would push the modal Settings dialog behind it.
+                if (popup.IsLoaded) popup.CloseWithoutRestoringFocus();
         };
 
         new StartupService(StartupService.CurrentExePath).RefreshIfEnabled();
@@ -263,6 +266,7 @@ public partial class App : Application
                     SaveData, _mainVm.SetDefaultSound,
                     clearAllAlarms: _mainVm.ClearAllAlarms,
                     alarmCount: () => _scheduler.Alarms.Count + _scheduler.Running.Count,
+                    hasAnythingToClear: () => _mainVm.HasAnythingToClear,
                     resetWindowPlacement: () => _main?.ResetPlacement(),
                     confirm: confirm)),
             editFactory, _settings, SaveData);
@@ -276,9 +280,10 @@ public partial class App : Application
     {
         _timer.Stop();
         _hotkey.Dispose();
-        _tray?.Dispose();
         _mainVm.CommitPendingDelete();   // an uncommitted delete commits on quit (spec §3.1)
-        SaveData();                      // flush the final armed set
+        SaveData();                      // flush the final armed set — its failure path notifies via
+                                          // _tray, so the tray must still be alive when this runs
+        _tray?.Dispose();
         Shutdown();
     }
 

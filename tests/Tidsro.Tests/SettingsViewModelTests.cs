@@ -14,8 +14,8 @@ public class SettingsViewModelTests
         var startup = new FakeStartupService();
         var saves = 0;
         var vm = new SettingsViewModel(shared, startup, save: () => saves++, _ => { },
-            clearAllAlarms: () => { }, alarmCount: () => 0, resetWindowPlacement: () => { },
-            confirm: (_, _) => true);
+            clearAllAlarms: () => { }, alarmCount: () => 0, hasAnythingToClear: () => true,
+            resetWindowPlacement: () => { }, confirm: (_, _) => true);
 
         vm.DefaultSound = SoundChoice.Bell;   // edit the draft only
 
@@ -30,8 +30,8 @@ public class SettingsViewModelTests
         var startup = new FakeStartupService();
         var saves = 0;
         var vm = new SettingsViewModel(shared, startup, save: () => saves++, _ => { },
-            clearAllAlarms: () => { }, alarmCount: () => 0, resetWindowPlacement: () => { },
-            confirm: (_, _) => true);
+            clearAllAlarms: () => { }, alarmCount: () => 0, hasAnythingToClear: () => true,
+            resetWindowPlacement: () => { }, confirm: (_, _) => true);
 
         vm.DefaultSound = SoundChoice.Bell;
         vm.Save();
@@ -43,18 +43,51 @@ public class SettingsViewModelTests
     [Fact]
     public void Clearing_alarms_asks_first_and_names_the_count()
     {
-        var shared = new AppSettings();
+        var shared = new AppSettings { LaunchAtStartup = true, DefaultSound = SoundChoice.Bell };
         string? title = null;
         string? message = null;
         var cleared = 0;
         var vm = new SettingsViewModel(shared, new FakeStartupService(),
-            () => { }, _ => { }, () => cleared++, () => 6, () => { },
+            () => { }, _ => { }, () => cleared++, () => 6, () => true, () => { },
             (t, m) => { title = t; message = m; return true; });
 
         vm.ClearAlarmsCommand.Execute(null);
 
         Assert.Equal("Delete alarms?", title);
         Assert.Equal("Delete all 6 alarms? This cannot be undone.", message);
+        Assert.Equal(1, cleared);
+        Assert.Equal(SoundChoice.Bell, shared.DefaultSound);   // clearing alarms leaves preferences untouched
+        Assert.True(shared.LaunchAtStartup);
+    }
+
+    [Fact]
+    public void Clearing_a_single_alarm_uses_singular_wording()
+    {
+        var shared = new AppSettings();
+        string? message = null;
+        var vm = new SettingsViewModel(shared, new FakeStartupService(),
+            () => { }, _ => { }, () => { }, () => 1, () => true, () => { },
+            (_, m) => { message = m; return true; });
+
+        vm.ClearAlarmsCommand.Execute(null);
+
+        Assert.Equal("Delete this alarm? This cannot be undone.", message);
+    }
+
+    [Fact]
+    public void Clearing_with_only_a_missed_note_still_asks_and_clears()
+    {
+        // No armed alarms (alarmCount is 0), but a missed note remains — HasAnythingToClear says yes.
+        var shared = new AppSettings();
+        var asked = false;
+        var cleared = 0;
+        var vm = new SettingsViewModel(shared, new FakeStartupService(),
+            () => { }, _ => { }, () => cleared++, () => 0, hasAnythingToClear: () => true,
+            resetWindowPlacement: () => { }, confirm: (_, _) => { asked = true; return true; });
+
+        vm.ClearAlarmsCommand.Execute(null);
+
+        Assert.True(asked);
         Assert.Equal(1, cleared);
     }
 
@@ -64,7 +97,7 @@ public class SettingsViewModelTests
         var shared = new AppSettings();
         string? message = null;
         var vm = new SettingsViewModel(shared, new FakeStartupService(),
-            () => { }, _ => { }, () => { }, () => 6, () => { },
+            () => { }, _ => { }, () => { }, () => 6, () => true, () => { },
             (_, m) => { message = m; return false; });
 
         vm.ResetSettingsCommand.Execute(null);
@@ -79,7 +112,7 @@ public class SettingsViewModelTests
         var shared = new AppSettings();
         var cleared = 0;
         var vm = new SettingsViewModel(shared, new FakeStartupService(),
-            () => { }, _ => { }, () => cleared++, () => 6, () => { }, (_, _) => false);
+            () => { }, _ => { }, () => cleared++, () => 6, () => true, () => { }, (_, _) => false);
 
         vm.ClearAlarmsCommand.Execute(null);
 
@@ -93,8 +126,8 @@ public class SettingsViewModelTests
         var asked = false;
         var cleared = 0;
         var vm = new SettingsViewModel(shared, new FakeStartupService(),
-            () => { }, _ => { }, () => cleared++, () => 0, () => { },
-            (_, _) => { asked = true; return true; });
+            () => { }, _ => { }, () => cleared++, () => 0, hasAnythingToClear: () => false,
+            resetWindowPlacement: () => { }, confirm: (_, _) => { asked = true; return true; });
 
         vm.ClearAlarmsCommand.Execute(null);
 
@@ -111,9 +144,10 @@ public class SettingsViewModelTests
             WindowLeft = 100, WindowTop = 200, WindowWidth = 900, WindowHeight = 900,
         };
         var startup = new FakeStartupService { Enabled = true };
-        var placementResets = 0; var saves = 0;
+        var placementResets = 0; var saves = 0; var cleared = 0;
         var vm = new SettingsViewModel(shared, startup,
-            () => saves++, _ => { }, () => { }, () => 6, () => placementResets++, (_, _) => true);
+            () => saves++, _ => { }, () => cleared++, () => 6, () => true,
+            () => placementResets++, (_, _) => true);
 
         vm.ResetSettingsCommand.Execute(null);
 
@@ -128,6 +162,7 @@ public class SettingsViewModelTests
         Assert.Equal(SoundChoice.None, vm.DefaultSound);  // ...so a later Save can't rewrite the old values
         Assert.Equal(1, placementResets);
         Assert.Equal(1, saves);
+        Assert.Equal(0, cleared);                         // resetting settings leaves alarms untouched
     }
 
     [Fact]
@@ -135,7 +170,7 @@ public class SettingsViewModelTests
     {
         var shared = new AppSettings { LaunchAtStartup = true, DefaultSound = SoundChoice.Bell };
         var vm = new SettingsViewModel(shared, new FakeStartupService(),
-            () => { }, _ => { }, () => { }, () => 6, () => { }, (_, _) => true);
+            () => { }, _ => { }, () => { }, () => 6, () => true, () => { }, (_, _) => true);
 
         vm.ResetSettingsCommand.Execute(null);
         vm.Save();
@@ -149,7 +184,7 @@ public class SettingsViewModelTests
     {
         var shared = new AppSettings { LaunchAtStartup = true, DefaultSound = SoundChoice.Bell };
         var vm = new SettingsViewModel(shared, new FakeStartupService(),
-            () => { }, _ => { }, () => { }, () => 6, () => { }, (_, _) => false);
+            () => { }, _ => { }, () => { }, () => 6, () => true, () => { }, (_, _) => false);
 
         vm.ResetSettingsCommand.Execute(null);
 
