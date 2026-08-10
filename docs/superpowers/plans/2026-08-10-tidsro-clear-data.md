@@ -35,8 +35,10 @@ xUnit. Spec: `docs/superpowers/specs/2026-08-10-tidsro-clear-data-design.md`.
 
 **Interfaces:**
 - Consumes: `SchedulerService.Cancel(TimerItem)` (removes from both the running and the alarm list),
+  `SchedulerService.Alarms` and `SchedulerService.Running` (both `IReadOnlyList<TimerItem>`),
   `MainViewModel.CommitPendingDelete()`, the `AlarmsChanged` event.
-- Produces: `public void ClearAllAlarms()` on `MainViewModel` — Task 2 calls it through a delegate.
+- Produces: `public void ClearAllAlarms()` on `MainViewModel` — Task 3 calls it through a delegate —
+  and `public event EventHandler? ClosePopupsRequested`, which Task 4 subscribes to in `App`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -88,7 +90,40 @@ public void ClearAllAlarms_settles_an_outstanding_undo_first()
     Assert.False(vm.HasPendingDelete);
     Assert.Null(vm.PendingDeleteLabel);
 }
+
+[Fact]
+public void ClearAllAlarms_disarms_what_the_agenda_has_not_caught_up_with()
+{
+    var vm = New(out var clock, out var sched);
+    // Armed straight on the scheduler: the agenda has never been rebuilt, so vm.Alarms is empty.
+    sched.ArmClockAlarm(clock.Now.AddHours(2), "Ghost", SoundChoice.None, Guid.NewGuid());
+    Assert.Empty(vm.Alarms);
+
+    vm.ClearAllAlarms();
+
+    Assert.Empty(sched.Alarms);   // the wipe follows the scheduler, not the view
+}
+
+[Fact]
+public void ClearAllAlarms_asks_for_open_popups_to_close_before_disarming()
+{
+    var vm = New(out _, out var sched);
+    vm.AlarmTimeInput = "14:30";
+    vm.AddAlarmCommand.Execute(null);
+    var requests = 0;
+    var armedWhenAsked = -1;
+    vm.ClosePopupsRequested += (_, _) => { requests++; armedWhenAsked = sched.Alarms.Count; };
+
+    vm.ClearAllAlarms();
+
+    Assert.Equal(1, requests);
+    Assert.Equal(1, armedWhenAsked);   // asked before anything was disarmed
+}
 ```
+
+Check `SchedulerService.ArmClockAlarm`'s exact parameter list before writing the ghost-alarm test —
+it takes `(DateTimeOffset fireAt, string? label, SoundChoice sound, Guid id, bool warnBefore = false,
+bool enabled = true)`. Use `FakeClock.Now` for the fire time so the test doesn't depend on wall time.
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
@@ -99,15 +134,27 @@ Expected: FAIL — `error CS1061: 'MainViewModel' does not contain a definition 
 
 Add to `src/Tidsro/ViewModels/MainViewModel.cs`, next to `DeleteAlarm`:
 
+Add the event beside the existing ones (near `EditAlarmRequested`):
+
 ```csharp
-/// <summary>Wipe every countdown, alarm and missed note. Disarms before emptying, so the 250 ms
-/// tick can't fire something mid-wipe. Called from Settings; the confirmation happens there.</summary>
+/// <summary>Raised before a bulk wipe so the View can close open completion cards — their Snooze
+/// would otherwise re-arm an alarm into the schedule we are emptying.</summary>
+public event EventHandler? ClosePopupsRequested;
+```
+
+Then the method itself, next to `DeleteAlarm`:
+
+```csharp
+/// <summary>Wipe every countdown, alarm and missed note. Walks the scheduler rather than the view:
+/// SaveData persists from _scheduler.Alarms, so anything the agenda hasn't caught up with would
+/// survive the wipe and be written straight back. Called from Settings; confirmation happens there.</summary>
 public void ClearAllAlarms()
 {
     CommitPendingDelete();                 // settle any outstanding undo first
+    ClosePopupsRequested?.Invoke(this, EventArgs.Empty);
 
-    foreach (var row in Running.ToList()) _scheduler.Cancel(row.Item);
-    foreach (var row in Alarms.ToList()) _scheduler.Cancel(row.Item);
+    foreach (var item in _scheduler.Running.ToList()) _scheduler.Cancel(item);
+    foreach (var item in _scheduler.Alarms.ToList()) _scheduler.Cancel(item);
 
     Running.Clear();
     Alarms.Clear();
@@ -119,18 +166,17 @@ public void ClearAllAlarms()
 }
 ```
 
-Iterating over `.ToList()` copies is required: `Cancel` mutates the scheduler's lists while
-`RebuildAgenda` may read them, and enumerating a collection you are clearing throws.
+Iterating over `.ToList()` copies is required: `Cancel` mutates the very lists being enumerated.
 
 If `System.Linq` is not already imported in this file, add `using System.Linq;` at the top.
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `dotnet test --filter FullyQualifiedName~MainViewModelTests.ClearAllAlarms`
-Expected: PASS, 3 tests.
+Expected: PASS, 5 tests.
 
 Then run the whole suite: `dotnet test`
-Expected: PASS, 273 tests.
+Expected: PASS, 275 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -221,7 +267,7 @@ In `tests/Tidsro.Tests/SettingsViewModelTests.cs`, replace both occurrences of
 - [ ] **Step 6: Verify nothing broke**
 
 Run: `dotnet test`
-Expected: PASS, 273 tests — same count as after Task 1, since this task is a refactor.
+Expected: PASS, 275 tests — same count as after Task 1, since this task is a refactor.
 
 - [ ] **Step 7: Commit**
 
@@ -250,7 +296,7 @@ git commit -m "refactor(startup): put the startup toggle behind IStartupService"
 public SettingsViewModel(AppSettings settings, IStartupService startup,
     Action save, Action<SoundChoice> onDefaultSoundChanged,
     Action clearAllAlarms, Func<int> alarmCount,
-    Action resetWindowPlacement, Func<string, bool> confirm)
+    Action resetWindowPlacement, Func<string, string, bool> confirm)
 ```
 
 - [ ] **Step 1: Write the failing tests**
@@ -263,16 +309,33 @@ Add to `tests/Tidsro.Tests/SettingsViewModelTests.cs`. The two tests already in 
 public void Clearing_alarms_asks_first_and_names_the_count()
 {
     var shared = new AppSettings();
+    string? title = null;
     string? message = null;
     var cleared = 0;
     var vm = new SettingsViewModel(shared, new FakeStartupService(),
         () => { }, _ => { }, () => cleared++, () => 6, () => { },
-        m => { message = m; return true; });
+        (t, m) => { title = t; message = m; return true; });
 
     vm.ClearAlarmsCommand.Execute(null);
 
+    Assert.Equal("Delete alarms?", title);
     Assert.Equal("Delete all 6 alarms? This cannot be undone.", message);
     Assert.Equal(1, cleared);
+}
+
+[Fact]
+public void The_reset_confirm_says_what_is_kept()
+{
+    var shared = new AppSettings();
+    string? message = null;
+    var vm = new SettingsViewModel(shared, new FakeStartupService(),
+        () => { }, _ => { }, () => { }, () => 6, () => { },
+        (_, m) => { message = m; return false; });
+
+    vm.ResetSettingsCommand.Execute(null);
+
+    Assert.Equal("Reset all settings? Launch at startup will be turned off. "
+               + "Your alarms and the diagnostic log are kept.", message);
 }
 
 [Fact]
@@ -281,7 +344,7 @@ public void Declining_the_confirm_clears_nothing()
     var shared = new AppSettings();
     var cleared = 0;
     var vm = new SettingsViewModel(shared, new FakeStartupService(),
-        () => { }, _ => { }, () => cleared++, () => 6, () => { }, _ => false);
+        () => { }, _ => { }, () => cleared++, () => 6, () => { }, (_, _) => false);
 
     vm.ClearAlarmsCommand.Execute(null);
 
@@ -296,7 +359,7 @@ public void Clearing_with_nothing_to_clear_does_not_even_ask()
     var cleared = 0;
     var vm = new SettingsViewModel(shared, new FakeStartupService(),
         () => { }, _ => { }, () => cleared++, () => 0, () => { },
-        _ => { asked = true; return true; });
+        (_, _) => { asked = true; return true; });
 
     vm.ClearAlarmsCommand.Execute(null);
 
@@ -315,7 +378,7 @@ public void Resetting_restores_every_default_and_refreshes_the_draft()
     var startup = new FakeStartupService { Enabled = true };
     var placementResets = 0; var saves = 0;
     var vm = new SettingsViewModel(shared, startup,
-        () => saves++, _ => { }, () => { }, () => 6, () => placementResets++, _ => true);
+        () => saves++, _ => { }, () => { }, () => 6, () => placementResets++, (_, _) => true);
 
     vm.ResetSettingsCommand.Execute(null);
 
@@ -337,7 +400,7 @@ public void Saving_after_a_reset_keeps_the_defaults()
 {
     var shared = new AppSettings { LaunchAtStartup = true, DefaultSound = SoundChoice.Bell };
     var vm = new SettingsViewModel(shared, new FakeStartupService(),
-        () => { }, _ => { }, () => { }, () => 6, () => { }, _ => true);
+        () => { }, _ => { }, () => { }, () => 6, () => { }, (_, _) => true);
 
     vm.ResetSettingsCommand.Execute(null);
     vm.Save();
@@ -351,7 +414,7 @@ public void Declining_the_reset_changes_nothing()
 {
     var shared = new AppSettings { LaunchAtStartup = true, DefaultSound = SoundChoice.Bell };
     var vm = new SettingsViewModel(shared, new FakeStartupService(),
-        () => { }, _ => { }, () => { }, () => 6, () => { }, _ => false);
+        () => { }, _ => { }, () => { }, () => 6, () => { }, (_, _) => false);
 
     vm.ResetSettingsCommand.Execute(null);
 
@@ -366,7 +429,7 @@ and `Save_applies_changes_to_the_shared_AppSettings_and_persists`) to pass the f
 ```csharp
 var vm = new SettingsViewModel(shared, startup, save: () => saves++, _ => { },
     clearAllAlarms: () => { }, alarmCount: () => 0, resetWindowPlacement: () => { },
-    confirm: _ => true);
+    confirm: (_, _) => true);
 ```
 
 - [ ] **Step 2: Run the tests to verify they fail**
@@ -387,12 +450,12 @@ private readonly AppSettings _settings;   // the in-memory snapshot App reuses t
 private readonly Action _clearAllAlarms;
 private readonly Func<int> _alarmCount;
 private readonly Action _resetWindowPlacement;
-private readonly Func<string, bool> _confirm;
+private readonly Func<string, string, bool> _confirm;   // (title, message) -> confirmed
 
 public SettingsViewModel(AppSettings settings, IStartupService startup,
     Action save, Action<SoundChoice> onDefaultSoundChanged,
     Action clearAllAlarms, Func<int> alarmCount,
-    Action resetWindowPlacement, Func<string, bool> confirm)
+    Action resetWindowPlacement, Func<string, string, bool> confirm)
 {
     _settings = settings;
     _startup = startup; _save = save; _onDefaultSoundChanged = onDefaultSoundChanged;
@@ -410,7 +473,7 @@ private void ClearAlarms()
 {
     var count = _alarmCount();
     if (count == 0) return;                     // nothing to lose: don't ask a pointless question
-    if (!_confirm($"Delete all {count} alarms? This cannot be undone.")) return;
+    if (!_confirm("Delete alarms?", $"Delete all {count} alarms? This cannot be undone.")) return;
 
     _clearAllAlarms();                          // raises AlarmsChanged, which persists via App
 }
@@ -418,7 +481,8 @@ private void ClearAlarms()
 [RelayCommand]
 private void ResetSettings()
 {
-    if (!_confirm("Reset all settings? Launch at startup will be turned off.")) return;
+    if (!_confirm("Reset settings?", "Reset all settings? Launch at startup will be turned off. "
+                                   + "Your alarms and the diagnostic log are kept.")) return;
 
     var defaults = AppSettings.Defaults();
     _startup.Disable();                         // never leave the Run key behind a checkbox that reads off
@@ -444,10 +508,10 @@ private void ResetSettings()
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `dotnet test --filter FullyQualifiedName~SettingsViewModelTests`
-Expected: PASS, 8 tests.
+Expected: PASS, 9 tests.
 
 Then: `dotnet test`
-Expected: PASS, 279 tests.
+Expected: PASS, 282 tests.
 
 - [ ] **Step 5: Commit**
 
@@ -484,24 +548,30 @@ decision-shaped was already tested in Tasks 1 and 3.
 <Window x:Class="Tidsro.Views.ConfirmDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Tidsro" Width="340" SizeToContent="Height" WindowStartupLocation="CenterOwner"
+        Width="340" SizeToContent="Height" WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize" ShowInTaskbar="False"
+        FocusManager.FocusedElement="{Binding ElementName=CancelButton}"
         Background="{StaticResource PageBg}" Foreground="{StaticResource Text}"
         FontFamily="{StaticResource FontSans}">
   <StackPanel Margin="24">
     <TextBlock x:Name="MessageText" TextWrapping="Wrap"
                AutomationProperties.Name="Confirmation message"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
-      <Button Content="Yes" Style="{StaticResource GoldAction}" IsDefault="True"
+      <Button Content="Yes" Style="{StaticResource GoldAction}"
               MinWidth="84" Margin="0,0,8,0" Click="Yes_Click"
               AutomationProperties.Name="Confirm"/>
-      <Button Content="Cancel" Style="{StaticResource QuietAction}" IsCancel="True"
-              MinWidth="84"
+      <Button x:Name="CancelButton" Content="Cancel" Style="{StaticResource QuietAction}"
+              IsCancel="True" IsDefault="True" MinWidth="84"
               AutomationProperties.Name="Cancel"/>
     </StackPanel>
   </StackPanel>
 </Window>
 ```
+
+Note what is deliberately **not** here: `IsDefault` is on Cancel, not Yes, and `FocusedElement`
+points at Cancel. The button that opened this dialog was activated by Enter or Space, and a held or
+repeated key must not carry through into confirming an irreversible wipe. There is no `Title` in the
+XAML — it is set per call, because a screen reader announces the title when the modal opens.
 
 `src/Tidsro/Views/ConfirmDialog.xaml.cs`:
 
@@ -510,18 +580,20 @@ using System.Windows;
 
 namespace Tidsro.Views;
 
-// A dark, owner-centred yes/no in the app's own styling. Esc cancels via IsCancel.
+// A dark, owner-centred yes/no in the app's own styling. Esc cancels via IsCancel, and closing with
+// the title-bar X leaves DialogResult null — which Ask reads as "not confirmed".
 public partial class ConfirmDialog : Window
 {
-    private ConfirmDialog(string message)
+    private ConfirmDialog(string title, string message)
     {
         InitializeComponent();
+        Title = title;              // announced by screen readers when the modal opens
         MessageText.Text = message;
     }
 
     /// <summary>Show the question modally. True only when the user explicitly confirms.</summary>
-    public static bool Ask(Window owner, string message) =>
-        new ConfirmDialog(message) { Owner = owner }.ShowDialog() == true;
+    public static bool Ask(Window owner, string title, string message) =>
+        new ConfirmDialog(title, message) { Owner = owner }.ShowDialog() == true;
 
     private void Yes_Click(object sender, RoutedEventArgs e) => DialogResult = true;
 }
@@ -536,7 +608,7 @@ Save/Cancel `StackPanel`:
     <Separator Margin="0,24,0,0" Background="{StaticResource TextMuted}" Opacity="0.3"/>
     <TextBlock Text="Data" Margin="0,16,0,4" Foreground="{StaticResource TextMuted}"/>
     <TextBlock Text="These take effect immediately. Cancel will not undo them."
-               TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{StaticResource TextMuted}"/>
+               TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{StaticResource Text}"/>
     <Button Content="Clear all alarms" Style="{StaticResource QuietAction}"
             HorizontalAlignment="Left" MinWidth="150" Margin="0,0,0,8"
             Command="{Binding ClearAlarmsCommand}"
@@ -570,10 +642,10 @@ In `src/Tidsro/Views/SettingsWindow.xaml.cs`, the view owns the dialog so the vi
 have to. Replace the constructor:
 
 ```csharp
-public SettingsWindow(Func<Func<string, bool>, SettingsViewModel> vmFactory)
+public SettingsWindow(Func<Func<string, string, bool>, SettingsViewModel> vmFactory)
 {
     InitializeComponent();
-    DataContext = vmFactory(message => ConfirmDialog.Ask(this, message));
+    DataContext = vmFactory((title, message) => ConfirmDialog.Ask(this, title, message));
 }
 ```
 
@@ -589,18 +661,56 @@ In `src/Tidsro/App.xaml.cs`, replace the `SettingsWindow` construction at lines 
                 new SettingsViewModel(_settings, new StartupService(StartupService.CurrentExePath),
                     SaveData, _mainVm.SetDefaultSound,
                     clearAllAlarms: _mainVm.ClearAllAlarms,
-                    alarmCount: () => _mainVm.Alarms.Count + _mainVm.Running.Count,
+                    alarmCount: () => _scheduler.Alarms.Count + _scheduler.Running.Count,
                     resetWindowPlacement: () => _main?.ResetPlacement(),
                     confirm: confirm)),
             editFactory, _settings, SaveData);
 ```
+
+The count reads the **scheduler**, not the view collections, for the same reason Task 1's wipe does:
+the scheduler is what `SaveData` persists from, so a view-derived count could report "nothing to
+clear" while alarms are still armed.
+
+- [ ] **Step 5b: Close open popups on a wipe, and stop hiding failed saves**
+
+Two more changes in `src/Tidsro/App.xaml.cs`.
+
+Subscribe to the new event where the other `_mainVm` handlers are wired (beside
+`_mainVm.AlarmsChanged += ...` in `LoadStateAndServices`):
+
+```csharp
+        _mainVm.ClosePopupsRequested += (_, _) =>
+        {
+            foreach (var popup in _openPopups.ToList())
+                if (popup.IsLoaded) popup.Close();   // IsLoaded: never re-close a window already closing
+        };
+```
+
+Without this, a completion card still on screen after a wipe can re-arm an alarm through its Snooze
+button, which calls `SchedulerService.Snooze` and saves.
+
+Then make a failed save visible, in `SaveData`:
+
+```csharp
+        try { _persistence.Save(data); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _log.Log(ex, "SaveData");   // logs, and raises a tray balloon on the first of a kind
+        }
+```
+
+This is a deliberate widening: it makes *every* failed save visible, not only the ones behind a
+clear or a reset. Threading a "this one is critical" flag through an event handler costs more
+complexity than it removes, `LogService` already throttles duplicates at 5 s per signature, and a
+save that silently fails is bad in every case — it is merely worst here, where the user explicitly
+asked for the data to be gone and would otherwise find it back at the next launch.
 
 - [ ] **Step 6: Build and run the app**
 
 ```bash
 dotnet test
 ```
-Expected: PASS, 279 tests (this task adds no tests).
+Expected: PASS, 282 tests (this task adds no tests).
 
 ```bash
 Get-Process Tidsro -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -615,6 +725,10 @@ Work through each of these in the running app:
 1. Open Settings with alarms present. The Data section appears below a divider, with both buttons.
 2. Click **Clear all alarms** → the dialog is dark, centred on Settings, and names the real count.
 3. Press Esc → nothing is deleted.
+3a. Open it again and press Enter immediately → **nothing is deleted**, because Cancel is the
+    default. If Enter wipes the alarms, the `IsDefault`/`FocusedElement` pair is on the wrong button.
+3b. Reach the button by keyboard (Tab to it, press Space) and confirm the dialog does not
+    self-confirm from the same keystroke.
 4. Click it again and confirm → every quick timer, alarm and the missed note disappear from the main
    window immediately.
 5. Reopen the app. The alarms are still gone, confirming it persisted.
@@ -626,7 +740,14 @@ Work through each of these in the running app:
 9. Verify the alarm from step 6 survived the settings reset.
 10. Check the Run key is gone after the reset:
     `Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -Name Tidsro -ErrorAction SilentlyContinue`
-11. Start Narrator and tab through the Data section: both buttons and the dialog announce their names.
+11. Set a countdown to fire in a few seconds. When its completion card appears, leave it on screen,
+    open Settings and clear all alarms → the card closes with the wipe. Confirm no alarm reappears
+    in the schedule (this is the Snooze-resurrection path).
+12. Start Narrator and tab through the Data section: both buttons announce their names, and opening
+    each dialog announces "Delete alarms?" or "Reset settings?" rather than "Tidsro".
+13. Make `data.json` read-only (`attrib +R "$env:APPDATA\Tidsro\data.json"`), clear the alarms, and
+    confirm a tray balloon reports the failed save instead of it passing silently. Then
+    `attrib -R` the file again.
 
 - [ ] **Step 8: Commit**
 
@@ -647,8 +768,15 @@ git commit -m "feat(settings): add a Data section with a themed confirm dialog"
   the window closed. Task 4 Step 3 resets the live window too, so what gets re-saved is the default
   placement. The user-visible outcome matches the spec; the stored values end up as 440x600 centred
   rather than null.
+- **Nine stress-test findings are folded in** (spec updated to match): the wipe follows the scheduler
+  rather than the view; open popups are closed so Snooze can't resurrect a wiped alarm; failed saves
+  surface through `LogService` instead of being swallowed; Cancel is the confirm dialog's default and
+  focus; `Ask` takes a title so screen readers announce something useful; the "takes effect
+  immediately" line uses `Text` not `TextMuted`; the reset copy names what is kept. The one finding
+  accepted rather than fixed is the success announcement landing on the main window while Settings
+  is modal — reasoning is in the spec's risks section.
 - **`IStartupService` is not in the spec** and was added in Task 2 for a concrete reason: without it,
   the reset test deletes the developer's own `HKCU\...\Run\Tidsro` value every time `dotnet test`
   runs. It follows the existing `ISoundService` / `FakeSoundService` pattern and changes no behaviour.
-- **Test counts** assume the branch starts at 270. Task 1 adds 3, Task 2 adds none (refactor),
-  Task 3 adds 6 while updating the 2 existing Settings tests. Final: 279.
+- **Test counts** assume the branch starts at 270. Task 1 adds 5, Task 2 adds none (refactor),
+  Task 3 adds 7 while updating the 2 existing Settings tests. Final: 282.

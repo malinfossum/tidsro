@@ -36,18 +36,37 @@ confirmed, each takes effect immediately, and neither touches the other's data.
 
 ```
 CommitPendingDelete();                       // settle any outstanding undo first
-foreach item in Running + Alarms:            // over a snapshot, not the live collections
+closeOpenPopups();                           // an open card's Snooze would re-arm what we just wiped
+foreach item in _scheduler.Alarms + _scheduler.Running:   // over snapshots, not the live lists
     _scheduler.Cancel(item);                 // removes from both _running and _alarms
 Running.Clear(); Alarms.Clear();
 MissedNote = null;
 AlarmsChanged?.Invoke(...);                  // App's existing SaveData path persists it
 ```
 
-Disarming through `SchedulerService.Cancel` **before** emptying the collections is the load-bearing
-order: it guarantees nothing can fire from the 250 ms tick between the two steps. `Cancel` already
-removes from both scheduler lists, so one call covers countdowns and alarms alike.
+Three things here are load-bearing.
+
+**Iterate the scheduler, not the view.** `Running` and `Alarms` are derived collections, and
+`App.SaveData` builds `data.json` from `_scheduler.Alarms`. Clearing by walking the view would let
+any scheduler entry the agenda doesn't currently reflect survive the wipe, stay armed, and be
+written straight back by the save the wipe itself triggers. The scheduler is the source of truth on
+both sides, so it drives the wipe — and the count in the confirmation message comes from it too,
+or "nothing to clear" could be reported while alarms are still armed.
+
+**Disarm before emptying.** `Cancel` runs before the collections are cleared, so nothing can fire
+from the 250 ms tick in between. One call covers countdowns and alarms alike.
+
+**Close open completion popups.** Their buttons are not inert: `PopupViewModel.Plus5` calls
+`SchedulerService.Snooze` and then saves. Without this, clicking **+5** on a card still on screen
+after a wipe re-arms an alarm into the emptied schedule and persists it, with no way for the user to
+tell where it came from.
 
 No new persistence code — raising `AlarmsChanged` reuses the save path every other mutation uses.
+That path currently swallows `IOException` and `UnauthorizedAccessException`, which is a reasonable
+non-critical choice for an ordinary edit but inverts the user's intent here: they asked for the data
+to be gone, the write fails silently, and everything returns at the next launch. `App.SaveData`
+therefore reports the failure through the existing `LogService.Log(ex, source)`, which already logs
+and raises a tray balloon.
 
 ### 2. Resetting the preferences — `SettingsViewModel`
 
@@ -77,10 +96,21 @@ A small themed window built like `EditAlarmWindow`: `PageBg`/`Text` from `tokens
 `GoldAction` for the confirming button, `QuietAction` for Cancel, `IsCancel="True"` so Esc backs
 out, and `AutomationProperties.Name` on both buttons. Owner-centred and modal.
 
-Messages name the count, so the user sees the size of what they are about to lose:
+**Cancel is the default button and takes initial focus.** Confirming an irreversible wipe must cost
+a deliberate Tab or a click. The button that opened the dialog was itself activated by Enter or
+Space, and a held or repeated key would otherwise carry straight through into the confirmation. The
+uninstaller's prompt already defaults to No; this matches it.
 
-- *Delete all 6 alarms? This cannot be undone.*
-- *Reset all settings? Launch at startup will be turned off.*
+`Ask(owner, title, message)` sets the window title as well as the body, because a screen reader
+announces the title when a modal opens — "Tidsro" would say only that *something* opened.
+
+- Title *Delete alarms?* — *Delete all 6 alarms? This cannot be undone.*
+- Title *Reset settings?* — *Reset all settings? Launch at startup will be turned off. Your alarms
+  and the diagnostic log are kept.*
+
+Naming the log in the copy matters: someone clearing their data before handing the machine on would
+reasonably assume nothing personal remains, and `LogService` records exception text that can carry
+an alarm's label.
 
 `SettingsViewModel` takes an injected `Func<string, bool> confirm` rather than calling the dialog
 itself. The view-model stays free of UI, and both the accepted and declined paths become ordinary
@@ -95,12 +125,21 @@ Both act the instant they are confirmed and persist at once. **Cancel does not u
 are outside the draft. This is deliberate and is why they sit in their own visually separated
 section rather than among the preference controls.
 
+The sentence saying so is rendered in `Text`, not `TextMuted`. It is the only warning shown before
+an irreversible action, and the muted token is the lowest-contrast text in the dialog — the wrong
+place for the highest-stakes line. `TextMuted` stays on the "Data" heading.
+
 ## Testing
 
 Headless view-model tests, following the existing suite:
 
 - Clearing empties `Running`, `Alarms`, and `MissedNote`, and the scheduler has nothing armed
   afterwards.
+- Clearing disarms an alarm armed directly on the scheduler without an intervening agenda rebuild —
+  proving the wipe follows the source of truth rather than the view.
+- Clearing raises the close-popups request exactly once, and before anything is disarmed. That the
+  popups actually close, and that a snooze afterwards re-arms nothing, is a manual check — the
+  windows themselves are outside the view-model.
 - Clearing raises `AlarmsChanged` exactly once.
 - A **declined** confirm leaves every alarm in place — for both buttons.
 - Reset restores each default field and calls `StartupService.Disable()`.
@@ -121,6 +160,12 @@ the dark styling matches the app.
 - **Reset while the startup Run key points elsewhere.** `Disable()` deletes the value by name, so
   it clears regardless of the path recorded — consistent with the autostart work on
   `fix/autostart-survives-move`.
+- **The success announcement lands on a window the screen reader isn't in.** `ClearAllAlarms` raises
+  `Announce("All alarms cleared")` through the main window's UIA live region while the Settings
+  dialog is modal and focused. The announcement is kept, since the method is callable from anywhere
+  and it costs nothing, but a Narrator user's reliable confirmation is the dialog closing and the
+  empty schedule on return. Giving Settings its own live region would duplicate the main window's
+  UIA plumbing for one message; **accepted as a limitation rather than fixed.**
 
 ## Rejected alternatives
 
