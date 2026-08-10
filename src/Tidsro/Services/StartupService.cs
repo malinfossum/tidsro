@@ -4,7 +4,7 @@ using Microsoft.Win32;
 
 namespace Tidsro.Services;
 
-public sealed class StartupService
+public sealed class StartupService : IStartupService
 {
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string ValueName = "Tidsro";

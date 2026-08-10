@@ -142,6 +142,14 @@ public partial class App : Application
         ArmLoadedAlarms(_data.Alarms);
         ArmLoadedRecurring(_data.RecurringAlarms);
         _mainVm.AlarmsChanged += (_, _) => SaveData();
+        _mainVm.ClosePopupsRequested += (_, _) =>
+        {
+            foreach (var popup in _openPopups.ToList())
+                // IsLoaded: never re-close a window already closing. CloseWithoutRestoringFocus, not
+                // Close: a normal close restores the foreground window captured when the card appeared
+                // (often a different app), which would push the modal Settings dialog behind it.
+                if (popup.IsLoaded) popup.CloseWithoutRestoringFocus();
+        };
 
         new StartupService(StartupService.CurrentExePath).RefreshIfEnabled();
     }
@@ -253,9 +261,14 @@ public partial class App : Application
             new EditAlarmViewModel(row.Item.Id, row.Item.EndsAt?.ToString("HH\\:mm") ?? "",
                 row.Item.Label ?? "", row.Item.Sound, row.Item.RecurringDays ?? Weekdays.None, row.Item.WarnBefore,
                 _mainVm.SoundOptions, _mainVm.ApplyAlarmEdit, _sound));
-        _main ??= new MainWindow(_mainVm, () => new SettingsWindow(
+        _main ??= new MainWindow(_mainVm, () => new SettingsWindow(confirm =>
                 new SettingsViewModel(_settings, new StartupService(StartupService.CurrentExePath),
-                    SaveData, _mainVm.SetDefaultSound)),
+                    SaveData, _mainVm.SetDefaultSound,
+                    clearAllAlarms: _mainVm.ClearAllAlarms,
+                    alarmCount: () => _scheduler.Alarms.Count + _scheduler.Running.Count,
+                    hasAnythingToClear: () => _mainVm.HasAnythingToClear,
+                    resetWindowPlacement: () => _main?.ResetPlacement(),
+                    confirm: confirm)),
             editFactory, _settings, SaveData);
         Application.Current.MainWindow = _main;
         _main.Show();
@@ -267,9 +280,10 @@ public partial class App : Application
     {
         _timer.Stop();
         _hotkey.Dispose();
-        _tray?.Dispose();
         _mainVm.CommitPendingDelete();   // an uncommitted delete commits on quit (spec §3.1)
-        SaveData();                      // flush the final armed set
+        SaveData();                      // flush the final armed set — its failure path notifies via
+                                         // _tray, so the tray must still be alive when this runs
+        _tray?.Dispose();
         Shutdown();
     }
 
@@ -283,7 +297,13 @@ public partial class App : Application
             RecurringAlarms = armed.Where(a => a.TriggerType == TriggerType.Recurring).Select(ToRecurringRecord).ToList(),
         };
         try { _persistence.Save(data); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* non-critical */ }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Log() returns true for a fresh error, false for a duplicate suppressed within its 5 s
+            // window (see LogService) — mirrors the OnDispatcherUnhandledException balloon pattern.
+            if (_log.Log(ex, "SaveData"))
+                _tray?.ShowNotification("Tidsro", "Tidsro couldn't save your changes. See Tray ▸ Open log folder.");
+        }
     }
 
     private static AlarmRecord ToRecord(TimerItem a) => new()

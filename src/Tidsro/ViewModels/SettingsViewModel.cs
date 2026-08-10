@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Tidsro.Models;
 using Tidsro.Services;
 
@@ -6,10 +7,15 @@ namespace Tidsro.ViewModels;
 
 public partial class SettingsViewModel : ObservableObject
 {
-    private readonly StartupService _startup;
+    private readonly IStartupService _startup;      // interface came from Task 2
     private readonly Action _save;                              // bundles settings + alarms at the App level
     private readonly Action<SoundChoice> _onDefaultSoundChanged;
     private readonly AppSettings _settings;   // the in-memory snapshot App reuses to open this window; keep it current
+    private readonly Action _clearAllAlarms;
+    private readonly Func<int> _alarmCount;
+    private readonly Func<bool> _hasAnythingToClear;
+    private readonly Action _resetWindowPlacement;
+    private readonly Func<string, string, bool> _confirm;   // (title, message) -> confirmed
 
     [ObservableProperty] private bool _launchAtStartup;
     [ObservableProperty] private SoundChoice _defaultSound;
@@ -18,11 +24,15 @@ public partial class SettingsViewModel : ObservableObject
         { SoundChoice.None, SoundChoice.SoftChime, SoundChoice.Marimba, SoundChoice.Bell,
           SoundChoice.PianoJingle, SoundChoice.ElectricPianoJingle, SoundChoice.BellJingle };
 
-    public SettingsViewModel(AppSettings settings, StartupService startup,
-        Action save, Action<SoundChoice> onDefaultSoundChanged)
+    public SettingsViewModel(AppSettings settings, IStartupService startup,
+        Action save, Action<SoundChoice> onDefaultSoundChanged,
+        Action clearAllAlarms, Func<int> alarmCount, Func<bool> hasAnythingToClear,
+        Action resetWindowPlacement, Func<string, string, bool> confirm)
     {
         _settings = settings;
         _startup = startup; _save = save; _onDefaultSoundChanged = onDefaultSoundChanged;
+        _clearAllAlarms = clearAllAlarms; _alarmCount = alarmCount; _hasAnythingToClear = hasAnythingToClear;
+        _resetWindowPlacement = resetWindowPlacement; _confirm = confirm;
         _launchAtStartup = settings.LaunchAtStartup;
         _defaultSound = settings.DefaultSound;
     }
@@ -43,5 +53,54 @@ public partial class SettingsViewModel : ObservableObject
         _settings.LaunchAtStartup = LaunchAtStartup;
         _settings.DefaultSound = DefaultSound;
         _save();   // App's SaveData handles IO errors; settings remain non-critical
+    }
+
+    // Both of these act at once and are outside the Save/Cancel draft — Cancel does not undo them,
+    // which is why the view keeps them in their own separated section.
+
+    [RelayCommand]
+    private void ClearAlarms()
+    {
+        // alarmCount excludes a leftover missed note (no armed alarm behind it), so the early return
+        // is gated on hasAnythingToClear instead — otherwise the button silently does nothing while
+        // a missed note is still on screen.
+        if (!_hasAnythingToClear()) return;
+
+        var count = _alarmCount();
+        var (title, message) = count switch
+        {
+            0 => ("Clear missed note?", "Clear the missed alarm note? This cannot be undone."),
+            1 => ("Delete alarms?", "Delete this alarm? This cannot be undone."),
+            _ => ("Delete alarms?", $"Delete all {count} alarms? This cannot be undone."),
+        };
+        if (!_confirm(title, message)) return;
+
+        _clearAllAlarms();                          // raises AlarmsChanged, which persists via App
+    }
+
+    [RelayCommand]
+    private void ResetSettings()
+    {
+        if (!_confirm("Reset settings?", "Reset all settings? Launch at startup will be turned off. "
+                                       + "Your alarms and the diagnostic log are kept.")) return;
+
+        var defaults = AppSettings.Defaults();
+        _startup.Disable();                         // never leave the Run key behind a checkbox that reads off
+
+        _settings.LaunchAtStartup = defaults.LaunchAtStartup;
+        _settings.DefaultSound = defaults.DefaultSound;
+        _settings.WindowLeft = null;
+        _settings.WindowTop = null;
+        _settings.WindowWidth = null;
+        _settings.WindowHeight = null;
+
+        // Refresh the draft, or a following Save writes the pre-reset values straight back.
+        LaunchAtStartup = defaults.LaunchAtStartup;
+        DefaultSound = defaults.DefaultSound;
+        _onDefaultSoundChanged(defaults.DefaultSound);
+
+        _resetWindowPlacement();                    // main window returns to 440x600 centred, so its
+                                                    // OnClosing can't re-save the old coordinates
+        _save();
     }
 }
