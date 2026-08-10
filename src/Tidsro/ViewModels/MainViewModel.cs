@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Tidsro.Models;
@@ -60,6 +61,9 @@ public partial class MainViewModel : ObservableObject
     public event EventHandler<string>? Announcement;
     /// <summary>Raised when the user picks an agenda row to edit, so the View opens the modal Edit-alarm dialog.</summary>
     public event EventHandler<AlarmItemViewModel>? EditAlarmRequested;
+    /// <summary>Raised before a bulk wipe so the View can close open completion cards — their Snooze
+    /// would otherwise re-arm an alarm into the schedule we are emptying.</summary>
+    public event EventHandler? ClosePopupsRequested;
 
     public bool IsDayEmpty => Alarms.Count == 0;
 
@@ -262,6 +266,26 @@ public partial class MainViewModel : ObservableObject
         RebuildAgenda();
         Announce($"Alarm at {row.TimeText} deleted");
         // Note: not persisted yet. The on-disk record survives until CommitPendingDelete (auto-timeout / quit).
+    }
+
+    /// <summary>Wipe every countdown, alarm and missed note. Walks the scheduler rather than the view:
+    /// SaveData persists from _scheduler.Alarms, so anything the agenda hasn't caught up with would
+    /// survive the wipe and be written straight back. Called from Settings; confirmation happens there.</summary>
+    public void ClearAllAlarms()
+    {
+        CommitPendingDelete();                 // settle any outstanding undo first
+        ClosePopupsRequested?.Invoke(this, EventArgs.Empty);
+
+        foreach (var item in _scheduler.Running.ToList()) _scheduler.Cancel(item);
+        foreach (var item in _scheduler.Alarms.ToList()) _scheduler.Cancel(item);
+
+        Running.Clear();
+        Alarms.Clear();
+        MissedNote = null;
+
+        OnPropertyChanged(nameof(IsDayEmpty));
+        AlarmsChanged?.Invoke(this, EventArgs.Empty);
+        Announce("All alarms cleared");
     }
 
     [RelayCommand]

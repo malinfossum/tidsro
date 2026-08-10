@@ -988,4 +988,79 @@ public class MainViewModelTests
         Assert.True(row.IsNext);                           // active again
         Assert.Equal(new DateTimeOffset(2026, 1, 2, 10, 0, 0, TimeSpan.Zero), row.Item.EndsAt);   // rolled to Fri 10:00
     }
+
+    [Fact]
+    public void ClearAllAlarms_empties_every_list_and_disarms_the_scheduler()
+    {
+        var vm = New(out _, out var sched);
+        vm.StartPresetCommand.Execute(30);                  // a running countdown
+        vm.AlarmTimeInput = "14:30";
+        vm.AddAlarmCommand.Execute(null);                   // a clock-time alarm
+        vm.MissedNote = "Missed while away: Lunch · 11:30";
+
+        vm.ClearAllAlarms();
+
+        Assert.Empty(vm.Running);
+        Assert.Empty(vm.Alarms);
+        Assert.Null(vm.MissedNote);
+        Assert.Empty(sched.Running);
+        Assert.Empty(sched.Alarms);
+    }
+
+    [Fact]
+    public void ClearAllAlarms_persists_once()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "14:30";
+        vm.AddAlarmCommand.Execute(null);
+        var saves = 0;
+        vm.AlarmsChanged += (_, _) => saves++;
+
+        vm.ClearAllAlarms();
+
+        Assert.Equal(1, saves);
+    }
+
+    [Fact]
+    public void ClearAllAlarms_settles_an_outstanding_undo_first()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "14:30";
+        vm.AddAlarmCommand.Execute(null);
+        vm.DeleteAlarmCommand.Execute(vm.Alarms.Count > 0 ? vm.Alarms[0] : null);
+
+        vm.ClearAllAlarms();
+
+        Assert.False(vm.HasPendingDelete);
+        Assert.Null(vm.PendingDeleteLabel);
+    }
+
+    [Fact]
+    public void ClearAllAlarms_disarms_what_the_agenda_has_not_caught_up_with()
+    {
+        var vm = New(out var clock, out var sched);
+        // Armed straight on the scheduler: the agenda has never been rebuilt, so vm.Alarms is empty.
+        sched.ArmClockAlarm(clock.Now.AddHours(2), "Ghost", SoundChoice.None, Guid.NewGuid());
+        Assert.Empty(vm.Alarms);
+
+        vm.ClearAllAlarms();
+
+        Assert.Empty(sched.Alarms);   // the wipe follows the scheduler, not the view
+    }
+
+    [Fact]
+    public void ClearAllAlarms_asks_for_open_popups_to_close_before_disarming()
+    {
+        var vm = New(out _, out var sched);
+        vm.AlarmTimeInput = "14:30";
+        vm.AddAlarmCommand.Execute(null);
+        var requests = 0;
+        var armedWhenAsked = -1;
+        vm.ClosePopupsRequested += (_, _) => { requests++; armedWhenAsked = sched.Alarms.Count; };
+
+        vm.ClearAllAlarms();
+
+        Assert.Equal(1, requests);
+        Assert.Equal(1, armedWhenAsked);   // asked before anything was disarmed
+    }
 }
