@@ -57,6 +57,16 @@ all four window coordinates null (so the next open uses default placement).
 Reset must also call `StartupService.Disable()`. Leaving the Run key behind while the checkbox
 reads off would make the UI lie about the user's machine.
 
+Two implementation consequences, found while planning:
+
+- `StartupService` moves behind an `IStartupService` interface, mirroring the existing
+  `ISoundService` / `FakeSoundService` pattern. Otherwise a unit test covering the reset deletes the
+  developer's own `HKCU\...\Run\Tidsro` value on every test run.
+- `MainWindow.OnClosing` writes the live window's placement back into settings, so clearing the
+  stored coordinates alone would be undone the next time the window closed. The reset therefore also
+  returns the live window to 440x600 centred. The user-visible result is the spec's, but the stored
+  values end up as those defaults rather than null.
+
 Because Settings is a draft dialog, reset must then refresh the view-model's own
 `LaunchAtStartup` and `DefaultSound` to the new defaults. Without that, clicking Save afterwards
 writes the pre-reset preferences straight back over the reset — the one real trap in this feature.
