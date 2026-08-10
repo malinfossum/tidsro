@@ -40,6 +40,11 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: "..\dist\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 
+[Registry]
+; Records where we installed. The app reads this to tell the installed copy from a dev build or a
+; portable copy, so only the real install may repoint the launch-at-startup entry.
+Root: HKCU; Subkey: "Software\{#AppName}"; ValueType: string; ValueName: "InstallDir"; ValueData: "{app}"; Flags: uninsdeletekey
+
 [Icons]
 Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppExeName}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExeName}"; Tasks: desktopicon
@@ -50,3 +55,21 @@ Filename: "{app}\{#AppExeName}"; Description: "{cm:LaunchProgram,{#AppName}}"; F
 [UninstallRun]
 ; Remove the launch-at-startup entry the app may have written, so an uninstall leaves nothing behind.
 Filename: "{sys}\reg.exe"; Parameters: "delete ""HKCU\Software\Microsoft\Windows\CurrentVersion\Run"" /v Tidsro /f"; Flags: runhidden; RunOnceId: "DelTidsroAutostart"
+
+[Code]
+// Alarms and settings outlive an uninstall by default — a reinstall picks them back up. Offer to clear
+// them so a fresh install can start clean; "No" is the default button, since this can't be undone.
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  DataDir: String;
+begin
+  if CurUninstallStep = usPostUninstall then
+  begin
+    DataDir := ExpandConstant('{userappdata}\{#AppName}');
+    if DirExists(DataDir) then
+      if MsgBox('Also delete your alarms, settings and log?' + #13#10 + #13#10 + DataDir + #13#10 + #13#10 +
+                'Choose No to keep them for a future install.',
+                mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
+        DelTree(DataDir, True, True, True);
+  end;
+end;
