@@ -17,6 +17,18 @@
         </DataTemplate>
       </ComboBox.ItemTemplate>
     </ComboBox>
+    <Separator Margin="0,24,0,0" Background="{StaticResource TextMuted}" Opacity="0.3"/>
+    <TextBlock Text="Data" Margin="0,16,0,4" Foreground="{StaticResource TextMuted}"/>
+    <TextBlock Text="These take effect immediately. Cancel will not undo them."
+               TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{StaticResource Text}"/>
+    <Button Content="Clear all alarms" Style="{StaticResource QuietAction}"
+            HorizontalAlignment="Left" MinWidth="150" Margin="0,0,0,8"
+            Command="{Binding ClearAlarmsCommand}"
+            AutomationProperties.Name="Clear all alarms"/>
+    <Button Content="Reset all settings" Style="{StaticResource QuietAction}"
+            HorizontalAlignment="Left" MinWidth="150"
+            Command="{Binding ResetSettingsCommand}"
+            AutomationProperties.Name="Reset all settings"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
       <Button Content="Save" Style="{StaticResource GoldAction}" IsDefault="True"
               MinWidth="84" Margin="0,0,8,0" Click="Save_Click"

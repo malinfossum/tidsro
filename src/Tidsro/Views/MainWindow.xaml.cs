@@ -59,6 +59,17 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>Return to the XAML defaults after a settings reset, so OnClosing can't re-save the
+    /// coordinates the reset just cleared.</summary>
+    public void ResetPlacement()
+    {
+        Width = 440;
+        Height = 600;
+        WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        Left = (SystemParameters.WorkArea.Width - Width) / 2 + SystemParameters.WorkArea.Left;
+        Top = (SystemParameters.WorkArea.Height - Height) / 2 + SystemParameters.WorkArea.Top;
+    }
+
     private const double WideBreakpoint = 760;
     private bool? _wideApplied;   // current layout mode; skip the rebuild unless the breakpoint flips
 

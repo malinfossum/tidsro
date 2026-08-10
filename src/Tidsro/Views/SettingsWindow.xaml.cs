@@ -5,10 +5,10 @@ namespace Tidsro.Views;
 
 public partial class SettingsWindow : Window
 {
-    public SettingsWindow(SettingsViewModel vm)
+    public SettingsWindow(Func<Func<string, string, bool>, SettingsViewModel> vmFactory)
     {
         InitializeComponent();
-        DataContext = vm;
+        DataContext = vmFactory((title, message) => ConfirmDialog.Ask(this, title, message));
     }
 
     // Save applies the draft then closes; Cancel/✕ close without saving, which discards the draft
