@@ -42,7 +42,9 @@ public partial class MainViewModel : ObservableObject
     public bool ShowCustomDays => AlarmRepeat == RepeatOption.Custom;
     partial void OnAlarmRepeatChanged(RepeatOption value) => OnPropertyChanged(nameof(ShowCustomDays));
 
-    [ObservableProperty] private string? _missedNote;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAnythingToClear))]
+    private string? _missedNote;
 
     // Snapshot of (id, fire-time) the agenda was last built from. A recurring alarm advances its
     // EndsAt on firing without changing its id, so reconciling on ids alone would leave a stale row.

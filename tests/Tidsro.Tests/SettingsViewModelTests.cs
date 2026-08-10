@@ -81,13 +81,17 @@ public class SettingsViewModelTests
         var shared = new AppSettings();
         var asked = false;
         var cleared = 0;
+        string? title = null;
+        string? message = null;
         var vm = new SettingsViewModel(shared, new FakeStartupService(),
             () => { }, _ => { }, () => cleared++, () => 0, hasAnythingToClear: () => true,
-            resetWindowPlacement: () => { }, confirm: (_, _) => { asked = true; return true; });
+            resetWindowPlacement: () => { }, confirm: (t, m) => { asked = true; title = t; message = m; return true; });
 
         vm.ClearAlarmsCommand.Execute(null);
 
         Assert.True(asked);
+        Assert.Equal("Clear missed note?", title);
+        Assert.Equal("Clear the missed alarm note? This cannot be undone.", message);
         Assert.Equal(1, cleared);
     }
 

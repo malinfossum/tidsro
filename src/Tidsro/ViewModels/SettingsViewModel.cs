@@ -67,10 +67,13 @@ public partial class SettingsViewModel : ObservableObject
         if (!_hasAnythingToClear()) return;
 
         var count = _alarmCount();
-        var message = count == 1
-            ? "Delete this alarm? This cannot be undone."
-            : $"Delete all {count} alarms? This cannot be undone.";
-        if (!_confirm("Delete alarms?", message)) return;
+        var (title, message) = count switch
+        {
+            0 => ("Clear missed note?", "Clear the missed alarm note? This cannot be undone."),
+            1 => ("Delete alarms?", "Delete this alarm? This cannot be undone."),
+            _ => ("Delete alarms?", $"Delete all {count} alarms? This cannot be undone."),
+        };
+        if (!_confirm(title, message)) return;
 
         _clearAllAlarms();                          // raises AlarmsChanged, which persists via App
     }

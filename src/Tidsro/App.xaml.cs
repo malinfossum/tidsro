@@ -282,7 +282,7 @@ public partial class App : Application
         _hotkey.Dispose();
         _mainVm.CommitPendingDelete();   // an uncommitted delete commits on quit (spec §3.1)
         SaveData();                      // flush the final armed set — its failure path notifies via
-                                          // _tray, so the tray must still be alive when this runs
+                                         // _tray, so the tray must still be alive when this runs
         _tray?.Dispose();
         Shutdown();
     }
