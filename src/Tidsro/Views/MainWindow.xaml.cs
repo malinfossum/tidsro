@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Threading;
 using Tidsro.Models;
 using Tidsro.Services;
@@ -34,6 +36,11 @@ public partial class MainWindow : Window
             if (e.PropertyName != nameof(MainViewModel.PendingDeleteLabel)) return;
             _undoTimer.Stop();
             if (vm.HasPendingDelete) _undoTimer.Start();   // restart the window on each new delete
+        };
+
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.SelectedTabIndex)) RescueFocusFromHiddenPanel();
         };
 
         _settingsFactory = settingsFactory;
@@ -80,6 +87,21 @@ public partial class MainWindow : Window
         var right = x + SystemParameters.VirtualScreenWidth;
         var bottom = y + SystemParameters.VirtualScreenHeight;
         return left >= x - 8 && top >= y && left <= right - 40 && top <= bottom - 40;
+    }
+
+    /// <summary>A collapsed panel cannot hold keyboard focus, so switching tabs while focus sits in
+    /// the panel content — which Ctrl+Tab allows from anywhere in the window — drops focus to the
+    /// window itself: the next Tab restarts from the top and a screen reader loses its place. Move
+    /// focus to the headers instead.
+    ///
+    /// Gated on IsActive because ResetSettings changes the tab while the modal Settings dialog owns
+    /// focus. Without the gate this would pull the user out of the dialog to a header behind it.</summary>
+    private void RescueFocusFromHiddenPanel()
+    {
+        if (!IsActive) return;
+        if (Keyboard.FocusedElement is not Visual focused) return;
+        if (!Panels.IsAncestorOf(focused)) return;
+        Tabs.Focus();
     }
 
     // ✕ on the window hides to tray instead of quitting (real Quit is in the tray menu).
