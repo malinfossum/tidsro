@@ -101,8 +101,10 @@ that change which timer is `Running[0]` without changing the count.
 The per-second remaining-time updates need no new plumbing: the strip binds through the same
 `TimerItemViewModel` the card does.
 
-The strip shows the accent dot, the remaining time in `FontMono`, the label, and the extra-count
-text. An unlabelled timer shows no label, the same way its card does — the time is the identity. It
+The strip shows the accent dot, a muted "Running" caption, the remaining time in `FontMono`, the
+label, and the extra-count text. The caption exists for two reasons: without it a gold dot is the
+only thing saying what the strip is, and it gives the accessible name somewhere to live that
+actually reaches the accessibility tree (see §7). An unlabelled timer shows no label, the same way its card does — the time is the identity. It
 is read-only — pause, reset and cancel stay on the Quick timers card, so there is exactly
 one place to control a timer. When nothing is running it collapses entirely, so an idle Tidsro looks
 as calm as it does today. It appears and disappears without animation: the app's reduced-motion
@@ -165,6 +167,12 @@ Roughly forty lines, including the most intricate code in the window.
   buttons would announce as buttons; see *Rejected alternatives*.
 - The strip carries an `AutomationProperties.Name` identifying it as the running timer, and
   deliberately **no** `LiveSetting` — a live region there would announce a new time every second.
+- **That name lives on the "Running" caption `TextBlock`, not on the strip's `Border`.** A `Border`
+  creates no automation peer, so a name set on it never reaches the accessibility tree at all —
+  the same defect `37c2f25` fixed for the alarm rows, where a name on a template-root `Border` was
+  silently inert. A `TextBlock` has a peer, and its `Name` overrides its text, so the caption reads
+  as "Running timer". Amended 2026-08-11 after the Task 5 implementer caught the original wording
+  mandating the dead placement.
 - That name is a **static string**, never a binding. A composed name carrying the remaining time
   would recompute on every 250 ms refresh and raise a UIA name-change up to four times a second;
   screen readers that re-announce a changed name on the focused element would defeat the live-region
@@ -174,9 +182,14 @@ Roughly forty lines, including the most intricate code in the window.
 - **Focus must not be stranded by a tab switch.** A collapsed panel cannot hold focus, so a switch
   made while focus sits in the panel content — which Ctrl+Tab allows from anywhere in the window —
   drops focus to the window itself, restarting Tab order from the top and losing a screen reader's
-  place. On a selection change, if focus is inside the panel being collapsed, the view moves it to
-  the selected tab header. Clicking a header never hits this, which is why it would survive casual
-  testing.
+  place. On a selection change, the view moves focus to the selected tab header when focus is inside
+  the panel being collapsed **or has already fallen to the window itself**. Both conditions are
+  needed: the handler is subscribed after the panels' visibility bindings and therefore runs second,
+  so whether it still sees focus inside the panel depends on whether WPF has already reassigned it —
+  and that ordering is not something the headless suite can pin down. Covering both states makes the
+  rescue correct either way. Clicking a header leaves focus on the `TabItem`, which is neither state,
+  so the normal path steals nothing. Amended 2026-08-11 after the Task 6 review raised the ordering
+  risk.
 - **That focus move is gated on the main window being active.** `ResetSettings` changes the selected
   tab while the Settings dialog is modal and focused; an ungated move would pull focus out of the
   modal to a header behind it — the same defect class as the popup-close path that stole foreground
