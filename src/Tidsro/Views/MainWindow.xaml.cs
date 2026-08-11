@@ -94,13 +94,22 @@ public partial class MainWindow : Window
     /// window itself: the next Tab restarts from the top and a screen reader loses its place. Move
     /// focus to the headers instead.
     ///
+    /// The panels' Visibility bindings subscribe to PropertyChanged in the constructor before this
+    /// handler does, so whether WPF has already reassigned focus off the collapsing panel by the time
+    /// this runs is unknowable from the headless test suite. Handling both outcomes — focus still
+    /// inside Panels, or already dropped to the window (including no focused element at all) — keeps
+    /// the rescue correct either way. A header click leaves focus on a TabItem, neither of those
+    /// states, so the normal click path is untouched.
+    ///
     /// Gated on IsActive because ResetSettings changes the tab while the modal Settings dialog owns
     /// focus. Without the gate this would pull the user out of the dialog to a header behind it.</summary>
     private void RescueFocusFromHiddenPanel()
     {
         if (!IsActive) return;
-        if (Keyboard.FocusedElement is not Visual focused) return;
-        if (!Panels.IsAncestorOf(focused)) return;
+        var focused = Keyboard.FocusedElement;
+        var insidePanels = focused is Visual visual && Panels.IsAncestorOf(visual);
+        var droppedToWindow = focused is null || ReferenceEquals(focused, this);
+        if (!insidePanels && !droppedToWindow) return;
         Tabs.Focus();
     }
 
