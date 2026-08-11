@@ -810,15 +810,23 @@ Read the UIA tree with Windows PowerShell and `UIAutomationClient`, walking `Con
 
 - [ ] **Step 2: Confirm keyboard navigation**
 
-With focus on a tab header: left and right arrows move between the two. From anywhere in the window, Ctrl+Tab cycles. Both work without the mouse.
+With focus on a tab header: left and right arrows move between the two.
+
+Then Ctrl+Tab, **with focus inside a panel** — click into the "Custom duration" box first. This is the highest-value check in the whole pass. Ctrl+Tab does not come free here: the header-only template puts the panels beside the tab control rather than inside it, so the stock handler never sees the keypress and the affordance is supplied by a window-level `KeyBinding` bound to `AdvanceTabCommand`. The unit tests call that command directly and therefore prove nothing about whether the binding resolves at runtime. If Ctrl+Tab does nothing, the binding is not reaching the view model.
 
 - [ ] **Step 3: Confirm the two focus rescues**
 
-Click into the "Custom duration" box, press Ctrl+Tab: focus lands on a header, not nowhere. Then open Settings, click "Reset all settings", confirm: focus stays in the dialog throughout and the main window behind it switches to Quick timers.
+Click into the "Custom duration" box, press Ctrl+Tab: focus lands on a tab header, not nowhere — and specifically on the **header**, showing the gold focus ring, not a system dotted rectangle around the whole tab strip. The ring is the tell: it is set on the item style, so seeing it means focus reached the `TabItem` rather than the `TabControl`.
+
+Then open Settings, click "Reset all settings", confirm: focus stays in the dialog throughout and the main window behind it switches to Quick timers.
 
 - [ ] **Step 4: Confirm the strip**
 
 Start a 5 minute timer. The strip appears at the bottom and **nothing above it moves**. Start a second: the strip still shows the 5 minute one and reads "+1 more". Pause both: the strip still shows a timer. Cancel both: it disappears. In the UIA tree, the strip carries the static name "Running timer" and no live-region setting.
+
+Then start one with a deliberately long label — a full sentence. The label must trim with an ellipsis and **"+N more" must stay on screen**. That text is the only signal that other timers are running, and before the fix a long label pushed it past the window edge.
+
+Finally, the missed-alarm note, which now lives in the shell rather than in the Schedule panel. Arm a one-shot alarm a minute or two out, quit Tidsro, wait past the time, and relaunch. The "Missed while away" note must be visible on **both** tabs. A missed alarm produces no completion card, so before this change a user sitting on Quick timers got no signal at all.
 
 - [ ] **Step 5: Confirm both panels stay loaded**
 
@@ -838,7 +846,9 @@ Close Tidsro gracefully, restore `data.json` and the Run key value, and relaunch
 
 - [ ] **Step 9: Note the follow-ups this leaves open**
 
-`docs/screenshots/main-window.png` now shows a layout the app no longer has, and the README references it. Refreshing the screenshots belongs to the release pass, not to this branch — record it so the release recipe picks it up.
+`docs/screenshots/main-window.png` now shows a layout the app no longer has. The README's prose and alt text were corrected on this branch, so until the screenshot is retaken the alt text describes something the image does not show. Refreshing the screenshots belongs to the release pass, not to this branch — record both halves so the release recipe picks them up together.
+
+Separately: the running-timer rows still announce as `Tidsro.ViewModels.TimerItemViewModel`. The `37c2f25` fix was only ever applied to the alarms list, so this is pre-existing rather than a regression — but the strip makes running timers more prominent, so it is worth doing soon. It already has its own task chip.
 
 ---
 
