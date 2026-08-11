@@ -2,6 +2,15 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
+## [1.7.0] — 2026-08-11
+
+### Added
+- **Clear your data from Settings** — a new **Data** section with *Clear all alarms* and *Reset settings*. Each asks first, in a dialog that matches the rest of the app, and the two are independent: clearing alarms leaves your settings alone, and resetting settings leaves your alarms alone. Reset also turns off launch-at-startup and forgets the saved window position.
+- **Uninstall asks about your data** — the uninstaller now offers to delete alarms and settings as well. *No* is the default, so a reinstall picks up where you left off unless you choose otherwise.
+
+### Fixed
+- **Autostart is no longer hijacked by a stray copy** — running Tidsro from a build folder or a portable copy used to silently repoint launch-at-startup at that copy, so deleting or moving it broke startup at the next boot. Only the installed copy may claim startup now, and a healthy registration is left alone; moving or reinstalling still repairs itself.
+
 ## [1.6.0] — 2026-07-13
 
 ### Changed
@@ -50,6 +59,7 @@ Clock-time alarms — a "Your day" agenda with one-shot fire-at-HH:MM alarms, op
 ## [1.0.0] — 2026-06-16
 First release — countdown timers with presets or custom durations, pause/resume, reset, and per-timer sounds.
 
+[1.7.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.7.0
 [1.6.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.6.0
 [1.5.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.5.0
 [1.4.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.4.0
