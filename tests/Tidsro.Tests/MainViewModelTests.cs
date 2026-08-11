@@ -1114,6 +1114,23 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public void AdvanceTab_moves_from_the_first_tab_to_the_second()
+    {
+        var vm = New(out _, out _);
+        vm.AdvanceTabCommand.Execute(null);
+        Assert.Equal(1, vm.SelectedTabIndex);
+    }
+
+    [Fact]
+    public void AdvanceTab_wraps_from_the_last_tab_back_to_the_first()
+    {
+        var vm = New(out _, out _);
+        vm.SelectedTabIndex = AppSettings.TabCount - 1;
+        vm.AdvanceTabCommand.Execute(null);
+        Assert.Equal(0, vm.SelectedTabIndex);
+    }
+
+    [Fact]
     public void Strip_is_empty_when_nothing_is_counting_down()
     {
         var vm = New(out _, out _);

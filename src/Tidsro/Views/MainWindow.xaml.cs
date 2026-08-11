@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -110,7 +111,11 @@ public partial class MainWindow : Window
         var insidePanels = focused is Visual visual && Panels.IsAncestorOf(visual);
         var droppedToWindow = focused is null || ReferenceEquals(focused, this);
         if (!insidePanels && !droppedToWindow) return;
-        Tabs.Focus();
+        // TabControl is Focusable with IsTabStop false: Focus() on it parks focus on the container
+        // (UIA announces the tab strip, and the gold ring — set on ShellTabItem — never appears), so
+        // focus the selected header itself, falling back to the control if it isn't generated yet.
+        if (Tabs.ItemContainerGenerator.ContainerFromIndex(Tabs.SelectedIndex) is TabItem header) header.Focus();
+        else Tabs.Focus();
     }
 
     // ✕ on the window hides to tray instead of quitting (real Quit is in the tray menu).

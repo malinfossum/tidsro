@@ -109,6 +109,13 @@ public partial class MainViewModel : ObservableObject
     // The Settings "default sound" changed: move the picker to match (last edit wins with a manual per-timer pick).
     public void SetDefaultSound(SoundChoice sound) => SelectedSound = sound;
 
+    // Restores Ctrl+Tab: the header-only TabControl template puts the panels beside Tabs rather than
+    // inside it, so a keypress in a panel never reaches the control's own Ctrl+Tab handler. Bound from
+    // a window-level KeyBinding instead, and testable here without a window. AppSettings.TabCount, not
+    // a literal 2, so the Week tab needs no change to this wrap.
+    [RelayCommand]
+    private void AdvanceTab() => SelectedTabIndex = (SelectedTabIndex + 1) % AppSettings.TabCount;
+
     [RelayCommand(CanExecute = nameof(CanPreviewSound))]
     private void PreviewSound() => _sound.Play(SelectedSound);
     private bool CanPreviewSound() => SelectedSound != SoundChoice.None;   // nothing to hear when silent

@@ -6,11 +6,17 @@
         MinWidth="380" MinHeight="480" ResizeMode="CanResize"
         Background="{StaticResource PageBg}" Foreground="{StaticResource Text}"
         FontFamily="{StaticResource FontSans}">
+  <Window.InputBindings>
+    <!-- TabControl's own Ctrl+Tab only fires for keys routed through it; the header-only template
+         puts Panels beside Tabs rather than inside it, so this has to be restored at the window level. -->
+    <KeyBinding Key="Tab" Modifiers="Ctrl" Command="{Binding AdvanceTabCommand}"/>
+  </Window.InputBindings>
   <Grid Margin="24">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>   <!-- tab headers -->
       <RowDefinition Height="*"/>      <!-- panels, both loaded -->
       <RowDefinition Height="Auto"/>   <!-- running-timer strip -->
+      <RowDefinition Height="Auto"/>   <!-- missed-alarm note -->
       <RowDefinition Height="Auto"/>   <!-- undo bar -->
       <RowDefinition Height="Auto"/>   <!-- settings -->
     </Grid.RowDefinitions>
@@ -203,18 +209,6 @@
           </StackPanel>
         </Border>
 
-        <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
-                CornerRadius="{StaticResource RadiusMd}" Padding="16" Margin="0,12,0,0"
-                Visibility="{Binding MissedNote, Converter={StaticResource NullToCollapsed}}">
-          <DockPanel>
-            <Button DockPanel.Dock="Right" Content="&#xE711;" Command="{Binding DismissMissedNoteCommand}"
-                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                    AutomationProperties.Name="Dismiss missed note" Style="{StaticResource QuietAction}"/>
-            <TextBlock Text="{Binding MissedNote}" Foreground="{StaticResource TextMuted}" TextWrapping="Wrap"
-                       VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite"/>
-          </DockPanel>
-        </Border>
-
         <TextBlock Text="Nothing scheduled yet — add an alarm" Foreground="{StaticResource TextFaint}"
                    FontSize="{StaticResource TextSm}" Margin="0,14,0,0"
                    Visibility="{Binding IsDayEmpty, Converter={StaticResource BoolToVisible}}"/>
@@ -304,24 +298,48 @@
             CornerRadius="{StaticResource RadiusMd}" Padding="12"
             Visibility="{Binding ShowStrip, Converter={StaticResource BoolToVisible}}">
       <!-- The name belongs on the TextBlock caption: a Border has no automation peer, so a name
-           set on it never reaches the tree. No LiveSetting, no bound Name, no storyboard. -->
-      <StackPanel Orientation="Horizontal">
-        <Ellipse Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,10,0" Fill="{StaticResource Accent}"/>
-        <TextBlock Text="Running" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"
+           set on it never reaches the tree. No LiveSetting, no bound Name, no storyboard.
+           The caption's visible text stays short ("Running") for the glance; its accessible name is
+           the longer "Running timer" so it still makes sense read alone, without the dot beside it
+           for context — don't "simplify" the two into agreeing text. -->
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto"/>   <!-- dot -->
+          <ColumnDefinition Width="Auto"/>   <!-- "Running" caption -->
+          <ColumnDefinition Width="Auto"/>   <!-- remaining time -->
+          <ColumnDefinition Width="*"/>      <!-- label: free text up to 200 chars, trims instead of pushing the rest off -->
+          <ColumnDefinition Width="Auto"/>   <!-- "+N more" -->
+        </Grid.ColumnDefinitions>
+        <Ellipse Grid.Column="0" Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,10,0" Fill="{StaticResource Accent}"/>
+        <TextBlock Grid.Column="1" Text="Running" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"
                    VerticalAlignment="Center" Margin="0,0,10,0"
                    AutomationProperties.Name="Running timer"/>
-        <TextBlock Text="{Binding StripTimer.RemainingText}" FontFamily="{StaticResource FontMono}"
+        <TextBlock Grid.Column="2" Text="{Binding StripTimer.RemainingText}" FontFamily="{StaticResource FontMono}"
                    FontSize="{StaticResource TextLg}" Foreground="{StaticResource Text}" VerticalAlignment="Center"/>
-        <TextBlock Text="{Binding StripTimer.Label}" Foreground="{StaticResource TextMuted}"
+        <TextBlock Grid.Column="3" Text="{Binding StripTimer.Label}" Foreground="{StaticResource TextMuted}"
                    FontSize="{StaticResource TextXs}" VerticalAlignment="Center" Margin="10,0,0,0"
+                   TextTrimming="CharacterEllipsis"
                    Visibility="{Binding StripTimer.Label, Converter={StaticResource NullToCollapsed}}"/>
-        <TextBlock Text="{Binding StripExtraText}" Foreground="{StaticResource TextFaint}"
+        <TextBlock Grid.Column="4" Text="{Binding StripExtraText}" Foreground="{StaticResource TextFaint}"
                    FontSize="{StaticResource TextXs}" VerticalAlignment="Center" Margin="10,0,0,0"
                    Visibility="{Binding StripExtraText, Converter={StaticResource NullToCollapsed}}"/>
-      </StackPanel>
+      </Grid>
     </Border>
 
     <Border Grid.Row="3" Margin="0,12,0,0"
+            Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+            CornerRadius="{StaticResource RadiusMd}" Padding="16"
+            Visibility="{Binding MissedNote, Converter={StaticResource NullToCollapsed}}">
+      <DockPanel>
+        <Button DockPanel.Dock="Right" Content="&#xE711;" Command="{Binding DismissMissedNoteCommand}"
+                FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                AutomationProperties.Name="Dismiss missed note" Style="{StaticResource QuietAction}"/>
+        <TextBlock Text="{Binding MissedNote}" Foreground="{StaticResource TextMuted}" TextWrapping="Wrap"
+                   VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite"/>
+      </DockPanel>
+    </Border>
+
+    <Border Grid.Row="4" Margin="0,12,0,0"
             Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
             CornerRadius="{StaticResource RadiusMd}" Padding="16"
             Visibility="{Binding PendingDeleteLabel, Converter={StaticResource NullToCollapsed}}"
@@ -334,6 +352,6 @@
       </DockPanel>
     </Border>
 
-    <Button Grid.Row="4" Content="Settings" HorizontalAlignment="Left" Click="OnSettings" Style="{StaticResource QuietAction}" Margin="0,16,0,0"/>
+    <Button Grid.Row="5" Content="Settings" HorizontalAlignment="Left" Click="OnSettings" Style="{StaticResource QuietAction}" Margin="0,16,0,0"/>
   </Grid>
 </Window>
