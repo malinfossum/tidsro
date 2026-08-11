@@ -8,21 +8,23 @@
         FontFamily="{StaticResource FontSans}">
   <Grid Margin="24">
     <Grid.RowDefinitions>
-      <RowDefinition Height="*"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>   <!-- tab headers -->
+      <RowDefinition Height="*"/>      <!-- panels, both loaded -->
+      <RowDefinition Height="Auto"/>   <!-- running-timer strip -->
+      <RowDefinition Height="Auto"/>   <!-- undo bar -->
+      <RowDefinition Height="Auto"/>   <!-- settings -->
     </Grid.RowDefinitions>
 
-    <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
-      <Grid x:Name="Sections">
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        <StackPanel x:Name="QuickPanel" Grid.Row="0">
+    <TabControl x:Name="Tabs" Grid.Row="0" Style="{StaticResource ShellTabs}"
+                SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
+      <TabItem Header="Quick timers"/>
+      <TabItem Header="Schedule"/>
+    </TabControl>
 
-        <TextBlock Text="Quick timers" FontSize="{StaticResource TextXl}" Margin="0,0,0,14"/>
+    <Grid x:Name="Panels" Grid.Row="1" Margin="0,16,0,0">
+      <ScrollViewer VerticalScrollBarVisibility="Auto"
+                    Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisible}, ConverterParameter=0}">
+        <StackPanel x:Name="QuickPanel">
 
         <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
                 CornerRadius="{StaticResource RadiusMd}" Padding="16" Margin="0">
@@ -141,10 +143,11 @@
         </ItemsControl>
 
         </StackPanel>
-        <Border x:Name="Divider" Grid.Row="1" Background="{StaticResource Border}" Height="1" Margin="0,12,0,12"/>
-        <StackPanel x:Name="DayPanel" Grid.Row="2" Margin="0,24,0,0">
+      </ScrollViewer>
 
-        <TextBlock Text="Schedule" FontSize="{StaticResource TextXl}" Margin="0,0,0,14"/>
+      <ScrollViewer VerticalScrollBarVisibility="Auto"
+                    Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisible}, ConverterParameter=1}">
+        <StackPanel x:Name="DayPanel">
 
         <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
                 CornerRadius="{StaticResource RadiusMd}" Padding="16">
@@ -293,10 +296,30 @@
         </ItemsControl>
 
         </StackPanel>
-      </Grid>
-    </ScrollViewer>
+      </ScrollViewer>
+    </Grid>
 
-    <Border Grid.Row="1" Margin="0,12,0,0"
+    <Border Grid.Row="2" Margin="0,12,0,0"
+            Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+            CornerRadius="{StaticResource RadiusMd}" Padding="12"
+            AutomationProperties.Name="Running timer"
+            Visibility="{Binding ShowStrip, Converter={StaticResource BoolToVisible}}">
+      <!-- No LiveSetting and no bound Name: either would announce a new time every second.
+           No storyboard either — this appears and disappears several times a day. -->
+      <StackPanel Orientation="Horizontal">
+        <Ellipse Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,10,0" Fill="{StaticResource Accent}"/>
+        <TextBlock Text="{Binding StripTimer.RemainingText}" FontFamily="{StaticResource FontMono}"
+                   FontSize="{StaticResource TextLg}" Foreground="{StaticResource Text}" VerticalAlignment="Center"/>
+        <TextBlock Text="{Binding StripTimer.Label}" Foreground="{StaticResource TextMuted}"
+                   FontSize="{StaticResource TextXs}" VerticalAlignment="Center" Margin="10,0,0,0"
+                   Visibility="{Binding StripTimer.Label, Converter={StaticResource NullToCollapsed}}"/>
+        <TextBlock Text="{Binding StripExtraText}" Foreground="{StaticResource TextFaint}"
+                   FontSize="{StaticResource TextXs}" VerticalAlignment="Center" Margin="10,0,0,0"
+                   Visibility="{Binding StripExtraText, Converter={StaticResource NullToCollapsed}}"/>
+      </StackPanel>
+    </Border>
+
+    <Border Grid.Row="3" Margin="0,12,0,0"
             Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
             CornerRadius="{StaticResource RadiusMd}" Padding="16"
             Visibility="{Binding PendingDeleteLabel, Converter={StaticResource NullToCollapsed}}"
@@ -309,6 +332,6 @@
       </DockPanel>
     </Border>
 
-    <Button Grid.Row="2" Content="Settings" HorizontalAlignment="Left" Click="OnSettings" Style="{StaticResource QuietAction}" Margin="0,16,0,0"/>
+    <Button Grid.Row="4" Content="Settings" HorizontalAlignment="Left" Click="OnSettings" Style="{StaticResource QuietAction}" Margin="0,16,0,0"/>
   </Grid>
 </Window>
