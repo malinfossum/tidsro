@@ -302,12 +302,14 @@
     <Border Grid.Row="2" Margin="0,12,0,0"
             Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
             CornerRadius="{StaticResource RadiusMd}" Padding="12"
-            AutomationProperties.Name="Running timer"
             Visibility="{Binding ShowStrip, Converter={StaticResource BoolToVisible}}">
-      <!-- No LiveSetting and no bound Name: either would announce a new time every second.
-           No storyboard either — this appears and disappears several times a day. -->
+      <!-- The name belongs on the TextBlock caption: a Border has no automation peer, so a name
+           set on it never reaches the tree. No LiveSetting, no bound Name, no storyboard. -->
       <StackPanel Orientation="Horizontal">
         <Ellipse Width="9" Height="9" VerticalAlignment="Center" Margin="0,0,10,0" Fill="{StaticResource Accent}"/>
+        <TextBlock Text="Running" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"
+                   VerticalAlignment="Center" Margin="0,0,10,0"
+                   AutomationProperties.Name="Running timer"/>
         <TextBlock Text="{Binding StripTimer.RemainingText}" FontFamily="{StaticResource FontMono}"
                    FontSize="{StaticResource TextLg}" Foreground="{StaticResource Text}" VerticalAlignment="Center"/>
         <TextBlock Text="{Binding StripTimer.Label}" Foreground="{StaticResource TextMuted}"
