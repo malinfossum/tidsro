@@ -214,4 +214,12 @@ public class PersistenceServiceTests : IDisposable
         var data = new PersistenceService(_path).Load();
         Assert.True(Assert.Single(data.Alarms).Enabled);   // missing key -> on (back-compat)
     }
+
+    [Fact]
+    public void SelectedTab_survives_a_save_and_load()
+    {
+        var svc = new PersistenceService(_path);
+        svc.Save(new TidsroData { Settings = new AppSettings { SelectedTab = 1 } });
+        Assert.Equal(1, svc.Load().Settings!.SelectedTab);
+    }
 }
