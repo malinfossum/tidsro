@@ -217,11 +217,17 @@
                    Visibility="{Binding IsDayEmpty, Converter={StaticResource BoolToVisible}}"/>
 
         <ItemsControl ItemsSource="{Binding Alarms}" Margin="0,14,0,0">
+          <!-- The name belongs on the generated container: a Border has no automation peer, so a name
+               set inside the template never reaches the tree and the row falls back to ToString(). -->
+          <ItemsControl.ItemContainerStyle>
+            <Style TargetType="ContentPresenter">
+              <Setter Property="AutomationProperties.Name" Value="{Binding AccessibleName}"/>
+            </Style>
+          </ItemsControl.ItemContainerStyle>
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <Border Padding="16" Margin="0,0,0,12" CornerRadius="{StaticResource RadiusMd}"
-                      Background="{StaticResource CardBg}" BorderThickness="1"
-                      AutomationProperties.Name="{Binding AccessibleName}">
+                      Background="{StaticResource CardBg}" BorderThickness="1">
                 <Border.Triggers>
                   <EventTrigger RoutedEvent="Loaded">
                     <BeginStoryboard><Storyboard>
