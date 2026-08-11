@@ -1104,4 +1104,80 @@ public class MainViewModelTests
         Assert.Equal(1, requests);
         Assert.Equal(1, armedWhenAsked);   // asked before anything was disarmed
     }
+
+    // ── Tab selection and running-timer strip ────────────────────────────────
+
+    [Fact]
+    public void The_window_opens_on_quick_timers_by_default()
+    {
+        Assert.Equal(0, New(out _, out _).SelectedTabIndex);
+    }
+
+    [Fact]
+    public void Strip_is_empty_when_nothing_is_counting_down()
+    {
+        var vm = New(out _, out _);
+        Assert.Null(vm.StripTimer);
+        Assert.False(vm.ShowStrip);
+        Assert.Null(vm.StripExtraText);
+    }
+
+    [Fact]
+    public void Strip_shows_the_countdown_that_finishes_soonest()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "30:00"; vm.Label = "long";  vm.StartCustomCommand.Execute(null);
+        vm.CustomInput = "5:00";  vm.Label = "short"; vm.StartCustomCommand.Execute(null);
+
+        Assert.True(vm.ShowStrip);
+        Assert.Equal("Short", vm.StripTimer!.Label);
+        Assert.Equal("+1 more", vm.StripExtraText);   // counts what the strip is NOT showing
+    }
+
+    [Fact]
+    public void Strip_shows_a_paused_timer_when_none_are_active()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
+        vm.Running[0].PauseResumeCommand.Execute(null);
+        vm.RefreshAll();
+
+        Assert.NotNull(vm.StripTimer);          // an IsNext-based strip would go blank here
+        Assert.True(vm.StripTimer!.IsPaused);
+    }
+
+    [Fact]
+    public void Strip_extra_text_is_null_for_a_single_timer()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
+        Assert.Null(vm.StripExtraText);
+    }
+
+    [Fact]
+    public void Cancelling_the_shown_timer_moves_the_strip_to_the_next_one()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "30:00"; vm.Label = "long";  vm.StartCustomCommand.Execute(null);
+        vm.CustomInput = "5:00";  vm.Label = "short"; vm.StartCustomCommand.Execute(null);
+
+        vm.CancelTimerCommand.Execute(vm.StripTimer);
+
+        Assert.Equal("Long", vm.StripTimer!.Label);   // no tick needed
+        Assert.Null(vm.StripExtraText);
+    }
+
+    [Fact]
+    public void ClearAllAlarms_empties_the_strip_without_waiting_for_a_tick()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
+        var raised = new List<string?>();
+        vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        vm.ClearAllAlarms();
+
+        Assert.Null(vm.StripTimer);
+        Assert.Contains(nameof(MainViewModel.StripTimer), raised);
+    }
 }
