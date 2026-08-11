@@ -39,9 +39,18 @@ The root grid goes from three rows to five:
 Row 0  Auto   TabControl — headers only
 Row 1  *      content grid — both panels, one visible
 Row 2  Auto   running-timer strip
-Row 3  Auto   undo bar          (unchanged)
-Row 4  Auto   Settings button   (unchanged)
+Row 3  Auto   missed-alarm note
+Row 4  Auto   undo bar          (unchanged)
+Row 5  Auto   Settings button   (unchanged)
 ```
+
+**The missed-alarm note moves out of the Schedule panel into the shell.** Amended 2026-08-11 after
+the whole-branch review: an alarm that expires while the user is away sets `MissedNote` but shows no
+completion card, so once the Schedule panel can be hidden, a user sitting on Quick timers gets no
+signal at all — and the note's `LiveSetting="Polite"` cannot announce from a collapsed subtree
+either. That is a behaviour regression the tabs introduced and the original spec did not anticipate.
+It sits below the strip rather than above it so that a note arriving does not move the strip, which
+is the window's constant glance target.
 
 The strip sits between the content and the undo bar so that nothing above it ever moves when it
 appears or disappears. That placement is the whole point: the strip comes and goes several times a
@@ -102,7 +111,11 @@ The per-second remaining-time updates need no new plumbing: the strip binds thro
 `TimerItemViewModel` the card does.
 
 The strip shows the accent dot, a muted "Running" caption, the remaining time in `FontMono`, the
-label, and the extra-count text. The caption exists for two reasons: without it a gold dot is the
+label, and the extra-count text. Its layout must survive a long label: labels are free text up to 200
+characters, so the label takes the only proportional column and trims with an ellipsis while the dot,
+caption, time and extra-count stay at their natural width. A plain horizontal stack would let one
+long label push `"+N more"` — the sole indication that other timers are running — off the window
+edge. The caption exists for two reasons: without it a gold dot is the
 only thing saying what the strip is, and it gives the accessible name somewhere to live that
 actually reaches the accessibility tree (see §7). An unlabelled timer shows no label, the same way its card does — the time is the identity. It
 is read-only — pause, reset and cancel stay on the Quick timers card, so there is exactly
@@ -163,8 +176,18 @@ Roughly forty lines, including the most intricate code in the window.
 ### 7. Accessibility
 
 - The `TabControl` is what buys the semantics: Tab and TabItem control types, "Quick timers, tab, 1
-  of 2" under Narrator, left/right arrows between headers, Ctrl+Tab to cycle. Hand-rolled toggle
-  buttons would announce as buttons; see *Rejected alternatives*.
+  of 2" under Narrator, and left/right arrows between headers. Hand-rolled toggle buttons would
+  announce as buttons; see *Rejected alternatives*.
+- **Ctrl+Tab needs an explicit window-level `KeyBinding`.** Amended 2026-08-11 after the whole-branch
+  review: a stock `TabControl` gets Ctrl+Tab from its own key handler, which only runs for keys
+  routed through the control — and the header-only template puts the panels *beside* `Tabs` rather
+  than inside it, so a keypress in a panel bubbles straight to the window and never reaches the tab
+  control. The affordance has to be restored deliberately. Without it the focus rescue below would
+  be guarding a path that cannot occur.
+- **The rescue focuses the selected `TabItem`, not the `TabControl`.** A `TabControl` is `Focusable`
+  with `IsTabStop` false, so calling `Focus()` on it parks keyboard focus on the container: UIA
+  announces the tab strip rather than "Quick timers, tab, 1 of 2", and the gold focus ring — which
+  is set on the item style, not the control style — never appears.
 - The strip carries an `AutomationProperties.Name` identifying it as the running timer, and
   deliberately **no** `LiveSetting` — a live region there would announce a new time every second.
 - **That name lives on the "Running" caption `TextBlock`, not on the strip's `Border`.** A `Border`
