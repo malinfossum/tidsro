@@ -267,7 +267,9 @@ public partial class App : Application
                     clearAllAlarms: _mainVm.ClearAllAlarms,
                     alarmCount: () => _scheduler.Alarms.Count + _scheduler.Running.Count,
                     hasAnythingToClear: () => _mainVm.HasAnythingToClear,
-                    resetWindowPlacement: () => _main?.ResetPlacement(),
+                    // Also returns the live view to the first tab; clearing the stored value alone
+                    // would leave the reset invisible until the next launch.
+                    resetWindowPlacement: () => { _main?.ResetPlacement(); _mainVm.SelectedTabIndex = 0; },
                     confirm: confirm)),
             editFactory, _settings, SaveData);
         Application.Current.MainWindow = _main;
@@ -281,6 +283,7 @@ public partial class App : Application
         _timer.Stop();
         _hotkey.Dispose();
         _mainVm.CommitPendingDelete();   // an uncommitted delete commits on quit (spec §3.1)
+        _main?.CaptureWindowState();   // the tray's Quit never runs OnClosing; null when the window was never opened
         SaveData();                      // flush the final armed set — its failure path notifies via
                                          // _tray, so the tray must still be alive when this runs
         _tray?.Dispose();

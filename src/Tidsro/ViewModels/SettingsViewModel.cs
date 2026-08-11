@@ -93,6 +93,7 @@ public partial class SettingsViewModel : ObservableObject
         _settings.WindowTop = null;
         _settings.WindowWidth = null;
         _settings.WindowHeight = null;
+        _settings.SelectedTab = defaults.SelectedTab;
 
         // Refresh the draft, or a following Save writes the pre-reset values straight back.
         LaunchAtStartup = defaults.LaunchAtStartup;
