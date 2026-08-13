@@ -1272,4 +1272,49 @@ public class MainViewModelTests
         Assert.Contains(nameof(MainViewModel.ShowHero), raised);
         Assert.Contains(nameof(MainViewModel.ShowStrip), raised);
     }
+
+    // The hero card and the Running list render the SAME collection, so the countdown was on screen
+    // twice on Quick timers - the exact duplication that justified collapsing the strip there. The
+    // hero owns the soonest timer; IsInHero is how the list leaves that one row out without the
+    // ItemsSource being re-projected (which would rebuild every container on every one-second tick).
+    [Fact]
+    public void The_timer_the_hero_shows_is_marked_and_the_others_are_not()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "30:00"; vm.Label = "long";  vm.StartCustomCommand.Execute(null);
+        vm.CustomInput = "5:00";  vm.Label = "short"; vm.StartCustomCommand.Execute(null);
+
+        Assert.Same(vm.StripTimer, vm.Running[0]);
+        Assert.True(vm.Running[0].IsInHero);
+        Assert.False(vm.Running[1].IsInHero);
+    }
+
+    [Fact]
+    public void Cancelling_the_heros_timer_moves_the_mark_to_the_next_one()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "30:00"; vm.Label = "long";  vm.StartCustomCommand.Execute(null);
+        vm.CustomInput = "5:00";  vm.Label = "short"; vm.StartCustomCommand.Execute(null);
+
+        vm.CancelTimerCommand.Execute(vm.StripTimer);
+
+        var remaining = Assert.Single(vm.Running);
+        Assert.Equal("Long", remaining.Label);
+        Assert.True(remaining.IsInHero);
+    }
+
+    [Fact]
+    public void No_timer_is_marked_for_the_hero_once_nothing_is_running()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
+        var only = vm.Running[0];
+        Assert.True(only.IsInHero);
+
+        vm.CancelTimerCommand.Execute(only);
+
+        Assert.Null(vm.StripTimer);
+        Assert.Empty(vm.Running);
+        Assert.False(only.IsInHero);   // the mark leaves with the row, not after it
+    }
 }

@@ -19,6 +19,15 @@ public sealed class BoolToVisibleConverter : IValueConverter
     public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
 }
 
+/// <summary>The inverse of <see cref="BoolToVisibleConverter"/>: true collapses. Used to leave the
+/// hero card's own timer out of the list that is bound to the same collection.</summary>
+public sealed class BoolToCollapsedConverter : IValueConverter
+{
+    public object Convert(object? v, Type t, object? p, CultureInfo c) =>
+        v is true ? Visibility.Collapsed : Visibility.Visible;
+    public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
+}
+
 public sealed class SoundChoiceToLabelConverter : IValueConverter
 {
     public object Convert(object? v, Type t, object? p, CultureInfo c) => v switch

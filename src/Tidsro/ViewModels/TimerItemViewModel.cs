@@ -17,6 +17,9 @@ public partial class TimerItemViewModel : ObservableObject
     [ObservableProperty] private string _remainingText = "00:00";
     [ObservableProperty] private bool _isPaused;
     [ObservableProperty] private bool _isNext;   // soonest-finishing active timer — the parent sets this
+    // True for the one row the hero card is already showing, so the list below can leave it out.
+    // Derived view state, set by MainViewModel whenever Running changes — never persisted.
+    [ObservableProperty] private bool _isInHero;
     [ObservableProperty] private string _pauseResumeGlyph = PauseGlyph;
     [ObservableProperty] private string _pauseResumeLabel = "Pause";
     [ObservableProperty] private string _finishText = "";

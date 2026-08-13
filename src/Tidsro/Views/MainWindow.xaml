@@ -34,23 +34,45 @@
 
         <!-- Hero countdown. The accessible name lives on the caption TextBlock: a Border has no
              automation peer. Deliberately NOT a live region - a countdown that announces every
-             tick is unusable with a screen reader. -->
+             tick is unusable with a screen reader.
+             The hero owns Running[0] outright: the list below collapses that row (see IsInHero),
+             so pause/reset/cancel have to live here or the soonest timer would have no controls
+             at all. Same commands and same accessible names as the row they replace. -->
         <Border Background="{StaticResource ElevatedBg}" BorderBrush="{StaticResource Border}"
                 BorderThickness="1" CornerRadius="{StaticResource RadiusMd}" Padding="16"
                 Margin="0,0,0,12"
                 Visibility="{Binding ShowHero, Converter={StaticResource BoolToVisible}}">
-          <StackPanel>
-            <TextBlock Text="RUNNING" Foreground="{StaticResource TextFaint}"
-                       FontSize="{StaticResource TextXs}"
-                       AutomationProperties.Name="Running timer"/>
-            <TextBlock Text="{Binding StripTimer.RemainingText}" FontFamily="{StaticResource FontMono}"
-                       FontSize="{StaticResource TextHero}" Foreground="{StaticResource Text}"
-                       Margin="0,4,0,0"/>
-            <TextBlock Text="{Binding StripTimer.Label}" Foreground="{StaticResource TextMuted}"
-                       FontSize="{StaticResource TextXs}" TextTrimming="CharacterEllipsis"
-                       Margin="0,2,0,0"
-                       Visibility="{Binding StripTimer.Label, Converter={StaticResource NullToCollapsed}}"/>
-          </StackPanel>
+          <DockPanel>
+            <Button DockPanel.Dock="Right" VerticalAlignment="Top" Content="&#xE711;"
+                    Command="{Binding CancelTimerCommand}" CommandParameter="{Binding StripTimer}"
+                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                    AutomationProperties.Name="Cancel timer" ToolTip="Cancel timer"
+                    Style="{StaticResource QuietAction}"/>
+            <Button DockPanel.Dock="Right" VerticalAlignment="Top" Content="&#xE72C;"
+                    Command="{Binding StripTimer.ResetCommand}"
+                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                    AutomationProperties.Name="Reset timer" ToolTip="Reset to full time"
+                    Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
+            <Button DockPanel.Dock="Right" VerticalAlignment="Top"
+                    Content="{Binding StripTimer.PauseResumeGlyph}"
+                    Command="{Binding StripTimer.PauseResumeCommand}"
+                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                    AutomationProperties.Name="{Binding StripTimer.PauseResumeLabel}"
+                    ToolTip="{Binding StripTimer.PauseResumeLabel}"
+                    Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
+            <StackPanel>
+              <TextBlock Text="RUNNING" Foreground="{StaticResource TextFaint}"
+                         FontSize="{StaticResource TextXs}"
+                         AutomationProperties.Name="Running timer"/>
+              <TextBlock Text="{Binding StripTimer.RemainingText}" FontFamily="{StaticResource FontMono}"
+                         FontSize="{StaticResource TextHero}" Foreground="{StaticResource Text}"
+                         Margin="0,4,0,0"/>
+              <TextBlock Text="{Binding StripTimer.Label}" Foreground="{StaticResource TextMuted}"
+                         FontSize="{StaticResource TextXs}" TextTrimming="CharacterEllipsis"
+                         Margin="0,2,0,0"
+                         Visibility="{Binding StripTimer.Label, Converter={StaticResource NullToCollapsed}}"/>
+            </StackPanel>
+          </DockPanel>
         </Border>
 
         <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
@@ -98,6 +120,16 @@
         </Border>
 
         <ItemsControl ItemsSource="{Binding Running}" Margin="0,12,0,0">
+          <!-- The hero above renders Running[0], so this list must skip it or the countdown is on
+               screen twice. Hiding at the container level keeps ItemsSource bound to Running itself:
+               a re-projected Running.Skip(1) would hand the control a new collection every tick and
+               rebuild every container, restarting the fade-in and dropping focus. A collapsed
+               container also leaves the UIA tree, so the row is not announced twice either. -->
+          <ItemsControl.ItemContainerStyle>
+            <Style TargetType="ContentPresenter">
+              <Setter Property="Visibility" Value="{Binding IsInHero, Converter={StaticResource BoolToCollapsed}}"/>
+            </Style>
+          </ItemsControl.ItemContainerStyle>
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <Border Background="{StaticResource CardBg}" BorderThickness="1"
