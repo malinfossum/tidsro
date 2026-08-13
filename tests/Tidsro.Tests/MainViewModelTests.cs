@@ -1273,6 +1273,56 @@ public class MainViewModelTests
         Assert.Contains(nameof(MainViewModel.ShowStrip), raised);
     }
 
+    // The bar must not linger on Schedule once the last quick timer stops. Every other cancellation
+    // test above runs on the Quick timers tab, where ShowStrip is false either way and so cannot tell
+    // a working teardown from a broken one. This one stays on Schedule across the cancel: the flag has
+    // to go false AND say so, because a computed property reads correct whether or not the UI is told.
+    [Fact]
+    public void Cancelling_the_last_countdown_hides_the_strip_while_the_schedule_tab_is_showing()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
+        vm.SelectedTabIndex = 1;
+        Assert.True(vm.ShowStrip);
+
+        var raised = new List<string?>();
+        vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        vm.CancelTimerCommand.Execute(vm.StripTimer);
+
+        Assert.False(vm.ShowStrip);
+        Assert.Null(vm.StripTimer);
+        Assert.Contains(nameof(MainViewModel.ShowStrip), raised);
+    }
+
+    // Same teardown by the other route: the timer leaves the scheduler behind the view model's back
+    // (a completion card dismissed, or the tray), and RefreshAll — what the tick loop calls — is what
+    // reaps the row. The strip must go with it rather than surviving until the next tab switch.
+    [Fact]
+    public void A_timer_reaped_by_the_tick_loop_hides_the_strip_while_the_schedule_tab_is_showing()
+    {
+        var vm = New(out _, out var sched);
+        vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
+        vm.SelectedTabIndex = 1;
+        Assert.True(vm.ShowStrip);
+
+        sched.Cancel(vm.StripTimer!.Item);   // gone from the scheduler, row not yet reaped
+        vm.RefreshAll();
+
+        Assert.Null(vm.StripTimer);
+        Assert.False(vm.ShowStrip);
+    }
+
+    [Fact]
+    public void The_strip_stays_hidden_on_the_schedule_tab_when_nothing_is_running()
+    {
+        var vm = New(out _, out _);
+        vm.SelectedTabIndex = 1;
+
+        Assert.False(vm.ShowStrip);
+        Assert.False(vm.ShowHero);
+    }
+
     // The hero card and the Running list render the SAME collection, so the countdown was on screen
     // twice on Quick timers - the exact duplication that justified collapsing the strip there.
     // IsCountdownInHero is how the one row the hero borrows from drops its own numerals. The ROW
