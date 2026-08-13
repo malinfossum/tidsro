@@ -39,6 +39,11 @@
     <Resource Include="Assets\fonts\IBMPlexSans-SemiBold.ttf" />
     <Resource Include="Assets\fonts\IBMPlexMono-Regular.ttf" />
     <Resource Include="Assets\fonts\IBMPlexMono-Medium.ttf" />
+    <!-- OFL 1.1 §2 requires the licence to accompany every redistributed copy of the font software.
+         The installer ships it as a file; the portable Tidsro.exe travels alone, so the only way it
+         can carry its own licence is from inside the binary - Settings ▸ View font licence reads it
+         straight back out of here. -->
+    <Resource Include="Assets\fonts\OFL.txt" />
   </ItemGroup>
 
   <ItemGroup>

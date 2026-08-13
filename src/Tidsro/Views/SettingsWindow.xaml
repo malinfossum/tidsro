@@ -34,6 +34,11 @@
                Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}"
                TextWrapping="Wrap" Margin="0,16,0,0"
                AutomationProperties.Name="Typeface: IBM Plex, copyright IBM Corp., SIL Open Font License 1.1"/>
+    <!-- The acknowledgement alone does not discharge OFL 1.1 §2: the licence itself has to travel
+         with the fonts, and the portable exe travels alone. This reads the embedded OFL.txt. -->
+    <Button Content="View font licence" Style="{StaticResource QuietAction}"
+            HorizontalAlignment="Left" Margin="0,8,0,0" Click="ViewLicence_Click"
+            AutomationProperties.Name="View font licence"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
       <Button Content="Save" Style="{StaticResource GoldAction}" IsDefault="True"
               MinWidth="84" Margin="0,0,8,0" Click="Save_Click"

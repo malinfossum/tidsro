@@ -1,0 +1,38 @@
+<Window x:Class="Tidsro.Views.LicenceDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="SIL Open Font License 1.1" Width="660" Height="560"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="{StaticResource PageBg}" Foreground="{StaticResource Text}"
+        FontFamily="{StaticResource FontSans}">
+  <Grid Margin="24">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+    <TextBlock Grid.Row="0" Margin="0,0,0,12" TextWrapping="Wrap"
+               Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextSm}"
+               Text="The licence text bundled with the IBM Plex fonts, read from inside this application."/>
+    <!-- A read-only TextBox, not a TextBlock: it is focusable, arrow-navigable and selectable, so a
+         keyboard or screen-reader user can actually read a 4 KB licence. Style is cleared because
+         the app's TextBox template is a single-line input with a placeholder and a centred content
+         host; the colours are re-applied from tokens so it still matches the app. The licence is
+         hard-wrapped at source and the window is sized to fit those lines in mono, so wrapping
+         rarely fires - but it is on, and the horizontal scrollbar off, on purpose: the app's
+         ScrollBar template is vertical-only (fixed 16px Width, no Track.Orientation binding), so a
+         horizontal bar would render wrong. -->
+    <TextBox Grid.Row="1" x:Name="LicenceText" Style="{x:Null}"
+             IsReadOnly="True" IsReadOnlyCaretVisible="False"
+             TextWrapping="Wrap" AcceptsReturn="True"
+             VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+             Background="{StaticResource CardBg}" Foreground="{StaticResource Text}"
+             BorderBrush="{StaticResource Border}" BorderThickness="1" Padding="12"
+             FontFamily="{StaticResource FontMono}" FontSize="{StaticResource TextXs}"
+             AutomationProperties.Name="Font licence text"/>
+    <Button Grid.Row="2" Content="Close" Style="{StaticResource QuietAction}"
+            HorizontalAlignment="Right" MinWidth="84" Margin="0,16,0,0"
+            IsCancel="True" IsDefault="True"
+            AutomationProperties.Name="Close licence"/>
+  </Grid>
+</Window>

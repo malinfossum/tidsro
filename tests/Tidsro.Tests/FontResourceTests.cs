@@ -1,10 +1,12 @@
 using System.Collections;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Resources;
 using System.Windows;
 using System.Windows.Media;
 using Tidsro.Services;
+using Tidsro.Views;
 
 namespace Tidsro.Tests;
 
@@ -39,6 +41,16 @@ public class FontResourceTests
         return reader.Cast<DictionaryEntry>().Select(e => (string)e.Key).ToList();
     }
 
+    private static string ResourceText(string key)
+    {
+        using var stream = App.GetManifestResourceStream("Tidsro.g.resources");
+        Assert.NotNull(stream);
+        using var reader = new ResourceReader(stream!);
+        var value = reader.Cast<DictionaryEntry>().Single(e => (string)e.Key == key).Value;
+        using var content = Assert.IsAssignableFrom<Stream>(value);
+        return new StreamReader(content, detectEncodingFromByteOrderMarks: true).ReadToEnd();
+    }
+
     [Theory]
     [InlineData("assets/fonts/ibmplexsans-regular.ttf")]
     [InlineData("assets/fonts/ibmplexsans-semibold.ttf")]
@@ -47,6 +59,27 @@ public class FontResourceTests
     public void Each_font_is_embedded_as_a_wpf_resource(string key)
     {
         Assert.Contains(key, ResourceKeys());
+    }
+
+    // OFL 1.1 §2 requires the licence to accompany every redistributed copy of the font software.
+    // The installer ships OFL-IBMPlex.txt beside the app, but publish.ps1 also produces a standalone
+    // portable Tidsro.exe with no companion files - so for that channel the licence only travels if
+    // it is inside the binary. The path comes from LicenceDialog, so moving the file without moving
+    // the reader (or vice versa) fails here rather than at a user's Settings ▸ View font licence.
+    [Fact]
+    public void The_font_licence_is_embedded_where_the_dialog_reads_it()
+    {
+        Assert.Contains(LicenceDialog.EmbeddedLicencePath.ToLowerInvariant(), ResourceKeys());
+    }
+
+    [Fact]
+    public void The_embedded_licence_is_the_OFL_text_itself_not_a_pointer_to_it()
+    {
+        var text = ResourceText(LicenceDialog.EmbeddedLicencePath.ToLowerInvariant());
+
+        Assert.Contains("SIL OPEN FONT LICENSE Version 1.1", text, StringComparison.Ordinal);
+        Assert.Contains("PERMISSION & CONDITIONS", text, StringComparison.Ordinal);
+        Assert.Contains("TERMINATION", text, StringComparison.Ordinal);
     }
 
     // FontFamily.Source is a literal echo of the string a FontFamily was built from - it proves
