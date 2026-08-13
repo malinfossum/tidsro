@@ -7,6 +7,7 @@
   <v:BoolToVisibleConverter x:Key="BoolToVisible"/>
   <v:SoundChoiceToLabelConverter x:Key="SoundLabel"/>
   <v:BoolToSoundGlyphConverter x:Key="SoundGlyph"/>
+  <v:IndexToVisibleConverter x:Key="IndexToVisible"/>
 
   <!-- Surfaces -->
   <SolidColorBrush x:Key="PageBg"        Color="#0E141A"/>
@@ -342,6 +343,58 @@
               <Setter TargetName="track" Property="BorderBrush" Value="{StaticResource AccentStrong}"/>
             </Trigger>
           </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Tab headers. The stock TabControl chrome is light-themed and unusable on PageBg, so both the
+       control and its items are templated end to end. Selected state reads from the gold underline,
+       not colour alone; 34px minimum height matches TextBox/ComboBox/DayChip so the app's only
+       navigation control is not also its smallest mouse target. -->
+  <Style x:Key="ShellTabItem" TargetType="TabItem">
+    <Setter Property="FocusVisualStyle" Value="{StaticResource ActionFocusVisual}"/>
+    <Setter Property="MinHeight" Value="34"/>
+    <Setter Property="Padding" Value="14,6"/>
+    <Setter Property="Margin" Value="0,0,4,0"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="FontSize" Value="{StaticResource TextSm}"/>
+    <Setter Property="Foreground" Value="{StaticResource TextFaint}"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="TabItem">
+          <Border x:Name="bd" Background="Transparent" BorderThickness="0,0,0,2"
+                  BorderBrush="Transparent" Padding="{TemplateBinding Padding}"
+                  MinHeight="{TemplateBinding MinHeight}">
+            <ContentPresenter ContentSource="Header" VerticalAlignment="Center"
+                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsSelected" Value="True">
+              <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Accent}"/>
+              <Setter Property="Foreground" Value="{StaticResource Text}"/>
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter Property="Foreground" Value="{StaticResource Text}"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Header-only: the template deliberately has no content host, so both shell panels can live
+       outside the control and stay loaded. TabItem still reports as a tab to UIA. -->
+  <Style x:Key="ShellTabs" TargetType="TabControl">
+    <Setter Property="ItemContainerStyle" Value="{StaticResource ShellTabItem}"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="TabControl">
+          <Border BorderBrush="{StaticResource Border}" BorderThickness="0,0,0,1">
+            <TabPanel IsItemsHost="True" HorizontalAlignment="Left"/>
+          </Border>
         </ControlTemplate>
       </Setter.Value>
     </Setter>

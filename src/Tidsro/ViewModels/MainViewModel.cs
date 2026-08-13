@@ -36,6 +36,7 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty] private RepeatOption _alarmRepeat = RepeatOption.Once;
     [ObservableProperty] private bool _alarmWarnBefore;
+    [ObservableProperty] private int _selectedTabIndex;
 
     public IReadOnlyList<DayToggleViewModel> AlarmDayToggles { get; } = DayToggleViewModel.Week();
 
@@ -69,6 +70,28 @@ public partial class MainViewModel : ObservableObject
 
     public bool IsDayEmpty => Alarms.Count == 0;
 
+    /// <summary>The countdown the bottom strip shows. SortRunning already puts active timers first in
+    /// finish order and parks paused ones below, so Running[0] is "the soonest active timer, or the
+    /// first paused one when nothing is active" — which is exactly what the strip should show. An
+    /// IsNext-based strip would go blank the moment every timer was paused.</summary>
+    public TimerItemViewModel? StripTimer => Running.FirstOrDefault();
+
+    public bool ShowStrip => StripTimer is not null;
+
+    /// <summary>The timers the strip is not showing, or null when there is only one.</summary>
+    public string? StripExtraText => Running.Count > 1 ? $"+{Running.Count - 1} more" : null;
+
+    // Driven off the collection, not off RefreshAll: Add, CancelTimer, UndoDelete and ClearAllAlarms
+    // all mutate Running directly, so a tick-driven strip would keep showing a wiped timer for up to
+    // 250 ms after "Clear all alarms" — exactly when the user is looking for confirmation. This also
+    // catches the Move calls in SortRunning, which change Running[0] without changing the count.
+    private void RefreshStrip()
+    {
+        OnPropertyChanged(nameof(StripTimer));
+        OnPropertyChanged(nameof(ShowStrip));
+        OnPropertyChanged(nameof(StripExtraText));
+    }
+
     /// <summary>True when Settings' "Clear all alarms" would actually change anything: armed alarms,
     /// running timers, or a missed note left over from a one-shot alarm that fired while away (the
     /// note has no armed alarm behind it, so alarmCount alone would miss it).</summary>
@@ -80,10 +103,18 @@ public partial class MainViewModel : ObservableObject
         _sound = sound;
         _selectedSound = defaultSound;   // seed the picker from the global default; per-timer override lives here after
         _alarmSound = defaultSound;   // the alarm sound picker starts at the global default too
+        Running.CollectionChanged += (_, _) => RefreshStrip();
     }
 
     // The Settings "default sound" changed: move the picker to match (last edit wins with a manual per-timer pick).
     public void SetDefaultSound(SoundChoice sound) => SelectedSound = sound;
+
+    // Restores Ctrl+Tab: the header-only TabControl template puts the panels beside Tabs rather than
+    // inside it, so a keypress in a panel never reaches the control's own Ctrl+Tab handler. Bound from
+    // a window-level KeyBinding instead, and testable here without a window. AppSettings.TabCount, not
+    // a literal 2, so the Week tab needs no change to this wrap.
+    [RelayCommand]
+    private void AdvanceTab() => SelectedTabIndex = (SelectedTabIndex + 1) % AppSettings.TabCount;
 
     [RelayCommand(CanExecute = nameof(CanPreviewSound))]
     private void PreviewSound() => _sound.Play(SelectedSound);

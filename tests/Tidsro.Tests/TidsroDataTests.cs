@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Tidsro.Models;
 using Xunit;
 
@@ -163,5 +164,34 @@ public class TidsroDataTests
         var r = GoodRec(); r.Enabled = false;
         var clean = new TidsroData { Settings = new(), RecurringAlarms = { r } }.Sanitized();
         Assert.False(Assert.Single(clean.RecurringAlarms).Enabled);
+    }
+
+    [Fact]
+    public void Sanitized_keeps_a_valid_selected_tab()
+    {
+        var data = new TidsroData { Settings = new AppSettings { SelectedTab = 1 } };
+        Assert.Equal(1, data.Sanitized().Settings!.SelectedTab);
+    }
+
+    [Fact]
+    public void Sanitized_resets_a_selected_tab_outside_the_range()
+    {
+        var high = new TidsroData { Settings = new AppSettings { SelectedTab = 7 } };
+        var low = new TidsroData { Settings = new AppSettings { SelectedTab = -1 } };
+        Assert.Equal(0, high.Sanitized().Settings!.SelectedTab);
+        Assert.Equal(0, low.Sanitized().Settings!.SelectedTab);
+    }
+
+    [Fact]
+    public void A_file_written_before_the_tab_shell_loads_on_quick_timers()
+    {
+        // A v4 file has no SelectedTab key at all — the absent-key case must land on 0, not throw.
+        var json = """
+        {"SchemaVersion":4,"Settings":{"LaunchAtStartup":false,"DefaultSound":0},
+         "Alarms":[],"RecurringAlarms":[]}
+        """;
+        var data = JsonSerializer.Deserialize<TidsroData>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
+        Assert.Equal(0, data.Sanitized().Settings!.SelectedTab);
     }
 }

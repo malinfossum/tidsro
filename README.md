@@ -9,7 +9,7 @@ A calm, dark-mode-first desktop timer for Windows — countdown timers and clock
 > **Tidsro** is Norwegian: *tid* (time) + *ro* (calm / peace) — roughly *"calm time."* The name is the whole idea: a timer that's visible when you need it and invisible when you don't.
 
 <p align="center">
-  <img src="docs/screenshots/main-window.png" alt="Tidsro main window: two Quick timers counting down on the left — each showing its remaining time alongside the wall-clock time it will finish (e.g. done 00:34) — and a Schedule of weekday alarms on the right, each row with an on/off toggle and one alarm switched off and dimmed at the bottom, in a dark theme with gold accents." width="720">
+  <img src="docs/screenshots/main-window.png" alt="Tidsro main window on the Quick timers tab: two timers counting down, each showing its remaining time alongside the wall-clock time it will finish (e.g. done 00:34), with a Schedule tab alongside for weekday alarms, each row with an on/off toggle and one alarm switched off and dimmed at the bottom, in a dark theme with gold accents." width="720">
 </p>
 
 ## Who it's for
@@ -55,7 +55,7 @@ Launching Tidsro opens its window — it remembers where you last placed it and 
   <em>A finished timer surfaces as a calm corner card — it never steals focus.</em>
 </p>
 
-The **Schedule** lives below the countdown list. Type a time — `14:30`, or shorthand like `9`, `930`, or `1430` (24-hour) — an optional label, choose a sound, set **Repeat** (Once, or a weekday set), and click **Add** (or press **Enter**). The alarm is saved immediately. Turn on **Warn me 5 minutes before** for a quiet heads-up ahead of the alarm.
+The **Schedule** is its own tab next to Quick timers, and a compact strip below the tab content shows whatever is counting down, whichever tab you're on. Type a time — `14:30`, or shorthand like `9`, `930`, or `1430` (24-hour) — an optional label, choose a sound, set **Repeat** (Once, or a weekday set), and click **Add** (or press **Enter**). The alarm is saved immediately. Turn on **Warn me 5 minutes before** for a quiet heads-up ahead of the alarm.
 
 - A one-shot alarm fires once; a recurring alarm repeats on its days, and the Schedule stays sorted by what's next.
 - If Tidsro isn't running when an alarm time passes, it fires within a 5-minute grace window on next launch.

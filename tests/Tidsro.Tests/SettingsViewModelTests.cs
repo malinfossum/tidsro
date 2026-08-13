@@ -195,4 +195,30 @@ public class SettingsViewModelTests
         Assert.True(shared.LaunchAtStartup);
         Assert.Equal(SoundChoice.Bell, shared.DefaultSound);
     }
+
+    [Fact]
+    public void Reset_returns_the_selected_tab_to_quick_timers()
+    {
+        var shared = new AppSettings { SelectedTab = 1 };
+        var vm = new SettingsViewModel(shared, new FakeStartupService(),
+            save: () => { }, _ => { }, clearAllAlarms: () => { }, alarmCount: () => 0,
+            hasAnythingToClear: () => true, resetWindowPlacement: () => { }, confirm: (_, _) => true);
+
+        vm.ResetSettingsCommand.Execute(null);
+
+        Assert.Equal(0, shared.SelectedTab);
+    }
+
+    [Fact]
+    public void A_declined_reset_leaves_the_selected_tab_alone()
+    {
+        var shared = new AppSettings { SelectedTab = 1 };
+        var vm = new SettingsViewModel(shared, new FakeStartupService(),
+            save: () => { }, _ => { }, clearAllAlarms: () => { }, alarmCount: () => 0,
+            hasAnythingToClear: () => true, resetWindowPlacement: () => { }, confirm: (_, _) => false);
+
+        vm.ResetSettingsCommand.Execute(null);
+
+        Assert.Equal(1, shared.SelectedTab);
+    }
 }

@@ -45,3 +45,19 @@ public sealed class BoolToSoundGlyphConverter : IValueConverter
     public object Convert(object? v, Type t, object? p, CultureInfo c) => v is true ? Volume : Mute;
     public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
 }
+
+/// <summary>Show a shell panel when its own index (ConverterParameter) matches the selected tab.
+/// Both panels stay loaded so switching tabs cannot re-run their Loaded fade-in storyboards or lose
+/// their scroll position — only visibility changes.</summary>
+public sealed class IndexToVisibleConverter : IValueConverter
+{
+    public object Convert(object? v, Type t, object? p, CultureInfo c) =>
+        v is int selected
+        && p is string s
+        && int.TryParse(s, NumberStyles.Integer, CultureInfo.InvariantCulture, out var own)
+        && selected == own
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+    public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
+}
