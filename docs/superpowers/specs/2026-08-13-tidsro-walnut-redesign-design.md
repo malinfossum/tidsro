@@ -109,15 +109,38 @@ Rationale in §8.
 | Token | Old | New | Note |
 |---|---|---|---|
 | `Accent` | `#E3B341` | `#E0A93C` | Brass. |
-| `AccentStrong` | `#ECC25A` | `#F2C05A` | Hover and focus ring base. |
-| `FocusRing` | `#99E3B341` | `#99E0A93C` | Unchanged role, retuned to the new accent. |
+| `AccentStrong` | `#ECC25A` | `#F2C05A` | Hover, and the keyboard focus ring (`ActionFocusVisual`). |
 | `Danger` | `#A1837F` | `#C4685C` | The one semantic token with real consumers. |
 
-**Deleted:** `Success`, `Warning`, `Info`, `AccentSoft`, `BorderSoft`, `CardShadow`. All have zero
-consumers today. Re-saturating colours nothing renders is busywork, and leaving them invites a
-future reader to assume the app has a semantic colour system when it does not. A later slice that
-genuinely needs a semantic colour should add it together with its consumer. This is the one
-decision in this spec that is purely a judgement call and is easy to reverse.
+**Deleted:** `Success`, `Warning`, `Info`, `AccentSoft`, `BorderSoft`, `BorderStrong`, `CardShadow`,
+`FocusRing`. All have zero consumers — `FocusRing` occurs exactly once, in its own definition; the
+actual focus indicator is `ActionFocusVisual`, which draws a solid `AccentStrong` border.
+Re-saturating colours nothing renders is busywork, and leaving them invites a future reader to
+assume the app has a semantic colour system when it does not. A later slice needing a semantic
+colour should add it together with its consumer. Confirmed by Malin 2026-08-13.
+
+**Deleting a token is a runtime failure, not a build failure.** `StaticResource` to a missing key
+throws `XamlParseException` when the *window* loads, and `CompletionPopup.xaml.cs:60` performs an
+unchecked string lookup (`FindResource("DurationBase")`). Before deleting, grep both XAML and `.cs`
+for each key. See §10 — every window must be opened during the manual pass.
+
+### Hard-coded colours that bypass the tokens
+
+Three literals sit inside control templates and defeat the token system:
+
+| Site | Literal | Is |
+|---|---|---|
+| `tokens.xaml:100` | `#1F2832` | `QuietAction` button background |
+| `tokens.xaml:151` | `#E3B341` | `GoldAction` button background |
+| `MainWindow.xaml:118` | `#F4F7FA` | Countdown foreground |
+
+The hover storyboards hard-code their endpoints too (`To="#28323E"`, `To="#ECC25A"`). They are
+literals because `ColorAnimation` needs a concrete `SolidColorBrush` to animate `Background.Color`.
+
+**Left as-is, changing `Accent` would leave every primary gold button on the old gold and every
+quiet button on cool slate** — the most prominent controls in the app would silently keep the
+palette this slice exists to replace. Each templated `Border` gets its own `SolidColorBrush` seeded
+from the token, and the storyboards animate that brush rather than a literal.
 
 Note that the old `Warning #A79A74` was effectively a dimmed version of the accent, so had it ever
 been used, a warning would have read as a primary action.
@@ -135,7 +158,20 @@ include `OFL.txt` in the repository and in the installer alongside the font file
 - `FontMono` → `IBM Plex Mono` (Regular 400, Medium 500)
 
 Four font files, a few hundred KB against an already self-contained single-file binary — a
-rounding error on download size.
+rounding error on download size. **Pin a specific IBM Plex release tag and record each file's
+SHA-256 in this spec when the files are added**, so a later contributor can verify what shipped.
+
+### Licence obligations
+
+OFL 1.1 requires the licence to accompany the font software wherever it is redistributed. The
+installer can carry `OFL.txt`, but `publish.ps1` also produces a **standalone portable
+`Tidsro.exe`** with no companion files — that binary embeds the fonts and travels alone, which is
+the weak point. The repository root is Apache-2.0, so an unqualified `LICENSE` would also appear to
+cover fonts it does not.
+
+Therefore: add `THIRD-PARTY-NOTICES.md` at the repo root, ship `OFL.txt` through the installer,
+state the font licence in the README, and **surface the attribution in-app** so the portable exe
+carries its own — the Settings dialog is the natural home. Add the check to the release recipe.
 
 Referenced through the WPF pack syntax, e.g. `pack://application:,,,/Fonts/#IBM Plex Sans`, with
 `Segoe UI` retained as the fallback so a packaging mistake degrades rather than breaks.
@@ -163,15 +199,29 @@ Four targeted view changes. Everything else inherits from tokens.
 1. **Hero countdown.** The running timer's remaining time renders at `TextHero` in Plex Mono on an
    `ElevatedBg` card at the top of the Quick timers panel, with its label above in `TextFaint`
    uppercase and its finish time below in `TextMuted`. One element dominates the screen.
+
+   **The strip collapses while the hero is showing.** The strip exists so a running timer stays
+   visible *from the Schedule tab*; on Quick timers it would repeat the hero's value verbatim —
+   the same number twice on one screen, and two UIA elements reporting one piece of state. So the
+   strip is visible only when the Quick timers tab is not selected. The hero carries the accessible
+   name the strip would have had ("Running timer"), is **not** a live region, and its numerals must
+   not be announced on every tick.
 2. **The next alarm earns emphasis.** Today it carries a small accent dot. It additionally takes
    `ElevatedBg` and a `BorderControl` edge, so "what is coming next" is legible at a glance rather
    than being one row among six.
 3. **The surface ladder is applied deliberately** — page, card, control, elevated — rather than
    every container defaulting to `CardBg` with one border.
 4. **Scrollbar restyle.** A `ScrollBar` template in `tokens.xaml`: slim track on `PanelBg`, rounded
-   thumb in `BorderControl`, hover to `TextFaint`, no stepper buttons. `ScrollBar` is an ordinary
-   WPF control and retemplates exactly like the `TextBox`, `ComboBox` and `TabItem` styles already
-   in the file — it is not native Windows chrome.
+   thumb in `BorderControl`, hover to `TextFaint`. `ScrollBar` is an ordinary WPF control and
+   retemplates exactly like the `TextBox`, `ComboBox` and `TabItem` styles already in the file — it
+   is not native Windows chrome.
+
+   Stepper buttons are removed deliberately, which is a small loss for users who click the arrows
+   to scroll; the alarm list is short and the panel is fully keyboard- and wheel-scrollable, so the
+   affordance is redundant here. To keep the thumb a usable pointer target under WCAG 2.5.8, it
+   takes a **minimum length of 40px** and the track keeps a **hit area at least 16px wide** even
+   where the visible bar is slimmer — a transparent padded region, so the target grows without
+   visual weight. Hover uses the existing duration tokens and stays inside the reduced-motion gate.
 
 ## 8. Accessibility
 
@@ -186,6 +236,14 @@ Contrast ratios computed against the new tokens (WCAG 2.1 relative luminance):
 | `Accent` on `PageBg` | 9.38 | AAA |
 | Button text `#160F0B` on `Accent` | 8.95 | AAA |
 | `Danger` on `CardBg` | 4.88 | AA |
+| `AccentStrong` (focus ring) on `PageBg` | 11.79 | passes 1.4.11 |
+| `AccentStrong` (focus ring) on `CardBg` | 11.10 | passes 1.4.11 |
+| `AccentStrong` (focus ring) on `ElevatedBg` | 10.11 | passes 1.4.11 |
+| `BorderControl` on `InteractiveBg` | 3.07 | passes 1.4.11 |
+| `BorderControl` on `CardBg` | 3.22 | passes 1.4.11 |
+
+`BorderControl` on `InteractiveBg` at 3.07 is the binding constraint in the whole palette — if
+either token is nudged darker during implementation, that pair must be recomputed first.
 
 **Why borders are split.** WCAG 1.4.11 requires 3:1 for visual information that identifies a user
 interface component. Meeting that on every decorative card edge requires roughly `#7A5B45`, a
@@ -202,13 +260,30 @@ retuned to the new accent but structurally identical); the reduced-motion gating
 and state being conveyed by more than colour — the selected tab keeps its underline, the toggle
 keeps its thumb position, the next alarm keeps its dot.
 
+### Accepted limitation: Windows High Contrast Mode
+
+Tidsro retemplates `TextBox`, `ComboBox`, `CheckBox`, `TabItem` and `Button` with hard-coded
+brushes and no `SystemColors` path, and the app contains **zero `DynamicResource` usage** — so
+nothing can respond to a theme change at runtime. High Contrast users get an app that ignores their
+settings entirely.
+
+This is pre-existing, but adding a `ScrollBar` template widens it, so it is recorded here rather
+than left to be rediscovered. Supporting it properly means a `SystemParameters.HighContrast` check
+and a swappable resource dictionary — a structural change, not a token change, and its own slice.
+**Known debt, deliberately not fixed here.**
+
 ## 9. Files touched
 
-- `src/Tidsro/Resources/tokens.xaml` — palette, fonts, `TextHero`, scrollbar style, token deletions.
-- `src/Tidsro/Views/MainWindow.xaml` — hero countdown, next-alarm emphasis, surface ladder.
+- `src/Tidsro/Resources/tokens.xaml` — palette, fonts, `TextHero`, scrollbar style, token deletions,
+  and converting the two hard-coded button-template literals plus their storyboard endpoints to
+  token-seeded brushes.
+- `src/Tidsro/Views/MainWindow.xaml` — hero countdown, strip visibility, next-alarm emphasis,
+  surface ladder, and the hard-coded countdown foreground at line 118.
 - `src/Tidsro/Assets/fonts/` *(new)* — four font files plus `OFL.txt`.
-- `src/Tidsro/Tidsro.csproj` — font resource glob.
-- `installer/` — ship the licence file.
+- `src/Tidsro/Tidsro.csproj` — font resource entries. Name the four files explicitly rather than
+  globbing, so nothing else dropped in that folder is silently embedded in a distributed binary.
+- `src/Tidsro/Views/SettingsWindow.xaml` — in-app font attribution (§6).
+- `THIRD-PARTY-NOTICES.md` *(new)*, `README.md`, `installer/` — licence obligations.
 - Popup, settings and dialog views — only where a hard-coded value bypasses a token.
 
 ## 10. Verification
@@ -220,12 +295,38 @@ keeps its thumb position, the next alarm keeps its dot.
   and a green suite; only driving the app caught it. Restyling `TabItem`, `ScrollBar`, `CheckBox`
   and `Button` templates is exactly the kind of change that can silently break hit-testing or
   focus. Every restyled control gets clicked, and every input gets keyboard focus.
+- **Open every window** — main, settings, confirm dialog, edit-alarm, and a fired completion popup.
+  A `StaticResource` pointing at a deleted token throws only when that window loads, so a rarely
+  opened view can ship green and crash on open. This is the same failure shape as the v1.3
+  `Run.Text` crash: XAML-attach-time, invisible to the test suite.
 - Re-read the UIA tree and diff the accessible names against the current build. They must match
-  exactly.
-- Confirm the embedded fonts actually load — verify by rendering, not by reading the XAML, since
-  the entire premise of this redesign is that a font reference silently fell back for months.
-- Recompute the contrast table against the values as implemented.
+  exactly, with the hero countdown as the one deliberate addition.
+- **Prove the fonts loaded, objectively.** A wrong pack URI yields working, attractive Segoe UI and
+  no error — precisely the failure that caused this redesign. Assert at runtime that
+  `new FontFamily(uri).GetTypefaces()` is non-empty and that `FamilyNames` contains "IBM Plex Sans";
+  a visual check is not sufficient, because the fallback looks fine.
+- **Grep for hex literals outside token definitions.** The expected result is zero. Any hit is a
+  control that kept the old palette.
+- Recompute the contrast table against the values as implemented, starting with
+  `BorderControl` on `InteractiveBg`.
 
-## 11. Open questions
+## 11. Stress test
 
-None. The one reversible judgement call is the deletion of unused tokens in §5.
+Reviewed 2026-08-13 across security, privacy, accessibility and loopholes. Nine findings, all
+folded in above: the hard-coded literals that would have half-applied the palette (§5), runtime
+failure on token deletion (§5, §10), High Contrast Mode as named debt (§8), hero/strip duplication
+(§7), OFL obligations for the portable exe (§6), silent font fallback (§10), the dead `FocusRing`
+token and uncomputed focus contrast (§5, §8), scrollbar target size (§7), and pinning the font
+source (§6).
+
+Privacy passed clean: no network calls, no telemetry, no new logging, nothing leaves the device.
+
+**Considered and rejected.** Windows text-scaling support — real, but pre-existing and a feature
+slice of its own. `ElevatedBg` serving both the hero card and the next-alarm row — mild impurity,
+better than inventing a fifth surface for one row. Light theme and runtime theme switching — out of
+scope, and structural rather than token work. Lifting `Danger` above 4.88:1 — it passes AA, and
+going further pushes it toward the accent's warmth and muddies the two.
+
+## 12. Open questions
+
+None. Token deletion in §5 was confirmed 2026-08-13.
