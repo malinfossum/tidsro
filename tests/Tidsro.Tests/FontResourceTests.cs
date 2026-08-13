@@ -124,6 +124,28 @@ public class FontResourceTests
         Assert.Equal(embeddedTypefaces, tokenTypefaces);
     }
 
+    // The weight hierarchy (spec §6) asks for SemiBold on the selected tab, section headings and
+    // primary buttons, and Medium for Plex Mono. Asking for a weight a family does not have is not
+    // an error: WPF synthesises a fake bold from the Regular face, which looks plausible and ships
+    // 359 KB of unused .ttf alongside it - the same silent-degradation shape as the "Inter" bug.
+    // TryGetGlyphTypeface resolves the request all the way down to the physical face, so comparing
+    // that face's own weight is what proves a real embedded face renders rather than a synthesised one.
+    [Theory]
+    [InlineData("IBM Plex Sans", 600)]   // SemiBold — IBMPlexSans-SemiBold.ttf
+    [InlineData("IBM Plex Mono", 500)]   // Medium   — IBMPlexMono-Medium.ttf
+    public void The_requested_weight_resolves_to_a_real_embedded_face(string familyName, int openTypeWeight)
+    {
+        var family = Fonts.GetFontFamilies(new Uri(FontBaseUri))
+            .Single(f => f.Source.EndsWith($"#{familyName}", StringComparison.Ordinal));
+        var requested = FontWeight.FromOpenTypeWeight(openTypeWeight);
+
+        Assert.Contains(family.GetTypefaces(), t => t.Weight == requested);
+
+        var typeface = new Typeface(family, FontStyles.Normal, requested, FontStretches.Normal);
+        Assert.True(typeface.TryGetGlyphTypeface(out var glyphTypeface));
+        Assert.Equal(requested, glyphTypeface.Weight);
+    }
+
     // Belt-and-suspenders on top of the two tests above: ask WPF what families it can actually see
     // at the pack base URI the tokens point into. This is the check from the design spec (§10) and
     // catches a mismatch between what tokens.xaml *says* and what the font files *are* (e.g. wrong

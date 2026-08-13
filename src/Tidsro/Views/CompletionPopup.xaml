@@ -27,7 +27,8 @@
                 Padding="6" Cursor="Hand" HorizontalAlignment="Right"/>
       </DockPanel>
       <TextBlock Text="{Binding Title}" Foreground="{StaticResource Text}"
-                 FontSize="{StaticResource TextLg}" TextWrapping="Wrap" Margin="0,6,0,16"/>
+                 FontSize="{StaticResource TextLg}" FontWeight="SemiBold"
+                 TextWrapping="Wrap" Margin="0,6,0,16"/>
       <!-- Actions: hidden for mouse-at-rest, shown on hover OR when the card has keyboard focus -->
       <StackPanel x:Name="Actions" Orientation="Horizontal" Opacity="0">
         <Button Content="+5 min" Command="{Binding Plus5Command}"

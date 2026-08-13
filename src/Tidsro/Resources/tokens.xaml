@@ -170,6 +170,8 @@
     <Setter Property="BorderThickness" Value="0"/>
     <Setter Property="Padding" Value="14,7"/>
     <Setter Property="FontSize" Value="{StaticResource TextSm}"/>
+    <!-- The one weight step in the button set: primary actions carry it, QuietAction stays Regular. -->
+    <Setter Property="FontWeight" Value="SemiBold"/>
     <Setter Property="Cursor" Value="Hand"/>
     <Setter Property="Template">
       <Setter.Value>
@@ -400,6 +402,10 @@
             <Trigger Property="IsSelected" Value="True">
               <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Accent}"/>
               <Setter Property="Foreground" Value="{StaticResource Text}"/>
+              <!-- Weight is the third cue after the underline and the foreground lift, and it is a
+                   real embedded face (IBMPlexSans-SemiBold), not a synthesised bold - FontResourceTests
+                   pins that, because a missing face degrades silently into faux-bold. -->
+              <Setter Property="FontWeight" Value="SemiBold"/>
             </Trigger>
             <Trigger Property="IsMouseOver" Value="True">
               <Setter Property="Foreground" Value="{StaticResource Text}"/>

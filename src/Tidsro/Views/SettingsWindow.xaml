@@ -18,7 +18,8 @@
       </ComboBox.ItemTemplate>
     </ComboBox>
     <Separator Margin="0,24,0,0" Background="{StaticResource TextMuted}" Opacity="0.3"/>
-    <TextBlock Text="Data" Margin="0,16,0,4" Foreground="{StaticResource TextMuted}"/>
+    <TextBlock Text="Data" Margin="0,16,0,4" Foreground="{StaticResource TextMuted}"
+               FontWeight="SemiBold"/>
     <TextBlock Text="These take effect immediately. Cancel will not undo them."
                TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{StaticResource Text}"/>
     <Button Content="Clear all alarms" Style="{StaticResource QuietAction}"

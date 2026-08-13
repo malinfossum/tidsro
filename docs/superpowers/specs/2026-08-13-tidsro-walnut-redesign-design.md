@@ -227,8 +227,20 @@ Existing sizes are unchanged: 12, 14, 16, 18, 20, 28. One is added:
 |---|---|---|
 | `TextHero` | 42 | The running timer's remaining time. |
 
-Weight becomes a hierarchy tool for the first time: SemiBold 600 for the selected tab, headings,
-and primary buttons; Regular 400 everywhere else.
+Weight becomes a hierarchy tool for the first time: SemiBold 600 for the selected tab, section
+headings, and primary buttons; Regular 400 everywhere else. As shipped that means the `ShellTabItem`
+`IsSelected` trigger, the `GoldAction` button style, the Settings "Data" heading and the completion
+card's title — and nothing else.
+
+Asking for a weight a family lacks is not an error in WPF: it synthesises a fake bold from the
+Regular face, which looks plausible while the real `.ttf` sits unused in the binary. So
+`FontResourceTests` resolves each requested weight down to the physical face and asserts the face's
+own weight, rather than trusting that the markup rendered what it asked for.
+
+**`IBMPlexMono-Medium.ttf` currently has no consumer.** Mono renders at Regular everywhere; nothing
+in the weight rule above is monospaced. The file is ~180 KB in every portable exe for nothing, so it
+should either be given a job (the hero numerals are the obvious candidate) or dropped from the
+`Resource` list. Left for a decision rather than settled here.
 
 ## 7. Depth and hierarchy
 
