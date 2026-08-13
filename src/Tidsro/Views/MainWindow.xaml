@@ -32,6 +32,27 @@
                     Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisible}, ConverterParameter=0}">
         <StackPanel x:Name="QuickPanel">
 
+        <!-- Hero countdown. The accessible name lives on the caption TextBlock: a Border has no
+             automation peer. Deliberately NOT a live region - a countdown that announces every
+             tick is unusable with a screen reader. -->
+        <Border Background="{StaticResource ElevatedBg}" BorderBrush="{StaticResource Border}"
+                BorderThickness="1" CornerRadius="{StaticResource RadiusMd}" Padding="16"
+                Margin="0,0,0,12"
+                Visibility="{Binding ShowHero, Converter={StaticResource BoolToVisible}}">
+          <StackPanel>
+            <TextBlock Text="RUNNING" Foreground="{StaticResource TextFaint}"
+                       FontSize="{StaticResource TextXs}"
+                       AutomationProperties.Name="Running timer"/>
+            <TextBlock Text="{Binding StripTimer.RemainingText}" FontFamily="{StaticResource FontMono}"
+                       FontSize="{StaticResource TextHero}" Foreground="{StaticResource Text}"
+                       Margin="0,4,0,0"/>
+            <TextBlock Text="{Binding StripTimer.Label}" Foreground="{StaticResource TextMuted}"
+                       FontSize="{StaticResource TextXs}" TextTrimming="CharacterEllipsis"
+                       Margin="0,2,0,0"
+                       Visibility="{Binding StripTimer.Label, Converter={StaticResource NullToCollapsed}}"/>
+          </StackPanel>
+        </Border>
+
         <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
                 CornerRadius="{StaticResource RadiusMd}" Padding="16" Margin="0">
           <StackPanel>

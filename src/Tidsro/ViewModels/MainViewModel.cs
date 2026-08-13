@@ -43,6 +43,14 @@ public partial class MainViewModel : ObservableObject
     public bool ShowCustomDays => AlarmRepeat == RepeatOption.Custom;
     partial void OnAlarmRepeatChanged(RepeatOption value) => OnPropertyChanged(nameof(ShowCustomDays));
 
+    // Both derived flags depend on the selected tab, and CommunityToolkit only raises
+    // SelectedTabIndex itself.
+    partial void OnSelectedTabIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(ShowHero));
+        OnPropertyChanged(nameof(ShowStrip));
+    }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasAnythingToClear))]
     private string? _missedNote;
@@ -76,7 +84,15 @@ public partial class MainViewModel : ObservableObject
     /// IsNext-based strip would go blank the moment every timer was paused.</summary>
     public TimerItemViewModel? StripTimer => Running.FirstOrDefault();
 
-    public bool ShowStrip => StripTimer is not null;
+    /// <summary>The hero countdown at the top of Quick timers. Same timer the strip would show.</summary>
+    public bool ShowHero => StripTimer is not null && SelectedTabIndex == QuickTimersTab;
+
+    /// <summary>The bottom strip exists to keep a running timer visible from the OTHER tab. On Quick
+    /// timers the hero already shows it, and rendering both repeats the value on screen and reports
+    /// one piece of state twice to a screen reader.</summary>
+    public bool ShowStrip => StripTimer is not null && SelectedTabIndex != QuickTimersTab;
+
+    private const int QuickTimersTab = 0;
 
     /// <summary>The timers the strip is not showing, or null when there is only one.</summary>
     public string? StripExtraText => Running.Count > 1 ? $"+{Running.Count - 1} more" : null;
@@ -89,6 +105,7 @@ public partial class MainViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(StripTimer));
         OnPropertyChanged(nameof(ShowStrip));
+        OnPropertyChanged(nameof(ShowHero));
         OnPropertyChanged(nameof(StripExtraText));
     }
 

@@ -1145,10 +1145,37 @@ public class MainViewModelTests
         var vm = New(out _, out _);
         vm.CustomInput = "30:00"; vm.Label = "long";  vm.StartCustomCommand.Execute(null);
         vm.CustomInput = "5:00";  vm.Label = "short"; vm.StartCustomCommand.Execute(null);
+        vm.SelectedTabIndex = 1;   // the strip is for the Schedule tab; Quick timers has the hero
 
         Assert.True(vm.ShowStrip);
         Assert.Equal("Short", vm.StripTimer!.Label);
         Assert.Equal("+1 more", vm.StripExtraText);   // counts what the strip is NOT showing
+    }
+
+    // The hero on Quick timers shows the same countdown as the strip, so showing both would repeat
+    // the value on screen and report one piece of state twice to a screen reader.
+    [Fact]
+    public void Strip_yields_to_the_hero_on_the_quick_timers_tab()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.Label = "short"; vm.StartCustomCommand.Execute(null);
+
+        vm.SelectedTabIndex = 0;
+        Assert.True(vm.ShowHero);
+        Assert.False(vm.ShowStrip);
+
+        vm.SelectedTabIndex = 1;
+        Assert.False(vm.ShowHero);
+        Assert.True(vm.ShowStrip);
+    }
+
+    [Fact]
+    public void Neither_hero_nor_strip_shows_without_a_countdown()
+    {
+        var vm = New(out _, out _);
+        vm.SelectedTabIndex = 0;
+        Assert.False(vm.ShowHero);
+        Assert.False(vm.ShowStrip);
     }
 
     [Fact]
