@@ -27,6 +27,8 @@ public class FontResourceTests
 
     private const string FontBaseUri = "pack://application:,,,/Tidsro;component/Assets/fonts/";
     private const string TokensUri = "pack://application:,,,/Tidsro;component/Resources/tokens.xaml";
+    private const string ApplicationPrefix = "pack://application:,,,/";
+    private const string AssemblyComponent = "Tidsro;component";
 
     // WPF Resource items live in Tidsro.g.resources, and WPF lower-cases every key.
     private static List<string> ResourceKeys()
@@ -47,28 +49,71 @@ public class FontResourceTests
         Assert.Contains(key, ResourceKeys());
     }
 
-    // Embedding proves the files are in the assembly; it says nothing about whether tokens.xaml
-    // actually points at them. Load the real ResourceDictionary and read what FontSans/FontMono
-    // resolve to, so a typo'd pack URI, a wrong family name, or a reverted token to "Inter" fails
-    // this test instead of silently falling back to Segoe UI / Consolas.
+    // FontFamily.Source is a literal echo of the string a FontFamily was built from - it proves
+    // nothing about whether WPF actually resolved that string to a font. And the mechanism that
+    // would normally do the resolving for an application-relative pack URI
+    // ("pack://application:,,,/<path>#<name>") is Application.ResourceAssembly, which is write-once
+    // and - verified empirically - is already claimed by the test host (testhost.exe, not
+    // Tidsro.dll) before any code in this class runs, so there's no way to point it at Tidsro.dll
+    // from here.
+    //
+    // Instead, take the token's own text (its location and family name, exactly as XAML parsed it)
+    // and resolve it through the fully assembly-qualified pack form ("Tidsro;component/...") that
+    // Application.ResourceAssembly would have produced - the same mechanism
+    // The_embedded_font_directory_exposes_both_IBM_Plex_families already uses successfully below.
+    // A wrong location (e.g. the trailing slash before '#' missing) makes Fonts.GetFontFamilies
+    // return no families at all; a wrong family name makes it return families that don't match.
+    // Either way ResolveTokenTypefaces comes back empty - only a token whose location AND family
+    // name are both correct resolves to real typefaces.
+    private static List<Typeface> ResolveTokenTypefaces(string tokenText)
+    {
+        var hashIndex = tokenText.IndexOf('#');
+        Assert.True(hashIndex > 0, $"token has no '#' family separator: {tokenText}");
+
+        var location = tokenText[..hashIndex];
+        var primaryFamilyName = tokenText[(hashIndex + 1)..].Split(',')[0].Trim();
+
+        Assert.StartsWith(ApplicationPrefix, location);
+        var relativePath = location[ApplicationPrefix.Length..];
+        var qualifiedLocation = new Uri($"{ApplicationPrefix}{AssemblyComponent}/{relativePath}");
+
+        var family = Fonts.GetFontFamilies(qualifiedLocation)
+            .FirstOrDefault(f => f.Source.Contains(primaryFamilyName, StringComparison.Ordinal));
+
+        return family?.GetTypefaces().ToList() ?? [];
+    }
+
+    private static List<Typeface> EmbeddedTypefaces(string familyNameContains) =>
+        Fonts.GetFontFamilies(new Uri(FontBaseUri))
+            .Single(f => f.Source.Contains(familyNameContains, StringComparison.Ordinal))
+            .GetTypefaces()
+            .ToList();
+
+    private static string Signature(Typeface typeface) =>
+        $"{typeface.Weight}/{typeface.Style}/{typeface.Stretch}";
+
     [Fact]
     public void FontSans_token_resolves_to_the_embedded_IBM_Plex_Sans_family()
     {
         var dict = new ResourceDictionary { Source = new Uri(TokensUri) };
-
         var fontSans = Assert.IsType<FontFamily>(dict["FontSans"]);
 
-        Assert.Contains("IBM Plex Sans", fontSans.Source);
+        var tokenTypefaces = ResolveTokenTypefaces(fontSans.Source).Select(Signature).OrderBy(s => s);
+        var embeddedTypefaces = EmbeddedTypefaces("IBM Plex Sans").Select(Signature).OrderBy(s => s);
+
+        Assert.Equal(embeddedTypefaces, tokenTypefaces);
     }
 
     [Fact]
     public void FontMono_token_resolves_to_the_embedded_IBM_Plex_Mono_family()
     {
         var dict = new ResourceDictionary { Source = new Uri(TokensUri) };
-
         var fontMono = Assert.IsType<FontFamily>(dict["FontMono"]);
 
-        Assert.Contains("IBM Plex Mono", fontMono.Source);
+        var tokenTypefaces = ResolveTokenTypefaces(fontMono.Source).Select(Signature).OrderBy(s => s);
+        var embeddedTypefaces = EmbeddedTypefaces("IBM Plex Mono").Select(Signature).OrderBy(s => s);
+
+        Assert.Equal(embeddedTypefaces, tokenTypefaces);
     }
 
     // Belt-and-suspenders on top of the two tests above: ask WPF what families it can actually see

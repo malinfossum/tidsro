@@ -55,10 +55,12 @@
   <!-- pack:// so the embedded family is used rather than a machine-installed one. The trailing
        slash before # is required. Segoe UI / Consolas stay as fallbacks so a packaging mistake
        degrades instead of crashing - but a fallback is exactly how "Inter" went unnoticed, so this
-       is checked from three angles: FontResourceTests proves the .ttf files are embedded, proves
-       these two tokens resolve to a FontFamily whose Source names IBM Plex (not just "present"),
-       and proves WPF can see both families at the pack base URI; the manual pass covers the rest
-       (visual weight rendering, no jitter). -->
+       is checked from three angles: FontResourceTests proves the .ttf files are embedded; proves
+       each token's own location and family name - re-resolved through Tidsro.dll, since a test
+       host can't be pointed at it any other way - actually returns IBM Plex's real typefaces
+       rather than an empty or Segoe-UI/Consolas result; and proves WPF can see both families at
+       the pack base URI. The manual pass covers what automated coverage still can't (visual
+       weight rendering, no jitter). -->
   <FontFamily x:Key="FontSans">pack://application:,,,/Assets/fonts/#IBM Plex Sans, Segoe UI</FontFamily>
   <FontFamily x:Key="FontMono">pack://application:,,,/Assets/fonts/#IBM Plex Mono, Consolas</FontFamily>
   <sys:Double x:Key="TextXs">12</sys:Double>
