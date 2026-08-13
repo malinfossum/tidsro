@@ -158,8 +158,17 @@ include `OFL.txt` in the repository and in the installer alongside the font file
 - `FontMono` → `IBM Plex Mono` (Regular 400, Medium 500)
 
 Four font files, a few hundred KB against an already self-contained single-file binary — a
-rounding error on download size. **Pin a specific IBM Plex release tag and record each file's
-SHA-256 in this spec when the files are added**, so a later contributor can verify what shipped.
+rounding error on download size. Sourced from `https://github.com/IBM/plex`, pinned at tag
+`@ibm/plex-sans@1.1.0`, monorepo layout `packages/plex-{sans,mono}/fonts/complete/ttf/`.
+`OFL.txt` is the repository `LICENSE.txt` at that same tag. SHA-256 of each file as embedded:
+
+```
+0bede3debdea8488bbb927f8f0650d915073209734a67fe8cd5a3320b572511c  IBMPlexMono-Medium.ttf
+fe11304a5fe956d5744e9b6a246cc83d90425245e75a62230044966ca96a7f50  IBMPlexMono-Regular.ttf
+975dcda37d80f038dcd143c22e33ca2d97a0cc5a929aace1c749153b0fe1afa5  IBMPlexSans-Regular.ttf
+a20caf8286023a6a7a85e40b1d2a4ae9fc3e3b1f9eda8f4c542dd4986af67bb1  IBMPlexSans-SemiBold.ttf
+7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da  OFL.txt
+```
 
 ### Licence obligations
 
