@@ -35,31 +35,15 @@
         <!-- Hero countdown. The accessible name lives on the caption TextBlock: a Border has no
              automation peer. Deliberately NOT a live region - a countdown that announces every
              tick is unusable with a screen reader.
-             The hero owns Running[0] outright: the list below collapses that row (see IsInHero),
-             so pause/reset/cancel have to live here or the soonest timer would have no controls
-             at all. Same commands and same accessible names as the row they replace. -->
+             The hero borrows only the NUMERALS of Running[0]: that row stays in the list below with
+             all of its controls (see IsCountdownInHero), so the hero needs no buttons of its own.
+             Buttons here would have had to bind StripTimer rather than a captured item, and
+             CancelTimer removes that item synchronously - a second click would then have cancelled a
+             second timer. Caption, numerals, label. Nothing else. -->
         <Border Background="{StaticResource ElevatedBg}" BorderBrush="{StaticResource Border}"
                 BorderThickness="1" CornerRadius="{StaticResource RadiusMd}" Padding="16"
                 Margin="0,0,0,12"
                 Visibility="{Binding ShowHero, Converter={StaticResource BoolToVisible}}">
-          <DockPanel>
-            <Button DockPanel.Dock="Right" VerticalAlignment="Top" Content="&#xE711;"
-                    Command="{Binding CancelTimerCommand}" CommandParameter="{Binding StripTimer}"
-                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                    AutomationProperties.Name="Cancel timer" ToolTip="Cancel timer"
-                    Style="{StaticResource QuietAction}"/>
-            <Button DockPanel.Dock="Right" VerticalAlignment="Top" Content="&#xE72C;"
-                    Command="{Binding StripTimer.ResetCommand}"
-                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                    AutomationProperties.Name="Reset timer" ToolTip="Reset to full time"
-                    Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
-            <Button DockPanel.Dock="Right" VerticalAlignment="Top"
-                    Content="{Binding StripTimer.PauseResumeGlyph}"
-                    Command="{Binding StripTimer.PauseResumeCommand}"
-                    FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                    AutomationProperties.Name="{Binding StripTimer.PauseResumeLabel}"
-                    ToolTip="{Binding StripTimer.PauseResumeLabel}"
-                    Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
             <StackPanel>
               <!-- Caption and accessible name both follow the paused state; the running values are
                    the ones that shipped. -->
@@ -95,7 +79,6 @@
                          Margin="0,2,0,0"
                          Visibility="{Binding StripTimer.Label, Converter={StaticResource NullToCollapsed}}"/>
             </StackPanel>
-          </DockPanel>
         </Border>
 
         <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
@@ -143,16 +126,14 @@
         </Border>
 
         <ItemsControl ItemsSource="{Binding Running}" Margin="0,12,0,0">
-          <!-- The hero above renders Running[0], so this list must skip it or the countdown is on
-               screen twice. Hiding at the container level keeps ItemsSource bound to Running itself:
-               a re-projected Running.Skip(1) would hand the control a new collection every tick and
-               rebuild every container, restarting the fade-in and dropping focus. A collapsed
-               container also leaves the UIA tree, so the row is not announced twice either. -->
-          <ItemsControl.ItemContainerStyle>
-            <Style TargetType="ContentPresenter">
-              <Setter Property="Visibility" Value="{Binding IsInHero, Converter={StaticResource BoolToCollapsed}}"/>
-            </Style>
-          </ItemsControl.ItemContainerStyle>
+          <!-- The hero above renders Running[0]'s countdown, so that ONE row drops its own numerals
+               (see the RemainingText TextBlock below) or the number is on screen twice. The row
+               itself stays: it keeps pause/reset/cancel bound to its own item, its label, its finish
+               time, its sound tag and its IsNext dot, none of which the hero carries. Hiding a
+               non-focusable TextBlock is inert; hiding the whole row collapsed a focusable subtree
+               out from under the caret every time a resumed timer sorted to the front.
+               ItemsSource stays bound to Running itself - a re-projected Running.Skip(1) would hand
+               the control a new collection every tick and rebuild every container. -->
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <Border Background="{StaticResource CardBg}" BorderThickness="1"
@@ -190,7 +171,12 @@
                   <StackPanel>
                     <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"/>
                     <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="{Binding RemainingText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource Text2xl}">
+                    <!-- The hero card above already shows this one countdown at 42px, so the row it
+                         belongs to hides its own numerals and nothing else. Margin sits here rather
+                         than on the finish time so the two close up cleanly when it goes. -->
+                    <TextBlock Text="{Binding RemainingText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource Text2xl}"
+                               Margin="0,0,10,0"
+                               Visibility="{Binding IsCountdownInHero, Converter={StaticResource BoolToCollapsed}}">
                       <TextBlock.Foreground><SolidColorBrush Color="{StaticResource TextColor}"/></TextBlock.Foreground>
                       <TextBlock.Style>
                         <Style TargetType="TextBlock">
@@ -212,7 +198,7 @@
                       </TextBlock.Style>
                     </TextBlock>
                       <TextBlock Text="{Binding FinishText}" Foreground="{StaticResource TextFaint}"
-                                 FontSize="{StaticResource TextXs}" VerticalAlignment="Center" Margin="10,0,0,0"
+                                 FontSize="{StaticResource TextXs}" VerticalAlignment="Center"
                                  AutomationProperties.Name="{Binding FinishText}"
                                  Visibility="{Binding ShowFinish, Converter={StaticResource BoolToVisible}}"/>
                     </StackPanel>

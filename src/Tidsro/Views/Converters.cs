@@ -19,8 +19,8 @@ public sealed class BoolToVisibleConverter : IValueConverter
     public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
 }
 
-/// <summary>The inverse of <see cref="BoolToVisibleConverter"/>: true collapses. Used to leave the
-/// hero card's own timer out of the list that is bound to the same collection.</summary>
+/// <summary>The inverse of <see cref="BoolToVisibleConverter"/>: true collapses. Used to drop the
+/// big numerals from the one running-timer row whose countdown the hero card is already showing.</summary>
 public sealed class BoolToCollapsedConverter : IValueConverter
 {
     public object Convert(object? v, Type t, object? p, CultureInfo c) =>

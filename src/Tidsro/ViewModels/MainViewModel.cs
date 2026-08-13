@@ -110,18 +110,25 @@ public partial class MainViewModel : ObservableObject
         MarkHero();
     }
 
-    /// <summary>Flag the one row the hero card is already rendering, so the list below can leave it
-    /// out. The hero and the Running list are bound to the SAME collection, so without this the
-    /// countdown sits on screen twice on Quick timers — the duplication that collapsing the strip
-    /// there was meant to prevent. Marking at the item level is deliberate: re-projecting the
-    /// ItemsSource as Running.Skip(1) would hand the ItemsControl a new collection on every
-    /// one-second tick, rebuilding every container, restarting the rows' fade-in and dropping focus.
-    /// Only Running[0] can be the hero's, so no tab check is needed — the hero and the list live in
-    /// the same panel and appear together.</summary>
+    /// <summary>Flag the one timer whose countdown the hero card is already rendering, so its row in
+    /// the list below can drop its own numerals. The hero and the Running list are bound to the SAME
+    /// collection, so without this the countdown sits on screen twice on Quick timers — the
+    /// duplication that collapsing the strip there was meant to prevent.
+    ///
+    /// Only the numerals go. The row itself stays, with its pause/reset/cancel buttons bound to their
+    /// own item, its label, its finish time, its sound tag and its IsNext dot. Hiding the whole row
+    /// cost all of that, and it collapsed a focusable subtree out from under the caret whenever a
+    /// resumed timer sorted to the front — the failure MainWindow's RescueFocusFromHiddenPanel exists
+    /// to prevent for panels. A TextBlock cannot hold focus, so hiding only that is inert.
+    ///
+    /// Marking at the item level is deliberate: re-projecting the ItemsSource as Running.Skip(1) would
+    /// hand the ItemsControl a new collection on every one-second tick, rebuilding every container and
+    /// restarting the rows' fade-in. Only Running[0] can be the hero's, so no tab check is needed —
+    /// the hero and the list live in the same panel and appear together.</summary>
     private void MarkHero()
     {
         var hero = StripTimer;
-        foreach (var vm in Running) vm.IsInHero = ReferenceEquals(vm, hero);
+        foreach (var vm in Running) vm.IsCountdownInHero = ReferenceEquals(vm, hero);
     }
 
     /// <summary>True when Settings' "Clear all alarms" would actually change anything: armed alarms,
@@ -141,7 +148,7 @@ public partial class MainViewModel : ObservableObject
             // still in Running — so unmark the departing rows here. (Clear() reports no OldItems,
             // but it discards every row anyway.)
             if (e.OldItems is not null)
-                foreach (TimerItemViewModel row in e.OldItems) row.IsInHero = false;
+                foreach (TimerItemViewModel row in e.OldItems) row.IsCountdownInHero = false;
             RefreshStrip();
         };
     }

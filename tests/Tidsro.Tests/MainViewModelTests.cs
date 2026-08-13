@@ -1274,23 +1274,26 @@ public class MainViewModelTests
     }
 
     // The hero card and the Running list render the SAME collection, so the countdown was on screen
-    // twice on Quick timers - the exact duplication that justified collapsing the strip there. The
-    // hero owns the soonest timer; IsInHero is how the list leaves that one row out without the
-    // ItemsSource being re-projected (which would rebuild every container on every one-second tick).
+    // twice on Quick timers - the exact duplication that justified collapsing the strip there.
+    // IsCountdownInHero is how the one row the hero borrows from drops its own numerals. The ROW
+    // stays: its buttons, label, finish time, sound tag and "next" dot are all things the hero does
+    // not carry, and a row that vanishes takes keyboard focus with it. Only the numerals go, and the
+    // ItemsSource is never re-projected (which would rebuild every container on every one-second tick).
     [Fact]
-    public void The_timer_the_hero_shows_is_marked_and_the_others_are_not()
+    public void Only_the_timer_the_hero_shows_drops_its_own_countdown()
     {
         var vm = New(out _, out _);
         vm.CustomInput = "30:00"; vm.Label = "long";  vm.StartCustomCommand.Execute(null);
         vm.CustomInput = "5:00";  vm.Label = "short"; vm.StartCustomCommand.Execute(null);
 
         Assert.Same(vm.StripTimer, vm.Running[0]);
-        Assert.True(vm.Running[0].IsInHero);
-        Assert.False(vm.Running[1].IsInHero);
+        Assert.True(vm.Running[0].IsCountdownInHero);
+        Assert.False(vm.Running[1].IsCountdownInHero);
+        Assert.Equal(2, vm.Running.Count);   // both rows are still there - only a TextBlock hides
     }
 
     [Fact]
-    public void Cancelling_the_heros_timer_moves_the_mark_to_the_next_one()
+    public void Cancelling_the_heros_timer_moves_the_countdown_mark_to_the_next_one()
     {
         var vm = New(out _, out _);
         vm.CustomInput = "30:00"; vm.Label = "long";  vm.StartCustomCommand.Execute(null);
@@ -1300,21 +1303,50 @@ public class MainViewModelTests
 
         var remaining = Assert.Single(vm.Running);
         Assert.Equal("Long", remaining.Label);
-        Assert.True(remaining.IsInHero);
+        Assert.True(remaining.IsCountdownInHero);
+    }
+
+    // Resuming a paused timer that then sorts to the front is the case that made hiding the whole row
+    // untenable: the row moved, and under the old design it collapsed with keyboard focus inside it.
+    // SortRunning reorders with Move, so the marks have to follow the reorder, not the insertion order.
+    [Fact]
+    public void Resuming_a_timer_that_sorts_to_the_front_moves_the_countdown_mark_with_it()
+    {
+        var vm = New(out _, out _);
+        vm.StartPresetCommand.Execute(5);    // soonest, so the hero borrows this one first
+        vm.StartPresetCommand.Execute(60);
+        var soon = vm.Running[0];
+        var late = vm.Running[1];
+        Assert.True(soon.IsCountdownInHero);
+
+        soon.PauseResumeCommand.Execute(null);   // paused timers park below the active ones
+        vm.RefreshAll();
+
+        Assert.Same(late, vm.Running[0]);
+        Assert.True(late.IsCountdownInHero);
+        Assert.False(soon.IsCountdownInHero);
+
+        soon.PauseResumeCommand.Execute(null);   // resumed, and it finishes soonest again
+        vm.RefreshAll();
+
+        Assert.Same(soon, vm.Running[0]);
+        Assert.True(soon.IsCountdownInHero);
+        Assert.False(late.IsCountdownInHero);
+        Assert.Equal(2, vm.Running.Count);       // reordered in place: neither row was ever removed
     }
 
     [Fact]
-    public void No_timer_is_marked_for_the_hero_once_nothing_is_running()
+    public void No_row_drops_its_countdown_once_nothing_is_running()
     {
         var vm = New(out _, out _);
         vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
         var only = vm.Running[0];
-        Assert.True(only.IsInHero);
+        Assert.True(only.IsCountdownInHero);
 
         vm.CancelTimerCommand.Execute(only);
 
         Assert.Null(vm.StripTimer);
         Assert.Empty(vm.Running);
-        Assert.False(only.IsInHero);   // the mark leaves with the row, not after it
+        Assert.False(only.IsCountdownInHero);   // the mark leaves with the row, not after it
     }
 }
