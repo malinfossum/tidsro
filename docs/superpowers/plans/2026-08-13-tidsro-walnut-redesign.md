@@ -808,13 +808,15 @@ slimming it down does not shrink the target."
 
 - [ ] **Step 1: Open every window**
 
-Main, Settings, the confirm dialog (Settings ▸ Reset all settings, then Cancel), edit-alarm (the pencil on any row), and a fired completion popup (arm a one-shot a minute out).
+Main, Settings, the licence viewer (Settings ▸ View font licence), the confirm dialog (Settings ▸ Reset all settings, then Cancel), edit-alarm (the pencil on any row), and a fired completion popup (arm a one-shot a minute out).
 
 This step exists because a `StaticResource` pointing at a deleted token throws only when that window loads — Task 3 removed eight tokens, and a missed reference in a rarely opened view ships green and crashes on open. Same failure shape as the v1.3 `Run.Text` crash: XAML-attach-time, invisible to the suite.
 
 - [ ] **Step 2: Click every restyled control**
 
-Both tab headers, several times alternating — a switch must happen every time, not just the first. Then: Start, the preset buttons, pause/reset/cancel on a running timer, the alarm on/off toggle, edit and delete on an alarm row, day chips in the editor, both combo boxes, Settings, and the scrollbar thumb.
+Both tab headers, several times alternating — a switch must happen every time, not just the first. Then: Start, the preset buttons, pause/reset/cancel **on the hero card** and on a second running timer's row, the alarm on/off toggle, edit and delete on an alarm row, day chips in the editor, both combo boxes, Settings, View font licence, and the scrollbar thumb.
+
+The hero's three buttons are the only way to reach the soonest timer now that its row is collapsed, so a dead button there costs a capability, not just a click. Watch the tab headers as you switch, too: the selected one is SemiBold, and a weight change on an auto-width `TabPanel` can shift the header row.
 
 The tab-shell slice merged a control that did not respond to the mouse past three reviews and a green suite. Restyling `TabItem`, `Button`, `CheckBox` and `ScrollBar` templates is exactly the change that can silently break hit-testing.
 
@@ -824,9 +826,20 @@ A wrong pack URI yields working, attractive Segoe UI and no error — the precis
 
 - [ ] **Step 4: Re-read the UIA tree and diff the accessible names**
 
-Walk `ControlViewWalker` from the Tidsro window with Windows PowerShell and `UIAutomationClient`. Every name must match the pre-redesign build exactly, with the hero's "Running timer" as the single deliberate addition.
+Walk `ControlViewWalker` from the Tidsro window with Windows PowerShell and `UIAutomationClient`. Every name must match the pre-redesign build exactly, except for the deliberate additions below. There are **six** of them, not one — an earlier version of this step expected only the hero's, which would have made the second read as a regression:
 
-Traps worth remembering: a `Border` gets no automation peer, so a name set on one never reaches the tree; owned modal windows (Settings, confirm) nest *under* the owner rather than as siblings at root; and `Start-Process -ArgumentList` does not quote values containing spaces.
+| Name | Where | Added by |
+|---|---|---|
+| `Running timer` | hero caption, on the Quick timers tab | Task 4 |
+| `Paused timer` | the same caption, while that timer is paused | fix wave (F3) |
+| `Typeface: IBM Plex, copyright IBM Corp., SIL Open Font License 1.1` | Settings | Task 2 |
+| `View font licence` | Settings | fix wave (F5) |
+| `Font licence text` | licence viewer | fix wave (F5) |
+| `Close licence` | licence viewer | fix wave (F5) |
+
+The hero also gained pause/resume, reset and cancel buttons (F2 collapses the row that used to carry them). Their names — `Pause`/`Resume`, `Reset timer`, `Cancel timer` — are **not** new strings, and the instance count is unchanged: the hero's row is collapsed out of the list, so N running timers still expose N of each.
+
+Traps worth remembering: a `Border` gets no automation peer, so a name set on one never reaches the tree; owned modal windows (Settings, confirm, the licence viewer under Settings) nest *under* the owner rather than as siblings at root; and `Start-Process -ArgumentList` does not quote values containing spaces.
 
 - [ ] **Step 5: Confirm no literal survived**
 
