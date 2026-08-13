@@ -244,7 +244,7 @@
           </ItemsControl.ItemContainerStyle>
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <Border Padding="16" Margin="0,0,0,12" CornerRadius="{StaticResource RadiusMd}"
+              <Border x:Name="row" Padding="16" Margin="0,0,0,12" CornerRadius="{StaticResource RadiusMd}"
                       Background="{StaticResource CardBg}" BorderThickness="1">
                 <Border.Triggers>
                   <EventTrigger RoutedEvent="Loaded">
@@ -258,7 +258,8 @@
                     <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
                     <Style.Triggers>
                       <DataTrigger Binding="{Binding IsNext}" Value="True">
-                        <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+                        <Setter Property="Background" Value="{StaticResource ElevatedBg}"/>
+                        <Setter Property="BorderBrush" Value="{StaticResource BorderControl}"/>
                       </DataTrigger>
                     </Style.Triggers>
                   </Style>
@@ -315,7 +316,7 @@
     </Grid>
 
     <Border Grid.Row="2" Margin="0,12,0,0"
-            Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+            Background="{StaticResource PanelBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
             CornerRadius="{StaticResource RadiusMd}" Padding="12"
             Visibility="{Binding ShowStrip, Converter={StaticResource BoolToVisible}}">
       <!-- The name belongs on the TextBlock caption: a Border has no automation peer, so a name
