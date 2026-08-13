@@ -115,19 +115,19 @@
                     <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"/>
                     <StackPanel Orientation="Horizontal">
                     <TextBlock Text="{Binding RemainingText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource Text2xl}">
-                      <TextBlock.Foreground><SolidColorBrush Color="#F4F7FA"/></TextBlock.Foreground>
+                      <TextBlock.Foreground><SolidColorBrush Color="{StaticResource TextColor}"/></TextBlock.Foreground>
                       <TextBlock.Style>
                         <Style TargetType="TextBlock">
                           <Style.Triggers>
                             <DataTrigger Binding="{Binding IsPaused}" Value="True">
                               <DataTrigger.EnterActions>
                                 <BeginStoryboard><Storyboard>
-                                  <ColorAnimation Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)" To="#B4BDC7" Duration="0:0:0.18"/>
+                                  <ColorAnimation Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)" To="{StaticResource TextMutedColor}" Duration="0:0:0.18"/>
                                 </Storyboard></BeginStoryboard>
                               </DataTrigger.EnterActions>
                               <DataTrigger.ExitActions>
                                 <BeginStoryboard><Storyboard>
-                                  <ColorAnimation Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)" To="#F4F7FA" Duration="0:0:0.18"/>
+                                  <ColorAnimation Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)" To="{StaticResource TextColor}" Duration="0:0:0.18"/>
                                 </Storyboard></BeginStoryboard>
                               </DataTrigger.ExitActions>
                             </DataTrigger>

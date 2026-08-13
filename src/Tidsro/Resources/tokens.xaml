@@ -9,33 +9,41 @@
   <v:BoolToSoundGlyphConverter x:Key="SoundGlyph"/>
   <v:IndexToVisibleConverter x:Key="IndexToVisible"/>
 
-  <!-- Surfaces -->
-  <SolidColorBrush x:Key="PageBg"        Color="#0E141A"/>
-  <SolidColorBrush x:Key="PanelBg"       Color="#0A0F14"/>
-  <SolidColorBrush x:Key="CardBg"        Color="#161D27"/>
-  <SolidColorBrush x:Key="ElevatedBg"    Color="#232C38"/>
-  <SolidColorBrush x:Key="InteractiveBg" Color="#1F2832"/>
-  <SolidColorBrush x:Key="InteractiveHover" Color="#28323E"/>
+  <!-- Surfaces — four distinguishable layers. Depth comes from this ladder, not from shadows. -->
+  <SolidColorBrush x:Key="PageBg"     Color="#0B0908"/>
+  <SolidColorBrush x:Key="PanelBg"    Color="#070505"/>
+  <SolidColorBrush x:Key="CardBg"     Color="#17110D"/>
+  <SolidColorBrush x:Key="ElevatedBg" Color="#241A14"/>
 
-  <!-- Text -->
-  <SolidColorBrush x:Key="Text"        Color="#F4F7FA"/>
-  <SolidColorBrush x:Key="TextMuted"   Color="#B4BDC7"/>
-  <SolidColorBrush x:Key="TextFaint"   Color="#87919C"/>
+  <!-- Any colour a ControlTemplate ANIMATES must exist as a Color resource. A Storyboard's To=
+       takes a Color, so writing a literal there silently survives a palette change - which is
+       exactly how the gold button kept its old gold. Colors are structs, so seeding an inline
+       (unfrozen) brush from one keeps the brush animatable. -->
+  <Color x:Key="InteractiveBgColor">#1E1611</Color>
+  <Color x:Key="InteractiveHoverColor">#2A1F17</Color>
+  <SolidColorBrush x:Key="InteractiveBg"    Color="{StaticResource InteractiveBgColor}"/>
+  <SolidColorBrush x:Key="InteractiveHover" Color="{StaticResource InteractiveHoverColor}"/>
 
-  <!-- Lines -->
-  <SolidColorBrush x:Key="Border"       Color="#2B3440"/>
-  <SolidColorBrush x:Key="BorderStrong" Color="#3A4552"/>
-  <SolidColorBrush x:Key="BorderSoft"   Color="#1A222B"/>
+  <!-- Text — warm white, not blue-white: blue-white on warm surfaces is what keeps a "warm"
+       palette feeling clinical. -->
+  <Color x:Key="TextColor">#F7F1E8</Color>
+  <Color x:Key="TextMutedColor">#BCA894</Color>
+  <SolidColorBrush x:Key="Text"      Color="{StaticResource TextColor}"/>
+  <SolidColorBrush x:Key="TextMuted" Color="{StaticResource TextMutedColor}"/>
+  <SolidColorBrush x:Key="TextFaint" Color="#94826F"/>
+
+  <!-- Lines, split by job. Border is ornament; BorderControl is the affordance, so it carries the
+       3:1 non-text contrast WCAG 1.4.11 asks for. BorderControl on InteractiveBg is 3.07:1 - the
+       tightest pair in the palette. Recompute it before nudging either value darker. -->
+  <SolidColorBrush x:Key="Border"        Color="#33251D"/>
+  <SolidColorBrush x:Key="BorderControl" Color="#7E5F48"/>
 
   <!-- Accent + semantic -->
-  <SolidColorBrush x:Key="Accent"       Color="#E3B341"/>
-  <SolidColorBrush x:Key="AccentStrong" Color="#ECC25A"/>
-  <SolidColorBrush x:Key="AccentSoft"  Color="#29E3B341"/>  <!-- 0.16 -->
-  <SolidColorBrush x:Key="Success"     Color="#7D9E8A"/>
-  <SolidColorBrush x:Key="Warning"     Color="#A79A74"/>
-  <SolidColorBrush x:Key="Danger"      Color="#A1837F"/>
-  <SolidColorBrush x:Key="Info"        Color="#7F92A3"/>
-  <SolidColorBrush x:Key="FocusRing"   Color="#99E3B341"/>  <!-- 0.60 -->
+  <Color x:Key="AccentColor">#E0A93C</Color>
+  <Color x:Key="AccentStrongColor">#F2C05A</Color>
+  <SolidColorBrush x:Key="Accent"       Color="{StaticResource AccentColor}"/>
+  <SolidColorBrush x:Key="AccentStrong" Color="{StaticResource AccentStrongColor}"/>
+  <SolidColorBrush x:Key="Danger"       Color="#C4685C"/>
 
   <!-- Spacing (DIP) -->
   <sys:Double x:Key="Space1">4</sys:Double>
@@ -75,10 +83,6 @@
   <Duration x:Key="DurationBase">0:0:0.18</Duration>
   <Duration x:Key="DurationSlow">0:0:0.26</Duration>
 
-  <!-- Card drop shadow (shadow-sm) -->
-  <DropShadowEffect x:Key="CardShadow" BlurRadius="24" ShadowDepth="8"
-                    Direction="270" Opacity="0.18" Color="#000000"/>
-
   <!-- Keyboard-only focus ring: a FocusVisualStyle renders for keyboard navigation, never for mouse clicks. -->
   <Style x:Key="ActionFocusVisual">
     <Setter Property="Control.Template">
@@ -95,7 +99,7 @@
     <Setter Property="FocusVisualStyle" Value="{StaticResource ActionFocusVisual}"/>
     <Setter Property="Background" Value="{StaticResource InteractiveBg}"/>
     <Setter Property="Foreground" Value="{StaticResource Text}"/>
-    <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderControl}"/>
     <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="Padding" Value="10,6"/>
     <Setter Property="FontSize" Value="{StaticResource TextSm}"/>
@@ -106,7 +110,7 @@
           <Border x:Name="b" CornerRadius="8"
                   BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
                   Padding="{TemplateBinding Padding}">
-            <Border.Background><SolidColorBrush Color="#1F2832"/></Border.Background>
+            <Border.Background><SolidColorBrush Color="{StaticResource InteractiveBgColor}"/></Border.Background>
             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
           </Border>
           <ControlTemplate.Triggers>
@@ -114,13 +118,13 @@
               <Trigger.EnterActions>
                 <BeginStoryboard><Storyboard>
                   <ColorAnimation Storyboard.TargetName="b" Storyboard.TargetProperty="Background.Color"
-                                  To="#28323E" Duration="0:0:0.12"/>
+                                  To="{StaticResource InteractiveHoverColor}" Duration="0:0:0.12"/>
                 </Storyboard></BeginStoryboard>
               </Trigger.EnterActions>
               <Trigger.ExitActions>
                 <BeginStoryboard><Storyboard>
                   <ColorAnimation Storyboard.TargetName="b" Storyboard.TargetProperty="Background.Color"
-                                  To="#1F2832" Duration="0:0:0.12"/>
+                                  To="{StaticResource InteractiveBgColor}" Duration="0:0:0.12"/>
                 </Storyboard></BeginStoryboard>
               </Trigger.ExitActions>
             </Trigger>
@@ -157,7 +161,7 @@
       <Setter.Value>
         <ControlTemplate TargetType="Button">
           <Border x:Name="b" CornerRadius="8" Padding="{TemplateBinding Padding}">
-            <Border.Background><SolidColorBrush Color="#E3B341"/></Border.Background>
+            <Border.Background><SolidColorBrush Color="{StaticResource AccentColor}"/></Border.Background>
             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
           </Border>
           <ControlTemplate.Triggers>
@@ -165,13 +169,13 @@
               <Trigger.EnterActions>
                 <BeginStoryboard><Storyboard>
                   <ColorAnimation Storyboard.TargetName="b" Storyboard.TargetProperty="Background.Color"
-                                  To="#ECC25A" Duration="0:0:0.12"/>
+                                  To="{StaticResource AccentStrongColor}" Duration="0:0:0.12"/>
                 </Storyboard></BeginStoryboard>
               </Trigger.EnterActions>
               <Trigger.ExitActions>
                 <BeginStoryboard><Storyboard>
                   <ColorAnimation Storyboard.TargetName="b" Storyboard.TargetProperty="Background.Color"
-                                  To="#E3B341" Duration="0:0:0.12"/>
+                                  To="{StaticResource AccentColor}" Duration="0:0:0.12"/>
                 </Storyboard></BeginStoryboard>
               </Trigger.ExitActions>
             </Trigger>
@@ -187,7 +191,7 @@
     <Setter Property="Foreground" Value="{StaticResource Text}"/>
     <Setter Property="CaretBrush" Value="{StaticResource Text}"/>
     <Setter Property="MinHeight" Value="34"/>
-    <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderControl}"/>
     <Setter Property="BorderThickness" Value="1"/>
     <Setter Property="Padding" Value="8,6"/>
     <Setter Property="FontSize" Value="{StaticResource TextSm}"/>
@@ -244,7 +248,7 @@
   <Style TargetType="ComboBox">
     <Setter Property="Foreground" Value="{StaticResource Text}"/>
     <Setter Property="Background" Value="{StaticResource InteractiveBg}"/>
-    <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource BorderControl}"/>
     <Setter Property="Padding" Value="8,6"/>
     <Setter Property="ItemContainerStyle" Value="{StaticResource ComboItem}"/>
     <Setter Property="MinHeight" Value="34"/>
@@ -256,7 +260,7 @@
                           IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
               <ToggleButton.Template>
                 <ControlTemplate TargetType="ToggleButton">
-                  <Border Background="{StaticResource InteractiveBg}" BorderBrush="{StaticResource Border}"
+                  <Border Background="{StaticResource InteractiveBg}" BorderBrush="{StaticResource BorderControl}"
                           BorderThickness="1" CornerRadius="8" Padding="8,6">
                     <Grid>
                       <Grid.ColumnDefinitions>
@@ -301,7 +305,7 @@
       <Setter.Value>
         <ControlTemplate TargetType="ToggleButton">
           <Border x:Name="chip" CornerRadius="{StaticResource RadiusSm}" BorderThickness="1"
-                  Background="{StaticResource InteractiveBg}" BorderBrush="{StaticResource Border}">
+                  Background="{StaticResource InteractiveBg}" BorderBrush="{StaticResource BorderControl}">
             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
           </Border>
           <ControlTemplate.Triggers>
@@ -333,7 +337,7 @@
         <ControlTemplate TargetType="CheckBox">
           <StackPanel Orientation="Horizontal" Background="Transparent">
             <Border x:Name="track" Width="42" Height="24" CornerRadius="12" VerticalAlignment="Center"
-                    Background="{StaticResource InteractiveBg}" BorderBrush="{StaticResource Border}" BorderThickness="1">
+                    Background="{StaticResource InteractiveBg}" BorderBrush="{StaticResource BorderControl}" BorderThickness="1">
               <Ellipse x:Name="thumb" Width="16" Height="16" HorizontalAlignment="Left" VerticalAlignment="Center"
                        Margin="3,0,0,0" Fill="{StaticResource TextMuted}"/>
             </Border>
