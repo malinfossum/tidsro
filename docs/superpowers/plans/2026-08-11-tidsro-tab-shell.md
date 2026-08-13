@@ -808,9 +808,13 @@ git commit -m "fix(settings): keep the selected tab through a reset and a tray q
 
 Read the UIA tree with Windows PowerShell and `UIAutomationClient`, walking `ControlViewWalker`. Confirm both headers appear with control type `TabItem` inside a `Tab`, and that their names are "Quick timers" and "Schedule". When filtering by name, AND the condition with a `ControlType` condition — matching on name alone finds the `TextBlock` inside the header, which has no selection pattern.
 
-- [ ] **Step 2: Confirm keyboard navigation**
+- [ ] **Step 2: Confirm the headers respond to the mouse, then to the keyboard**
 
-With focus on a tab header: left and right arrows move between the two.
+First the mouse, because nothing else matters if this is broken: click "Schedule", then "Quick timers", then "Schedule" again. Every click must switch. Do not settle for one successful click — the defect this step exists to catch let the *first* switch through and killed every one after it, so a single click looks fine.
+
+This step was added after the pass found exactly that. `RescueFocusFromHiddenPanel` runs from the view model's `PropertyChanged`, before the `SelectedIndex` binding has pushed the new value onto the control, so reading `Tabs.SelectedIndex` there yields the tab being *left*. Focus parked on the wrong header, and because a WPF `TabItem` selects itself only when it **receives** keyboard focus, clicking that header afterwards raised no `GotKeyboardFocus` and no `SelectionChanged` — a silent no-op that stranded the user on one tab. Nothing in the 321-test suite can see this: it is view-level focus timing, and every per-task and whole-branch review passed over it. Re-run this check after any change to the rescue or to the `SelectedIndex` binding.
+
+Then the keyboard. With focus on a tab header: left and right arrows move between the two.
 
 Then Ctrl+Tab, **with focus inside a panel** — click into the "Custom duration" box first. This is the highest-value check in the whole pass. Ctrl+Tab does not come free here: the header-only template puts the panels beside the tab control rather than inside it, so the stock handler never sees the keypress and the affordance is supplied by a window-level `KeyBinding` bound to `AdvanceTabCommand`. The unit tests call that command directly and therefore prove nothing about whether the binding resolves at runtime. If Ctrl+Tab does nothing, the binding is not reaching the view model.
 
@@ -849,6 +853,18 @@ Close Tidsro gracefully, restore `data.json` and the Run key value, and relaunch
 `docs/screenshots/main-window.png` now shows a layout the app no longer has. The README's prose and alt text were corrected on this branch, so until the screenshot is retaken the alt text describes something the image does not show. Refreshing the screenshots belongs to the release pass, not to this branch — record both halves so the release recipe picks them up together.
 
 Separately: the running-timer rows still announce as `Tidsro.ViewModels.TimerItemViewModel`. The `37c2f25` fix was only ever applied to the alarms list, so this is pre-existing rather than a regression — but the strip makes running timers more prominent, so it is worth doing soon. It already has its own task chip.
+
+---
+
+### Outcome of the manual pass (2026-08-13)
+
+Run against the Debug build with live data backed up and restored afterwards.
+
+**One merge-blocking defect found and fixed:** tab headers did not respond to clicks (see Step 2 above for the mechanism). Fixed by reading `_vm.SelectedTabIndex` rather than `Tabs.SelectedIndex` in `RescueFocusFromHiddenPanel`; 321 tests still pass. It is not reachable from the headless suite, so Step 2 is the standing guard.
+
+Everything else in the spec held. Verified by driving the app and reading the UIA tree: tab semantics and names; alarm rows still carrying their composed names (`37c2f25` survived the restructure); the strip appearing, surviving all-paused, and disappearing on the last cancel, with the static name "Running timer" and no live region; the long-label case measured at the 440px minimum, where the label trims to 161px and "+N more" stays inside the window edge; the panel's top edge and the tab row not moving when the strip appears; scroll position preserved across a tab switch, proving the panels are not rebuilt; the missed-alarm note visible on both tabs; the selected tab surviving both the ✕ path and a tray quit; and the settings reset switching the main window to Quick timers while leaving focus inside the dialog and keeping every alarm.
+
+**Two amendments this suggests for future slices.** A per-task review, a whole-branch review, and a green suite all passed a control that did not work when clicked — so a slice that adds or restyles an interactive control is not done until someone clicks it. And when automating the check, verify with `WindowFromPoint` that the click actually lands on the app: `SetForegroundWindow` fails silently from a background process, which first produced a false "reproduced" here.
 
 ---
 
