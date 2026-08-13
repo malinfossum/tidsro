@@ -52,8 +52,12 @@
   <CornerRadius x:Key="RadiusLg">16</CornerRadius>
 
   <!-- Typography -->
-  <FontFamily x:Key="FontSans">Inter, Segoe UI, sans-serif</FontFamily>
-  <FontFamily x:Key="FontMono">Consolas, Menlo, monospace</FontFamily>
+  <!-- pack:// so the embedded family is used rather than a machine-installed one. The trailing
+       slash before # is required. Segoe UI / Consolas stay as fallbacks so a packaging mistake
+       degrades instead of crashing - but a fallback is exactly how "Inter" went unnoticed, so
+       FontResourceTests and the manual pass both check the real family is in use. -->
+  <FontFamily x:Key="FontSans">pack://application:,,,/Assets/fonts/#IBM Plex Sans, Segoe UI</FontFamily>
+  <FontFamily x:Key="FontMono">pack://application:,,,/Assets/fonts/#IBM Plex Mono, Consolas</FontFamily>
   <sys:Double x:Key="TextXs">12</sys:Double>
   <sys:Double x:Key="TextSm">14</sys:Double>
   <sys:Double x:Key="TextMd">16</sys:Double>
