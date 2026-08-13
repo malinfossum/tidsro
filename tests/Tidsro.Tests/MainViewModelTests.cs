@@ -1224,4 +1224,52 @@ public class MainViewModelTests
         Assert.Null(vm.StripTimer);
         Assert.Contains(nameof(MainViewModel.StripTimer), raised);
     }
+
+    // ShowHero and ShowStrip are expression-bodied (computed from StripTimer + SelectedTabIndex), so
+    // they always read live-correct regardless of whether a notification ever fired. Asserting the
+    // property values alone (as above) can't catch a deleted OnPropertyChanged call - only watching
+    // the PropertyChanged event itself can.
+    [Fact]
+    public void Switching_tabs_raises_notifications_for_hero_and_strip()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
+        vm.SelectedTabIndex = 0;
+
+        var raised = new List<string?>();
+        vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        vm.SelectedTabIndex = 1;
+
+        Assert.Contains(nameof(MainViewModel.ShowHero), raised);
+        Assert.Contains(nameof(MainViewModel.ShowStrip), raised);
+    }
+
+    [Fact]
+    public void Starting_a_countdown_raises_notifications_for_hero_and_strip()
+    {
+        var vm = New(out _, out _);
+        var raised = new List<string?>();
+        vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
+
+        Assert.Contains(nameof(MainViewModel.ShowHero), raised);
+        Assert.Contains(nameof(MainViewModel.ShowStrip), raised);
+    }
+
+    [Fact]
+    public void Cancelling_the_last_countdown_raises_notifications_for_hero_and_strip()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
+
+        var raised = new List<string?>();
+        vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        vm.CancelTimerCommand.Execute(vm.StripTimer);
+
+        Assert.Contains(nameof(MainViewModel.ShowHero), raised);
+        Assert.Contains(nameof(MainViewModel.ShowStrip), raised);
+    }
 }
