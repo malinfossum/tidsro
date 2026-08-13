@@ -5,6 +5,48 @@
         WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
         Background="{StaticResource PageBg}" Foreground="{StaticResource Text}"
         FontFamily="{StaticResource FontSans}">
+  <Window.Resources>
+    <!-- The app's implicit TextBox style is a single-line input: centred content host, placeholder
+         hint from Tag, 34px minimum. None of that suits a 4 KB scrolling document, but clearing the
+         style with {x:Null} does NOT get us a plain box - it drops the control back onto the Aero2
+         THEME template, whose hover and keyboard-focus borders are hard-coded light blue and would
+         put an off-palette outline on the one window that exists to be read. So: an explicit style,
+         every colour from a token, focus treated exactly as the app's own inputs treat it. -->
+    <Style x:Key="LicenceReader" TargetType="TextBox">
+      <Setter Property="Background" Value="{StaticResource CardBg}"/>
+      <Setter Property="Foreground" Value="{StaticResource Text}"/>
+      <Setter Property="CaretBrush" Value="{StaticResource Text}"/>
+      <!-- WPF's default selection fill is a hard-coded blue, which is the same off-palette leak the
+           theme template was. Opacity is forced to 1 so the selected run is exactly PageBg on Accent
+           - 9.38:1, the pair the gold buttons already ship - rather than an unpredictable blend. -->
+      <Setter Property="SelectionBrush" Value="{StaticResource Accent}"/>
+      <Setter Property="SelectionTextBrush" Value="{StaticResource PageBg}"/>
+      <Setter Property="SelectionOpacity" Value="1"/>
+      <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="12"/>
+      <Setter Property="FontFamily" Value="{StaticResource FontMono}"/>
+      <Setter Property="FontSize" Value="{StaticResource TextXs}"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TextBox">
+            <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
+              <!-- Named PART_ContentHost and stretched, not centred: this one scrolls. -->
+              <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
+                            VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"
+                            HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource AccentStrong}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
   <Grid Margin="24">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
@@ -15,20 +57,16 @@
                Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextSm}"
                Text="The licence text bundled with the IBM Plex fonts, read from inside this application."/>
     <!-- A read-only TextBox, not a TextBlock: it is focusable, arrow-navigable and selectable, so a
-         keyboard or screen-reader user can actually read a 4 KB licence. Style is cleared because
-         the app's TextBox template is a single-line input with a placeholder and a centred content
-         host; the colours are re-applied from tokens so it still matches the app. The licence is
-         hard-wrapped at source and the window is sized to fit those lines in mono, so wrapping
-         rarely fires - but it is on, and the horizontal scrollbar off, on purpose: the app's
-         ScrollBar template is vertical-only (fixed 16px Width, no Track.Orientation binding), so a
-         horizontal bar would render wrong. -->
-    <TextBox Grid.Row="1" x:Name="LicenceText" Style="{x:Null}"
-             IsReadOnly="True" IsReadOnlyCaretVisible="False"
+         keyboard or screen-reader user can actually read a 4 KB licence. The caret is visible for
+         the same reason - arrow-navigable is the justification for the control, and navigating with
+         no caret is navigating blind. The licence is hard-wrapped at source and the window is sized
+         to fit those lines in mono, so wrapping rarely fires - but it is on, and the horizontal
+         scrollbar off, on purpose: the app's ScrollBar template is vertical-only (fixed 16px Width,
+         no Track.Orientation binding), so a horizontal bar would render wrong. -->
+    <TextBox Grid.Row="1" x:Name="LicenceText" Style="{StaticResource LicenceReader}"
+             IsReadOnly="True" IsReadOnlyCaretVisible="True"
              TextWrapping="Wrap" AcceptsReturn="True"
              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-             Background="{StaticResource CardBg}" Foreground="{StaticResource Text}"
-             BorderBrush="{StaticResource Border}" BorderThickness="1" Padding="12"
-             FontFamily="{StaticResource FontMono}" FontSize="{StaticResource TextXs}"
              AutomationProperties.Name="Font licence text"/>
     <Button Grid.Row="2" Content="Close" Style="{StaticResource QuietAction}"
             HorizontalAlignment="Right" MinWidth="84" Margin="0,16,0,0"
