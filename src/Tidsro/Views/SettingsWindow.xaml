@@ -29,6 +29,10 @@
             HorizontalAlignment="Left" MinWidth="150"
             Command="{Binding ResetSettingsCommand}"
             AutomationProperties.Name="Reset all settings"/>
+    <TextBlock Text="Typeface: IBM Plex, © IBM Corp., SIL Open Font License 1.1"
+               Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}"
+               TextWrapping="Wrap" Margin="0,16,0,0"
+               AutomationProperties.Name="Typeface: IBM Plex, copyright IBM Corp., SIL Open Font License 1.1"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
       <Button Content="Save" Style="{StaticResource GoldAction}" IsDefault="True"
               MinWidth="84" Margin="0,0,8,0" Click="Save_Click"
