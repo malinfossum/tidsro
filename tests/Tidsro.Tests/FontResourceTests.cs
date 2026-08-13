@@ -65,6 +65,13 @@ public class FontResourceTests
     // return no families at all; a wrong family name makes it return families that don't match.
     // Either way ResolveTokenTypefaces comes back empty - only a token whose location AND family
     // name are both correct resolves to real typefaces.
+    //
+    // The match against the returned family must be exact, not a substring check: Assets/fonts/
+    // holds two families that share a prefix ("IBM Plex Sans" and "IBM Plex Mono"), so a truncated
+    // token name like "IBM Plex" would still Contains-match the real "IBM Plex Sans" family and
+    // resolve to genuinely-correct typefaces, passing a test that should have caught it. WPF reports
+    // each resolved family's Source relative to the base URI it was looked up from - "./#<name>" -
+    // so that's what the exact family name is compared against.
     private static List<Typeface> ResolveTokenTypefaces(string tokenText)
     {
         var hashIndex = tokenText.IndexOf('#');
@@ -77,8 +84,9 @@ public class FontResourceTests
         var relativePath = location[ApplicationPrefix.Length..];
         var qualifiedLocation = new Uri($"{ApplicationPrefix}{AssemblyComponent}/{relativePath}");
 
+        var expectedSource = $"./#{primaryFamilyName}";
         var family = Fonts.GetFontFamilies(qualifiedLocation)
-            .FirstOrDefault(f => f.Source.Contains(primaryFamilyName, StringComparison.Ordinal));
+            .FirstOrDefault(f => f.Source == expectedSource);
 
         return family?.GetTypefaces().ToList() ?? [];
     }
