@@ -10,55 +10,72 @@
   <v:BoolToSoundGlyphConverter x:Key="SoundGlyph"/>
   <v:IndexToVisibleConverter x:Key="IndexToVisible"/>
 
-  <!-- Surfaces — four distinguishable layers. Depth comes from this ladder, not from shadows, so
-       every step carries a measured minimum: CardBg 1.12 on PageBg, ElevatedBg 1.20 on CardBg,
-       InteractiveBg 1.14 on CardBg, InteractiveHover 1.10 on InteractiveBg, PanelBg 1.05 on PageBg.
-       PageBg is pinned at #0B0908 (warm near-black, pixel-off on OLED); the ladder is built upward
-       from it. That pin is also why PanelBg sits ABOVE the page rather than below it — pure black is
-       only 1.06 away from PageBg, so a recessed surface cannot clear 1.05 without losing the walnut
-       hue entirely. PanelBg is therefore quiet chrome a hair above the page, not a well.
-       Recompute the whole table before nudging any of these; §8 of the design spec holds it. -->
+  <!-- Surfaces — deep, saturated walnut, separated by SHADOW, SPACING and HUE, not by lightness.
+       An earlier revision of this file carried per-step contrast MINIMA (CardBg 1.12 on PageBg and
+       so on) and lightened the mid surfaces to hit them. That was the wrong axis: lifting lightness
+       out of a warm near-black desaturates it, and the result read as washed-out dusty pink rather
+       than walnut. The rule this palette follows instead is the recorded one — when a dark palette
+       reads muted, raise SATURATION, not brightness. Do not reintroduce lightness minima here.
+       (CardBg went from 26.5% saturation at 9.6% lightness to 39.4% at 6.5%.)
+
+       Separation now comes from three things, in this order:
+         1. CardShadow, below — a soft dark halo under every card, hero and row.
+         2. Space5/Space6 gaps between sections in MainWindow.
+         3. A few degrees of hue between section types, so surfaces read as different MATERIALS
+            rather than different brightnesses: ElevatedBg sits ~7° warmer (redder) than CardBg,
+            InteractiveBg ~5° cooler (more taupe). Keep it under about 10° — past that it stops
+            being one wood and becomes two colours.
+
+       PageBg stays pinned at #0B0908 (warm near-black, pixel-off on OLED). PanelBg is quiet chrome
+       a hair above the page rather than a well: pure black is only 1.06 away from PageBg, so no
+       recessed value can be meaningfully darker without losing the hue this palette exists for.
+       §5/§8 of the design spec hold the contrast table — recompute it before nudging any value. -->
   <SolidColorBrush x:Key="PageBg"     Color="#0B0908"/>
-  <SolidColorBrush x:Key="PanelBg"    Color="#16100C"/>
-  <SolidColorBrush x:Key="CardBg"     Color="#1F1712"/>
-  <SolidColorBrush x:Key="ElevatedBg" Color="#34261D"/>
+  <SolidColorBrush x:Key="PanelBg"    Color="#100B08"/>
+  <SolidColorBrush x:Key="CardBg"     Color="#170F0A"/>
+  <SolidColorBrush x:Key="ElevatedBg" Color="#251712"/>
 
   <!-- Any colour a ControlTemplate ANIMATES must exist as a Color resource. A Storyboard's To=
        takes a Color, so writing a literal there silently survives a palette change - which is
        exactly how the gold button kept its old gold. Colors are structs, so seeding an inline
        (unfrozen) brush from one keeps the brush animatable. -->
-  <Color x:Key="InteractiveBgColor">#2F231B</Color>
-  <Color x:Key="InteractiveHoverColor">#3A2B21</Color>
+  <Color x:Key="InteractiveBgColor">#211810</Color>
+  <Color x:Key="InteractiveHoverColor">#2B2116</Color>
   <SolidColorBrush x:Key="InteractiveBg"    Color="{StaticResource InteractiveBgColor}"/>
   <SolidColorBrush x:Key="InteractiveHover" Color="{StaticResource InteractiveHoverColor}"/>
 
   <!-- Text — warm white, not blue-white: blue-white on warm surfaces is what keeps a "warm"
-       palette feeling clinical. -->
-  <Color x:Key="TextColor">#F7F1E8</Color>
-  <Color x:Key="TextMutedColor">#BCA894</Color>
+       palette feeling clinical. TextFaint is the one token the surfaces still bind: it renders on
+       ElevatedBg, the lightest surface carrying body text, and has to clear 4.5:1 there. #9E7F67
+       measures 4.70 on ElevatedBg and 4.73 on InteractiveBg — those two are its floor. -->
+  <Color x:Key="TextColor">#F9F3EA</Color>
+  <Color x:Key="TextMutedColor">#C0AB93</Color>
   <SolidColorBrush x:Key="Text"      Color="{StaticResource TextColor}"/>
   <SolidColorBrush x:Key="TextMuted" Color="{StaticResource TextMutedColor}"/>
-  <SolidColorBrush x:Key="TextFaint" Color="#A28E7A"/>
+  <SolidColorBrush x:Key="TextFaint" Color="#9E7F67"/>
 
   <!-- Lines, split by job. Border is ornament; BorderControl is the affordance, so it carries the
        3:1 non-text contrast WCAG 1.4.11 asks for - on every surface it is actually drawn on,
        including the InteractiveHover fill a QuietAction animates to underneath it.
-       The tightest pairs in the palette are BorderControl on InteractiveHover at 3.04:1 (hover-only)
-       and BorderControl on ElevatedBg at 3.27:1 (persistent, the next-alarm row). NOT BorderControl
-       on InteractiveBg, which sits at 3.42:1 - an earlier comment named that pair and was wrong.
-       For text the tightest are Danger on CardBg at 4.61:1 and TextFaint on ElevatedBg at 4.64:1.
-       Recompute all four before nudging any of these values darker. -->
-  <SolidColorBrush x:Key="Border"        Color="#413025"/>
-  <SolidColorBrush x:Key="BorderControl" Color="#947055"/>
+       Tightest non-text pair: BorderControl on InteractiveHover at 3.19:1 (hover-only). Tightest
+       text pairs: Danger on ElevatedBg at 4.53:1 and TextFaint on ElevatedBg at 4.70:1.
+       Recompute all three before nudging any of these values darker. -->
+  <SolidColorBrush x:Key="Border"        Color="#2A1B14"/>
+  <SolidColorBrush x:Key="BorderControl" Color="#8A6A4E"/>
 
-  <!-- Accent + semantic -->
-  <Color x:Key="AccentColor">#E0A93C</Color>
-  <Color x:Key="AccentStrongColor">#F2C05A</Color>
+  <!-- Accent + semantic. Accent is the gold that already sits in Assets/icons/tidsro.svg, so the
+       UI and the app's own mark are the same colour - the icon is brand and the UI follows it,
+       not the reverse. Do not drift one without the other. -->
+  <Color x:Key="AccentColor">#E3B341</Color>
+  <Color x:Key="AccentStrongColor">#F0C55C</Color>
   <SolidColorBrush x:Key="Accent"       Color="{StaticResource AccentColor}"/>
   <SolidColorBrush x:Key="AccentStrong" Color="{StaticResource AccentStrongColor}"/>
   <SolidColorBrush x:Key="Danger"       Color="#C4685C"/>
 
-  <!-- Spacing (DIP) -->
+  <!-- Spacing (DIP). Space1-4 are INSIDE controls; Space5 and up are BETWEEN sections. The gaps
+       between major blocks are part of how the surfaces separate now that the ladder no longer
+       leans on lightness, so widening them is a palette decision, not just a layout one. Padding
+       inside controls is deliberately unchanged. -->
   <sys:Double x:Key="Space1">4</sys:Double>
   <sys:Double x:Key="Space2">8</sys:Double>
   <sys:Double x:Key="Space3">12</sys:Double>
@@ -66,11 +83,44 @@
   <sys:Double x:Key="Space5">24</sys:Double>
   <sys:Double x:Key="Space6">32</sys:Double>
   <Thickness x:Key="CardPadding">16</Thickness>
+  <!-- Section rhythm, expressed as Thicknesses so MainWindow can use the tokens directly rather
+       than repeating magic numbers in a Margin string. -->
+  <Thickness x:Key="WindowPadding">32</Thickness>
+  <Thickness x:Key="SectionGap">0,24,0,0</Thickness>
+  <Thickness x:Key="RowGap">0,0,0,16</Thickness>
 
   <!-- Radius -->
   <CornerRadius x:Key="RadiusSm">8</CornerRadius>
   <CornerRadius x:Key="RadiusMd">12</CornerRadius>
   <CornerRadius x:Key="RadiusLg">16</CornerRadius>
+
+  <!-- Elevation.
+
+       THE TRAP: setting Effect on an element rasterises that element AND ITS ENTIRE SUBTREE into an
+       intermediate bitmap. Every glyph inside loses ClearType sub-pixel antialiasing and renders
+       visibly softer - on a timer app whose numerals ARE the product, that is a real cost. So the
+       shadow must never hang on a Border that contains content.
+
+       Instead: CardShadowCaster is a childless, background-only Border that sits BEHIND the content
+       Border with identical geometry (same Grid cell, same CornerRadius). It carries the effect and
+       casts the halo; the content Border stays effect-free and its text stays crisply rendered.
+       The caster is filled with PageBg, so where the content Border's antialiased corners are
+       partly transparent, what shows through is exactly the page colour that would have been there
+       anyway - the caster is invisible and only its shadow is seen. IsHitTestVisible=False keeps it
+       out of the input path.
+
+       A black shadow on a #0B0908 page can only darken by ~11 units, so this is inherently a soft
+       grounding halo rather than a Material elevation step. That is the intent - Tidsro is a calm
+       app. Adjust Opacity here to taste; do NOT reach for the content Border's Effect instead. -->
+  <DropShadowEffect x:Key="CardShadow" BlurRadius="22" ShadowDepth="4" Direction="270"
+                    Opacity="0.8" Color="#000000" RenderingBias="Performance"/>
+
+  <Style x:Key="CardShadowCaster" TargetType="Border">
+    <Setter Property="Background" Value="{StaticResource PageBg}"/>
+    <Setter Property="CornerRadius" Value="{StaticResource RadiusMd}"/>
+    <Setter Property="Effect" Value="{StaticResource CardShadow}"/>
+    <Setter Property="IsHitTestVisible" Value="False"/>
+  </Style>
 
   <!-- Typography -->
   <!-- pack:// so the embedded family is used rather than a machine-installed one. The trailing
