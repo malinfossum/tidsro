@@ -814,9 +814,9 @@ This step exists because a `StaticResource` pointing at a deleted token throws o
 
 - [ ] **Step 2: Click every restyled control**
 
-Both tab headers, several times alternating — a switch must happen every time, not just the first. Then: Start, the preset buttons, pause/reset/cancel **on the hero card** and on a second running timer's row, the alarm on/off toggle, edit and delete on an alarm row, day chips in the editor, both combo boxes, Settings, View font licence, and the scrollbar thumb.
+Both tab headers, several times alternating — a switch must happen every time, not just the first. Then: Start, the preset buttons, pause/reset/cancel on **both** running-timer rows with two timers going, the alarm on/off toggle, edit and delete on an alarm row, day chips in the editor, both combo boxes, Settings, View font licence, and the scrollbar thumb.
 
-The hero's three buttons are the only way to reach the soonest timer now that its row is collapsed, so a dead button there costs a capability, not just a click. Watch the tab headers as you switch, too: the selected one is SemiBold, and a weight change on an auto-width `TabPanel` can shift the header row.
+The hero card has no buttons — it is caption, numerals and label only. Every running timer is reached from its own row, including the one the hero is counting: that row is fully present and shows everything except its own large numerals. With two timers going, pause the top one and watch the rows swap: the numerals should move to whichever row the hero is not showing, both rows should stay put otherwise, and **keyboard focus should not move** — tab to the second row's pause button, press Space, and confirm focus is still on a button afterwards rather than on the window. Watch the tab headers as you switch, too: the selected one is SemiBold, and a weight change on an auto-width `TabPanel` can shift the header row.
 
 The tab-shell slice merged a control that did not respond to the mouse past three reviews and a green suite. Restyling `TabItem`, `Button`, `CheckBox` and `ScrollBar` templates is exactly the change that can silently break hit-testing.
 
@@ -837,7 +837,7 @@ Walk `ControlViewWalker` from the Tidsro window with Windows PowerShell and `UIA
 | `Font licence text` | licence viewer | fix wave (F5) |
 | `Close licence` | licence viewer | fix wave (F5) |
 
-The hero also gained pause/resume, reset and cancel buttons (F2 collapses the row that used to carry them). Their names — `Pause`/`Resume`, `Reset timer`, `Cancel timer` — are **not** new strings, and the instance count is unchanged: the hero's row is collapsed out of the list, so N running timers still expose N of each.
+A short-lived fix-wave version of the hero carried its own pause/resume, reset and cancel buttons, because that design collapsed the whole row. It no longer does — the row stays and keeps its controls — so those buttons are **gone** and with them one extra instance each of `Pause`/`Resume`, `Reset timer` and `Cancel timer`. No string disappears from the app: N running timers expose exactly N of each, from N rows, which is what the pre-redesign build did. If the tree shows N+1 of any of them, the hero's buttons came back.
 
 Traps worth remembering: a `Border` gets no automation peer, so a name set on one never reaches the tree; owned modal windows (Settings, confirm, the licence viewer under Settings) nest *under* the owner rather than as siblings at root; and `Start-Process -ArgumentList` does not quote values containing spaces.
 

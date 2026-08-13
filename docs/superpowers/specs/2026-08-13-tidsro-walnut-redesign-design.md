@@ -95,6 +95,12 @@ of what this section claimed: moving the base toward black compressed every step
 Depth therefore comes from layering rather than from shadows — consistent with the established rule
 that dark UIs should layer chrome rather than paint everything one value.
 
+"Popup surfaces" in that table means the completion card (`CompletionPopup`), which shipped on
+`CardBg` through the first pass and was moved onto `ElevatedBg` to match. It is the only surface in
+the app that floats over other windows, so if anything belongs at the top of the ladder it does, and
+every pair the move introduces is already measured in §8 and already shipping on the next-alarm row —
+the same surface carrying the same `QuietAction` buttons.
+
 `PageBg` stays pinned at `#0B0908`: the near-black is deliberate and is what delivers the OLED
 benefit. That pin is also why **`PanelBg` now sits above the page rather than below it**. Pure black
 is only 1.06:1 away from `#0B0908`, so a recessed surface cannot clear 1.05 without collapsing to a
@@ -247,15 +253,39 @@ should either be given a job (the hero numerals are the obvious candidate) or dr
 Four targeted view changes. Everything else inherits from tokens.
 
 1. **Hero countdown.** The running timer's remaining time renders at `TextHero` in Plex Mono on an
-   `ElevatedBg` card at the top of the Quick timers panel, with its label above in `TextFaint`
-   uppercase and its finish time below in `TextMuted`. One element dominates the screen.
+   `ElevatedBg` card at the top of the Quick timers panel, with a state caption above it in
+   `TextFaint` uppercase (`RUNNING` / `PAUSED`) and the timer's own label below in `TextMuted`. One
+   element dominates the screen. The hero carries **no buttons** — see the row rule below.
 
    **The strip collapses while the hero is showing.** The strip exists so a running timer stays
    visible *from the Schedule tab*; on Quick timers it would repeat the hero's value verbatim —
    the same number twice on one screen, and two UIA elements reporting one piece of state. So the
    strip is visible only when the Quick timers tab is not selected. The hero carries the accessible
-   name the strip would have had ("Running timer"), is **not** a live region, and its numerals must
-   not be announced on every tick.
+   name the strip would have had ("Running timer", or "Paused timer" when it is), is **not** a live
+   region, and its numerals must not be announced on every tick.
+
+   **The hero's timer keeps its row; the row drops its numerals.** The hero and the running-timer
+   list render the same `Running` collection, so the soonest timer's countdown would otherwise be on
+   screen twice — the same duplication the strip rule above exists to prevent. `MainViewModel` marks
+   that one timer (`TimerItemViewModel.IsCountdownInHero`, derived from the same
+   `Running.FirstOrDefault()` the hero binds, so the two cannot disagree) and its row hides its large
+   `RemainingText` `TextBlock`. **Nothing else about the row changes**: it keeps pause/resume, reset
+   and cancel, its label, its finish time, its sound tag and its `IsNext` dot.
+
+   Hiding the *whole* row instead — the first attempt — cost three things:
+   - the soonest timer lost every control, so pause/reset/cancel had to be rebuilt on the hero, where
+     they could only bind `Running[0]` rather than a captured item. `CancelTimer` removes that item
+     synchronously, so a double-click or key-repeat cancelled a **second** timer;
+   - resuming a paused timer that then sorts to the front collapsed its row **with keyboard focus
+     inside it**, dropping focus to the window — the failure `RescueFocusFromHiddenPanel` exists to
+     prevent for tab panels;
+   - the finish time, sound tag and "next" dot had nowhere left to live, so the Quick timers tab had
+     no next-to-finish cue at all.
+
+   A `TextBlock` takes no focus and owns no command, so hiding only the numerals has none of those
+   consequences. The mark is applied per item and the `ItemsSource` stays bound to `Running` itself:
+   re-projecting it as `Running.Skip(1)` would hand the `ItemsControl` a new collection on every
+   one-second tick and rebuild every container.
 2. **The next alarm earns emphasis.** Today it carries a small accent dot. It additionally takes
    `ElevatedBg` and a `BorderControl` edge, so "what is coming next" is legible at a glance rather
    than being one row among six.
@@ -317,6 +347,28 @@ together. For text they are `Danger` on `CardBg` at 4.61 and `TextFaint` on `Ele
 An earlier revision of this section named `BorderControl` on `InteractiveBg` as the tightest pair;
 it was never the tightest and is now the third-loosest of the five. Recompute all four before
 nudging any token darker.
+
+### Constraint on future work: four pairs that pass only by not existing
+
+Every pair in the table above renders somewhere in the app today. These four do not, and all four are
+**below 4.5:1**. Nothing is broken — but nothing stops them either, and each is one plausible edit
+away:
+
+| Pair | Ratio | The edit that would create it |
+|---|---|---|
+| `TextFaint` on `InteractiveHover` | 4.32 | any faint text inside a `QuietAction` — its fill animates to `InteractiveHover` |
+| `Danger` on `InteractiveBg` | 3.98 | error text on a text box, combo box or quiet button |
+| `Danger` on `ElevatedBg` | 3.80 | a validation message on the hero card or the next-alarm row |
+| `Danger` on `InteractiveHover` | 3.54 | a destructive button that colours its own label |
+
+`Danger #C4685C` clears 4.5:1 on `PageBg` (5.19), `PanelBg` (4.92) and `CardBg` (4.61) only — the
+three surfaces its current consumers (the two inline error `TextBlock`s) actually sit on. It is a
+`CardBg`-and-below token. Putting error text on any interactive or elevated surface means raising
+`Danger` first, and raising it is not free: it is already the tightest text pair in the palette at
+4.61 on `CardBg`, so it has no headroom downward either.
+
+`TextFaint` is the same story one step up. It clears 4.5:1 everywhere it is drawn today, including
+`ElevatedBg` at 4.64, but `InteractiveHover` is not one of those places and would fail at 4.32.
 
 **Why borders are split.** WCAG 1.4.11 requires 3:1 for visual information that identifies a user
 interface component. The requirement applies to boundaries that identify controls, not to ornament —
