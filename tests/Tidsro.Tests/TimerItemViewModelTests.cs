@@ -51,6 +51,42 @@ public class TimerItemViewModelTests
         Assert.Contains(nameof(vm.PauseResumeLabel), changed);
     }
 
+    // A paused timer stays in Running and the hero shows Running[0] unfiltered, so without this the
+    // hero displayed a frozen clock at 42px under the caption RUNNING.
+    [Fact]
+    public void Pausing_flips_the_hero_caption_and_its_accessible_name()
+    {
+        var (s, _) = New();
+        var item = s.StartCountdown(TimeSpan.FromMinutes(25), "focus", SoundChoice.None);
+        var vm = new TimerItemViewModel(item, s);
+
+        Assert.Equal("RUNNING", vm.StateCaption);
+        Assert.Equal("Running timer", vm.StateAccessibleName);   // the name that shipped, unchanged
+
+        vm.PauseResumeCommand.Execute(null);                     // -> paused
+        Assert.Equal("PAUSED", vm.StateCaption);
+        Assert.Equal("Paused timer", vm.StateAccessibleName);
+
+        vm.PauseResumeCommand.Execute(null);                     // -> running again
+        Assert.Equal("RUNNING", vm.StateCaption);
+        Assert.Equal("Running timer", vm.StateAccessibleName);
+    }
+
+    [Fact]
+    public void Pausing_raises_change_notification_for_the_hero_caption()
+    {
+        var (s, _) = New();
+        var item = s.StartCountdown(TimeSpan.FromMinutes(25), "focus", SoundChoice.None);
+        var vm = new TimerItemViewModel(item, s);
+        var changed = new List<string?>();
+        vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        vm.PauseResumeCommand.Execute(null);   // pause
+
+        Assert.Contains(nameof(vm.StateCaption), changed);
+        Assert.Contains(nameof(vm.StateAccessibleName), changed);
+    }
+
     [Fact]
     public void Reset_while_paused_returns_to_full_and_stays_paused()
     {

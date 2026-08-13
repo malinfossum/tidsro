@@ -61,12 +61,35 @@
                     ToolTip="{Binding StripTimer.PauseResumeLabel}"
                     Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
             <StackPanel>
-              <TextBlock Text="RUNNING" Foreground="{StaticResource TextFaint}"
+              <!-- Caption and accessible name both follow the paused state; the running values are
+                   the ones that shipped. -->
+              <TextBlock Text="{Binding StripTimer.StateCaption}" Foreground="{StaticResource TextFaint}"
                          FontSize="{StaticResource TextXs}"
-                         AutomationProperties.Name="Running timer"/>
+                         AutomationProperties.Name="{Binding StripTimer.StateAccessibleName}"/>
+              <!-- Mutes to TextMuted while paused, the same treatment (and the same tokens) the row
+                   below uses - a frozen clock at 42px has to look stopped, not just say so. -->
               <TextBlock Text="{Binding StripTimer.RemainingText}" FontFamily="{StaticResource FontMono}"
-                         FontSize="{StaticResource TextHero}" Foreground="{StaticResource Text}"
-                         Margin="0,4,0,0"/>
+                         FontSize="{StaticResource TextHero}" Margin="0,4,0,0">
+                <TextBlock.Foreground><SolidColorBrush Color="{StaticResource TextColor}"/></TextBlock.Foreground>
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock">
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding StripTimer.IsPaused}" Value="True">
+                        <DataTrigger.EnterActions>
+                          <BeginStoryboard><Storyboard>
+                            <ColorAnimation Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)" To="{StaticResource TextMutedColor}" Duration="0:0:0.18"/>
+                          </Storyboard></BeginStoryboard>
+                        </DataTrigger.EnterActions>
+                        <DataTrigger.ExitActions>
+                          <BeginStoryboard><Storyboard>
+                            <ColorAnimation Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)" To="{StaticResource TextColor}" Duration="0:0:0.18"/>
+                          </Storyboard></BeginStoryboard>
+                        </DataTrigger.ExitActions>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
               <TextBlock Text="{Binding StripTimer.Label}" Foreground="{StaticResource TextMuted}"
                          FontSize="{StaticResource TextXs}" TextTrimming="CharacterEllipsis"
                          Margin="0,2,0,0"

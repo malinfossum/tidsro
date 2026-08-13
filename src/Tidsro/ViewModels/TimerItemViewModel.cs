@@ -35,6 +35,24 @@ public partial class TimerItemViewModel : ObservableObject
     public bool HasSound => Item.Sound != SoundChoice.None;
     public string SoundTag => HasSound ? "sound" : "silent";
 
+    /// <summary>The hero card's caption above the countdown. A paused timer stays in Running, so the
+    /// hero would otherwise show a frozen clock at 42px under the word RUNNING. The row below already
+    /// mutes its own countdown when paused; at hero size the state needs saying as well as showing.</summary>
+    public string StateCaption => IsPaused ? "PAUSED" : "RUNNING";
+
+    /// <summary>The caption's accessible name, kept coherent with the caption it labels. The running
+    /// value is byte-identical to the name that shipped ("Running timer"); only the paused state adds
+    /// a string, and it reads correctly alone, without the 42px numerals beside it for context.</summary>
+    public string StateAccessibleName => IsPaused ? "Paused timer" : "Running timer";
+
+    // Both captions are computed, so they read live-correct whether or not a notification ever fires
+    // - only watching PropertyChanged can prove the UI is actually told. See the tests.
+    partial void OnIsPausedChanged(bool value)
+    {
+        OnPropertyChanged(nameof(StateCaption));
+        OnPropertyChanged(nameof(StateAccessibleName));
+    }
+
     public void Refresh()
     {
         var r = _scheduler.Remaining(Item);
