@@ -114,7 +114,12 @@ public partial class MainWindow : Window
         // TabControl is Focusable with IsTabStop false: Focus() on it parks focus on the container
         // (UIA announces the tab strip, and the gold ring — set on ShellTabItem — never appears), so
         // focus the selected header itself, falling back to the control if it isn't generated yet.
-        if (Tabs.ItemContainerGenerator.ContainerFromIndex(Tabs.SelectedIndex) is TabItem header) header.Focus();
+        // _vm.SelectedTabIndex, not Tabs.SelectedIndex: this runs from the view model's PropertyChanged,
+        // before the SelectedIndex binding has pushed the new value onto the control. Reading the control
+        // here parks focus on the header of the tab just left — and because a TabItem selects itself only
+        // when it *receives* keyboard focus, a later click on that header is a no-op, stranding the user
+        // on the current tab.
+        if (Tabs.ItemContainerGenerator.ContainerFromIndex(_vm.SelectedTabIndex) is TabItem header) header.Focus();
         else Tabs.Focus();
     }
 
