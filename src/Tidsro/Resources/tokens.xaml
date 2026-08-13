@@ -9,18 +9,25 @@
   <v:BoolToSoundGlyphConverter x:Key="SoundGlyph"/>
   <v:IndexToVisibleConverter x:Key="IndexToVisible"/>
 
-  <!-- Surfaces — four distinguishable layers. Depth comes from this ladder, not from shadows. -->
+  <!-- Surfaces — four distinguishable layers. Depth comes from this ladder, not from shadows, so
+       every step carries a measured minimum: CardBg 1.12 on PageBg, ElevatedBg 1.20 on CardBg,
+       InteractiveBg 1.14 on CardBg, InteractiveHover 1.10 on InteractiveBg, PanelBg 1.05 on PageBg.
+       PageBg is pinned at #0B0908 (warm near-black, pixel-off on OLED); the ladder is built upward
+       from it. That pin is also why PanelBg sits ABOVE the page rather than below it — pure black is
+       only 1.06 away from PageBg, so a recessed surface cannot clear 1.05 without losing the walnut
+       hue entirely. PanelBg is therefore quiet chrome a hair above the page, not a well.
+       Recompute the whole table before nudging any of these; §8 of the design spec holds it. -->
   <SolidColorBrush x:Key="PageBg"     Color="#0B0908"/>
-  <SolidColorBrush x:Key="PanelBg"    Color="#070505"/>
-  <SolidColorBrush x:Key="CardBg"     Color="#17110D"/>
-  <SolidColorBrush x:Key="ElevatedBg" Color="#241A14"/>
+  <SolidColorBrush x:Key="PanelBg"    Color="#16100C"/>
+  <SolidColorBrush x:Key="CardBg"     Color="#1F1712"/>
+  <SolidColorBrush x:Key="ElevatedBg" Color="#34261D"/>
 
   <!-- Any colour a ControlTemplate ANIMATES must exist as a Color resource. A Storyboard's To=
        takes a Color, so writing a literal there silently survives a palette change - which is
        exactly how the gold button kept its old gold. Colors are structs, so seeding an inline
        (unfrozen) brush from one keeps the brush animatable. -->
-  <Color x:Key="InteractiveBgColor">#1E1611</Color>
-  <Color x:Key="InteractiveHoverColor">#2A1F17</Color>
+  <Color x:Key="InteractiveBgColor">#2F231B</Color>
+  <Color x:Key="InteractiveHoverColor">#3A2B21</Color>
   <SolidColorBrush x:Key="InteractiveBg"    Color="{StaticResource InteractiveBgColor}"/>
   <SolidColorBrush x:Key="InteractiveHover" Color="{StaticResource InteractiveHoverColor}"/>
 
@@ -30,13 +37,18 @@
   <Color x:Key="TextMutedColor">#BCA894</Color>
   <SolidColorBrush x:Key="Text"      Color="{StaticResource TextColor}"/>
   <SolidColorBrush x:Key="TextMuted" Color="{StaticResource TextMutedColor}"/>
-  <SolidColorBrush x:Key="TextFaint" Color="#94826F"/>
+  <SolidColorBrush x:Key="TextFaint" Color="#A28E7A"/>
 
   <!-- Lines, split by job. Border is ornament; BorderControl is the affordance, so it carries the
-       3:1 non-text contrast WCAG 1.4.11 asks for. BorderControl on InteractiveBg is 3.07:1 - the
-       tightest pair in the palette. Recompute it before nudging either value darker. -->
-  <SolidColorBrush x:Key="Border"        Color="#33251D"/>
-  <SolidColorBrush x:Key="BorderControl" Color="#7E5F48"/>
+       3:1 non-text contrast WCAG 1.4.11 asks for - on every surface it is actually drawn on,
+       including the InteractiveHover fill a QuietAction animates to underneath it.
+       The tightest pairs in the palette are BorderControl on InteractiveHover at 3.04:1 (hover-only)
+       and BorderControl on ElevatedBg at 3.27:1 (persistent, the next-alarm row). NOT BorderControl
+       on InteractiveBg, which sits at 3.42:1 - an earlier comment named that pair and was wrong.
+       For text the tightest are Danger on CardBg at 4.61:1 and TextFaint on ElevatedBg at 4.64:1.
+       Recompute all four before nudging any of these values darker. -->
+  <SolidColorBrush x:Key="Border"        Color="#413025"/>
+  <SolidColorBrush x:Key="BorderControl" Color="#947055"/>
 
   <!-- Accent + semantic -->
   <Color x:Key="AccentColor">#E0A93C</Color>

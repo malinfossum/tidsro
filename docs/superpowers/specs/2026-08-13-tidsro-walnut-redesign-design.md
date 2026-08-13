@@ -73,15 +73,41 @@ Replaces the surface, text, line and accent tokens in `Resources/tokens.xaml`.
 | Token | Old | New | Role |
 |---|---|---|---|
 | `PageBg` | `#0E141A` | `#0B0908` | Window background. Warm near-black; near pixel-off on OLED. |
-| `PanelBg` | `#0A0F14` | `#070505` | Recessed areas. |
-| `CardBg` | `#161D27` | `#17110D` | Cards and alarm rows. |
-| `InteractiveBg` | `#1F2832` | `#1E1611` | Text boxes, combo boxes, quiet buttons. |
-| `InteractiveHover` | `#28323E` | `#2A1F17` | Hover state for the above. |
-| `ElevatedBg` | `#232C38` | `#241A14` | Hero card, next-alarm row, popup surfaces. |
+| `PanelBg` | `#0A0F14` | `#16100C` | Quiet chrome panels (the running strip). |
+| `CardBg` | `#161D27` | `#1F1712` | Cards and alarm rows. |
+| `InteractiveBg` | `#1F2832` | `#2F231B` | Text boxes, combo boxes, quiet buttons. |
+| `InteractiveHover` | `#28323E` | `#3A2B21` | Hover state for the above. |
+| `ElevatedBg` | `#232C38` | `#34261D` | Hero card, next-alarm row, popup surfaces. |
 
-The old `CardBg` and `ElevatedBg` were close enough to read as one plane. The new ladder makes
-each step visible, so depth comes from layering rather than from shadows — consistent with the
-established rule that dark UIs should layer chrome rather than paint everything one value.
+**Each step carries a measured minimum**, because the first draft of this palette did the opposite
+of what this section claimed: moving the base toward black compressed every step (`CardBg` on
+`PageBg` fell from 1.09 to 1.06, `ElevatedBg` on `CardBg` from 1.20 to 1.10), so the ladder shipped
+*flatter* than the cool slate it replaced. The values above are the corrected ones and hold to:
+
+| Step | Minimum | Actual |
+|---|---|---|
+| `CardBg` on `PageBg` | 1.12 | **1.13** |
+| `ElevatedBg` on `CardBg` | 1.20 | **1.21** |
+| `InteractiveBg` on `CardBg` | 1.14 | **1.16** |
+| `InteractiveHover` on `InteractiveBg` | 1.10 | **1.12** |
+| `PanelBg` on `PageBg` | 1.05 | **1.05** |
+
+Depth therefore comes from layering rather than from shadows — consistent with the established rule
+that dark UIs should layer chrome rather than paint everything one value.
+
+`PageBg` stays pinned at `#0B0908`: the near-black is deliberate and is what delivers the OLED
+benefit. That pin is also why **`PanelBg` now sits above the page rather than below it**. Pure black
+is only 1.06:1 away from `#0B0908`, so a recessed surface cannot clear 1.05 without collapsing to a
+neutral near-black and losing the walnut hue — the one thing this palette exists for. `PanelBg` is
+consequently redefined from "recessed areas" to "quiet chrome a hair above the page", which is what
+its only consumer (the running-timer strip) actually needs.
+
+Lightening the surfaces forced two dependent tokens up with them, both recorded in the tables below:
+`TextFaint` (`#94826F` → `#A28E7A`), which would otherwise have fallen to 3.94:1 on the new
+`ElevatedBg`, and `BorderControl` (`#7E5F48` → `#947055`), which would otherwise have fallen to
+2.63:1 on the new `InteractiveBg`. `Border` moved too (`#33251D` → `#413025`) for a non-contrast
+reason: the old value was *darker* than the new `ElevatedBg`, so the hero card's edge would have
+inverted into a near-invisible dark hairline.
 
 ### Text — warm, not blue-white
 
@@ -89,18 +115,21 @@ established rule that dark UIs should layer chrome rather than paint everything 
 |---|---|---|
 | `Text` | `#F4F7FA` | `#F7F1E8` |
 | `TextMuted` | `#B4BDC7` | `#BCA894` |
-| `TextFaint` | `#87919C` | `#94826F` |
+| `TextFaint` | `#87919C` | `#A28E7A` |
 
 Blue-white text on warm surfaces is a large part of what makes a warm palette still feel clinical.
-`TextFaint` is set at `#94826F` rather than the first-drafted `#8A7867`, which measured 4.42:1 on
-`CardBg` and would have failed AA for body text.
+`TextFaint` is the token the surface ladder binds hardest: it lands on `ElevatedBg`, the lightest
+surface that carries body text, so every lift of `ElevatedBg` pushes it. First drafted at `#8A7867`,
+which measured 4.42:1 on `CardBg` and would have failed AA for body text; raised to `#94826F`, which
+the corrected surface ladder then dropped to 3.94:1 on `ElevatedBg`. It ships at `#A28E7A`, which
+clears 4.5:1 on every surface it renders on.
 
 ### Lines — split by job
 
 | Token | Old | New | Role |
 |---|---|---|---|
-| `Border` | `#2B3440` | `#33251D` | Decorative card and divider edges. Name kept — it has 16 consumers, and renaming it to `BorderSubtle` would mean 16 edits for no functional gain. |
-| `BorderControl` | *(new)* | `#7E5F48` | Text boxes, toggles, buttons, scrollbar thumb — anywhere the outline *is* the affordance. |
+| `Border` | `#2B3440` | `#413025` | Decorative card and divider edges. Name kept — it has 16 consumers, and renaming it to `BorderSubtle` would mean 16 edits for no functional gain. |
+| `BorderControl` | *(new)* | `#947055` | Text boxes, toggles, buttons, scrollbar thumb — anywhere the outline *is* the affordance. |
 
 Rationale in §8.
 
@@ -239,27 +268,49 @@ Contrast ratios computed against the new tokens (WCAG 2.1 relative luminance):
 | Pair | Ratio | Level |
 |---|---|---|
 | `Text` on `PageBg` | 17.70 | AAA |
-| `Text` on `CardBg` | 16.66 | AAA |
-| `TextMuted` on `CardBg` | 8.17 | AAA |
-| `TextFaint` on `CardBg` | 5.06 | AA |
+| `Text` on `PanelBg` | 16.80 | AAA |
+| `Text` on `CardBg` | 15.72 | AAA |
+| `Text` on `InteractiveBg` | 13.58 | AAA |
+| `Text` on `ElevatedBg` | 12.98 | AAA |
+| `Text` on `InteractiveHover` | 12.09 | AAA |
+| `TextMuted` on `PageBg` | 8.67 | AAA |
+| `TextMuted` on `CardBg` | 7.71 | AAA |
+| `TextMuted` on `InteractiveBg` | 6.66 | AAA |
+| `TextMuted` on `ElevatedBg` | 6.36 | AAA |
+| `TextFaint` on `PageBg` | 6.33 | AA |
+| `TextFaint` on `PanelBg` | 6.01 | AA |
+| `TextFaint` on `CardBg` | 5.62 | AA |
+| `TextFaint` on `InteractiveBg` | 4.86 | AA |
+| `TextFaint` on `ElevatedBg` | **4.64** | AA |
+| `Danger` on `CardBg` | **4.61** | AA |
+| `Danger` on `PageBg` | 5.19 | AA |
 | `Accent` on `PageBg` | 9.38 | AAA |
-| Button text `#160F0B` on `Accent` | 8.95 | AAA |
-| `Danger` on `CardBg` | 4.88 | AA |
+| Button label `PageBg` on `Accent` | 9.38 | AAA |
+| Button label `PageBg` on `AccentStrong` (hover) | 11.79 | AAA |
 | `AccentStrong` (focus ring) on `PageBg` | 11.79 | passes 1.4.11 |
-| `AccentStrong` (focus ring) on `CardBg` | 11.10 | passes 1.4.11 |
-| `AccentStrong` (focus ring) on `ElevatedBg` | 10.11 | passes 1.4.11 |
-| `BorderControl` on `InteractiveBg` | 3.07 | passes 1.4.11 |
-| `BorderControl` on `CardBg` | 3.22 | passes 1.4.11 |
+| `AccentStrong` (focus ring) on `PanelBg` | 11.19 | passes 1.4.11 |
+| `AccentStrong` (focus ring) on `CardBg` | 10.48 | passes 1.4.11 |
+| `AccentStrong` (focus ring) on `InteractiveBg` | 9.05 | passes 1.4.11 |
+| `AccentStrong` (focus ring) on `ElevatedBg` | 8.65 | passes 1.4.11 |
+| `BorderControl` on `PageBg` | 4.46 | passes 1.4.11 |
+| `BorderControl` on `CardBg` | 3.96 | passes 1.4.11 |
+| `BorderControl` on `InteractiveBg` | 3.42 | passes 1.4.11 |
+| `BorderControl` on `ElevatedBg` | **3.27** | passes 1.4.11 |
+| `BorderControl` on `InteractiveHover` | **3.04** | passes 1.4.11 |
 
-`BorderControl` on `InteractiveBg` at 3.07 is the binding constraint in the whole palette — if
-either token is nudged darker during implementation, that pair must be recomputed first.
+**The binding constraints** (bold above) are `BorderControl` on `InteractiveHover` at 3.04 —
+hover-only, but a `QuietAction`'s outline *is* its boundary while the fill animates underneath it —
+and `BorderControl` on `ElevatedBg` at 3.27, which is persistent, since the next-alarm row sets both
+together. For text they are `Danger` on `CardBg` at 4.61 and `TextFaint` on `ElevatedBg` at 4.64.
+An earlier revision of this section named `BorderControl` on `InteractiveBg` as the tightest pair;
+it was never the tightest and is now the third-loosest of the five. Recompute all four before
+nudging any token darker.
 
 **Why borders are split.** WCAG 1.4.11 requires 3:1 for visual information that identifies a user
-interface component. Meeting that on every decorative card edge requires roughly `#7A5B45`, a
-prominent tan outline that fights the calm the app is built around. The requirement applies to
-boundaries that identify controls, not to ornament — so `BorderControl #7E5F48` (3.04:1 on
-`CardBg`) is used for text boxes, toggles, buttons and the scrollbar thumb, while `Border`
-stays quiet on card edges, where the surface step and the content already identify the container.
+interface component. The requirement applies to boundaries that identify controls, not to ornament —
+so `BorderControl #947055` is used for text boxes, toggles, buttons and the scrollbar thumb and
+clears 3:1 on every surface it is drawn on, in every state, while `Border #413025` stays quiet on
+card edges, where the surface step and the content already identify the container.
 
 This **fixes a pre-existing failure**: today's `Border #2B3440` on `InteractiveBg #1F2832` measures
 about 1.3:1, so input outlines are effectively invisible. The redesign is the natural moment.
@@ -316,8 +367,9 @@ and a swappable resource dictionary — a structural change, not a token change,
   a visual check is not sufficient, because the fallback looks fine.
 - **Grep for hex literals outside token definitions.** The expected result is zero. Any hit is a
   control that kept the old palette.
-- Recompute the contrast table against the values as implemented, starting with
-  `BorderControl` on `InteractiveBg`.
+- Recompute the contrast table against the values as implemented, starting with the four binding
+  constraints named in §8: `BorderControl` on `InteractiveHover` and on `ElevatedBg`, and `Danger`
+  and `TextFaint` on `CardBg` / `ElevatedBg`.
 
 ## 11. Stress test
 

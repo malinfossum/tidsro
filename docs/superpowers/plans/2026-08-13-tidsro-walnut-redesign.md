@@ -838,7 +838,7 @@ Expected: no output.
 
 - [ ] **Step 6: Recompute the contrast table**
 
-Against the values as implemented, starting with `BorderControl` on `InteractiveBg` — at 3.07:1 it is the tightest pair in the palette, so any nudge during implementation could have dropped it below 3:1.
+Against the values as implemented, starting with the palette's four binding constraints — `BorderControl` on `InteractiveHover` (3.04:1, hover-only) and on `ElevatedBg` (3.27:1, persistent), and for text `Danger` on `CardBg` (4.61:1) and `TextFaint` on `ElevatedBg` (4.64:1). `BorderControl` on `InteractiveBg` was named here as the tightest pair; it never was, and after the surface-ladder correction it sits at 3.42:1.
 
 - [ ] **Step 7: Restore the backed-up state**
 
