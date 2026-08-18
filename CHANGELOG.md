@@ -2,7 +2,7 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
-## [1.8.0] — 2026-08-18
+## [2.0.0] — 2026-08-18
 
 ### Added
 - **Tabs** — the window is split into **Quick timers** and **Schedule** instead of one long scrolling page, so the half you are not using stays out of the way. A slim strip along the bottom keeps any running timer visible from the Schedule tab, and Tidsro reopens on the tab you left it on.
@@ -71,7 +71,7 @@ Clock-time alarms — a "Your day" agenda with one-shot fire-at-HH:MM alarms, op
 ## [1.0.0] — 2026-06-16
 First release — countdown timers with presets or custom durations, pause/resume, reset, and per-timer sounds.
 
-[1.8.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.8.0
+[2.0.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.0.0
 [1.7.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.7.0
 [1.6.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.6.0
 [1.5.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.5.0
