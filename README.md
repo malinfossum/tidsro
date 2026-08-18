@@ -98,3 +98,6 @@ It publishes a self-contained, single-file `Tidsro.exe` (portable) and wraps it 
 ## License
 
 Apache License 2.0 — see [LICENSE](LICENSE). © 2026 Malin Fossum.
+
+Tidsro bundles IBM Plex Sans and IBM Plex Mono, licensed under the SIL Open Font License 1.1.
+See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

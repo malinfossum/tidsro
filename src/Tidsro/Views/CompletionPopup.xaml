@@ -6,7 +6,11 @@
         SizeToContent="WidthAndHeight" ResizeMode="NoResize"
         AutomationProperties.Name="{Binding AnnouncementText}"
         FontFamily="{StaticResource FontSans}">
-  <Border x:Name="Root" Background="{StaticResource CardBg}" CornerRadius="{StaticResource RadiusMd}"
+  <!-- ElevatedBg, per spec §5: this is the only surface in the app that floats over every other
+       window, so if anything is the top of the ladder it is this. Every pair it introduces is
+       already measured and shipping on the next-alarm row, which is the same surface carrying the
+       same QuietAction buttons - Text 12.98, TextMuted 6.36, TextFaint 4.64, BorderControl 3.27. -->
+  <Border x:Name="Root" Background="{StaticResource ElevatedBg}" CornerRadius="{StaticResource RadiusMd}"
           BorderBrush="{StaticResource Border}" BorderThickness="1"
           Padding="{StaticResource CardPadding}" Width="320">
     <Border.Effect>
@@ -27,7 +31,8 @@
                 Padding="6" Cursor="Hand" HorizontalAlignment="Right"/>
       </DockPanel>
       <TextBlock Text="{Binding Title}" Foreground="{StaticResource Text}"
-                 FontSize="{StaticResource TextLg}" TextWrapping="Wrap" Margin="0,6,0,16"/>
+                 FontSize="{StaticResource TextLg}" FontWeight="SemiBold"
+                 TextWrapping="Wrap" Margin="0,6,0,16"/>
       <!-- Actions: hidden for mouse-at-rest, shown on hover OR when the card has keyboard focus -->
       <StackPanel x:Name="Actions" Orientation="Horizontal" Opacity="0">
         <Button Content="+5 min" Command="{Binding Plus5Command}"

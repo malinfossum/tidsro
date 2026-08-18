@@ -1,4 +1,4 @@
-<Window x:Class="Tidsro.Views.MainWindow"
+﻿<Window x:Class="Tidsro.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
@@ -11,7 +11,7 @@
          puts Panels beside Tabs rather than inside it, so this has to be restored at the window level. -->
     <KeyBinding Key="Tab" Modifiers="Ctrl" Command="{Binding AdvanceTabCommand}"/>
   </Window.InputBindings>
-  <Grid Margin="24">
+  <Grid Margin="{StaticResource WindowPadding}">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>   <!-- tab headers -->
       <RowDefinition Height="*"/>      <!-- panels, both loaded -->
@@ -27,13 +27,92 @@
       <TabItem Header="Schedule"/>
     </TabControl>
 
-    <Grid x:Name="Panels" Grid.Row="1" Margin="0,16,0,0">
+    <Grid x:Name="Panels" Grid.Row="1" Margin="{StaticResource SectionGap}">
       <ScrollViewer VerticalScrollBarVisibility="Auto"
                     Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisible}, ConverterParameter=0}">
-        <StackPanel x:Name="QuickPanel">
+        <!-- ONE MEASURE for the whole tab. The cap lives here, on the content panel, so the composer
+             card and every alarm row share a maximum width and centre together as one column — the card
+             surface hugs its contents and the leftover space is PAGE, not card.
 
-        <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
-                CornerRadius="{StaticResource RadiusMd}" Padding="16" Margin="0">
+             This is the third layer this cap was tried on, and the first that looks intentional:
+             capping the COLUMN pinned the fields left with dead space beside them; capping the FORM
+             left a full-width card with a small form floating inside it. HorizontalAlignment stays
+             Stretch on purpose — a Stretch element constrained by MaxWidth is CENTRED by WPF, which is
+             the whole mechanism. Below 502 everything fills the window exactly as before.
+
+             502 = the 470 the form wants + 2x16 CardPadding. The tab strip and the bottom bars sit
+             outside this panel and stay full width, so the window still reads as a window. -->
+        <StackPanel MaxWidth="502" x:Name="QuickPanel">
+
+        <!-- Hero countdown. The accessible name lives on the caption TextBlock: a Border has no
+             automation peer. Deliberately NOT a live region - a countdown that announces every
+             tick is unusable with a screen reader.
+             The hero borrows only the NUMERALS of Running[0]: that row stays in the list below with
+             all of its controls (see IsCountdownInHero), so the hero needs no buttons of its own.
+             Buttons here would have had to bind StripTimer rather than a captured item, and
+             CancelTimer removes that item synchronously - a second click would then have cancelled a
+             second timer. Caption, numerals, label. Nothing else. -->
+        <!-- Shadow: the caster is a childless sibling BEHIND the card. Hanging the effect on the
+             card itself would rasterise the 42px numerals with it. See CardShadowCaster in
+             tokens.xaml. Visibility lives on the Grid so the caster collapses with the card. -->
+        <Grid Margin="0,0,0,24"
+              Visibility="{Binding ShowHero, Converter={StaticResource BoolToVisible}}">
+          <Border Style="{StaticResource CardShadowCaster}"/>
+          <Border Background="{StaticResource ElevatedBg}" BorderBrush="{StaticResource Border}"
+                  BorderThickness="1" CornerRadius="{StaticResource RadiusMd}" Padding="16">
+            <StackPanel>
+              <!-- Caption and accessible name both follow the paused state; the running values are
+                   the ones that shipped. -->
+              <TextBlock Text="{Binding StripTimer.StateCaption}" Foreground="{StaticResource TextFaint}"
+                         FontSize="{StaticResource TextXs}"
+                         AutomationProperties.Name="{Binding StripTimer.StateAccessibleName}"/>
+              <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                <!-- Mutes to TextMuted while paused, the same treatment (and the same tokens) the row
+                     below uses - a frozen clock at 42px has to look stopped, not just say so. -->
+                <TextBlock Text="{Binding StripTimer.RemainingText}" FontFamily="{StaticResource FontMono}"
+                           FontSize="{StaticResource TextHero}">
+                  <TextBlock.Foreground><SolidColorBrush Color="{StaticResource TextColor}"/></TextBlock.Foreground>
+                  <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding StripTimer.IsPaused}" Value="True">
+                          <DataTrigger.EnterActions>
+                            <BeginStoryboard><Storyboard>
+                              <ColorAnimation Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)" To="{StaticResource TextMutedColor}" Duration="0:0:0.18"/>
+                            </Storyboard></BeginStoryboard>
+                          </DataTrigger.EnterActions>
+                          <DataTrigger.ExitActions>
+                            <BeginStoryboard><Storyboard>
+                              <ColorAnimation Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)" To="{StaticResource TextColor}" Duration="0:0:0.18"/>
+                            </Storyboard></BeginStoryboard>
+                          </DataTrigger.ExitActions>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </TextBlock.Style>
+                </TextBlock>
+                <!-- The hero's own finish time, sitting beside the numerals rather than under them.
+                     VerticalAlignment=Bottom plus a bottom margin of one small-text descender puts
+                     its baseline on the numerals' baseline; StackPanel has no baseline alignment of
+                     its own. No AutomationProperties.Name: a bare TextBlock already reports its own
+                     text to UIA, and adding one here would be a new accessible name. -->
+                <TextBlock Text="{Binding StripTimer.FinishText}" Foreground="{StaticResource TextMuted}"
+                           FontSize="{StaticResource TextSm}" VerticalAlignment="Bottom"
+                           Margin="12,0,0,6"
+                           Visibility="{Binding StripTimer.ShowFinish, Converter={StaticResource BoolToVisible}}"/>
+              </StackPanel>
+              <TextBlock Text="{Binding StripTimer.Label}" Foreground="{StaticResource TextMuted}"
+                         FontSize="{StaticResource TextXs}" TextTrimming="CharacterEllipsis"
+                         Margin="0,2,0,0"
+                         Visibility="{Binding StripTimer.Label, Converter={StaticResource NullToCollapsed}}"/>
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <Grid>
+          <Border Style="{StaticResource CardShadowCaster}"/>
+          <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+                  CornerRadius="{StaticResource RadiusMd}" Padding="16">
           <StackPanel>
             <StackPanel Orientation="Horizontal">
               <Button Content="5" Width="64" Command="{Binding StartPresetCommand}" Style="{StaticResource QuietAction}">
@@ -74,13 +153,33 @@
                        Margin="0,8,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"
                        Visibility="{Binding CustomError, Converter={StaticResource NullToCollapsed}}"/>
           </StackPanel>
-        </Border>
+          </Border>
+        </Grid>
 
-        <ItemsControl ItemsSource="{Binding Running}" Margin="0,12,0,0">
+        <ItemsControl ItemsSource="{Binding Running}" Margin="{StaticResource SectionGap}">
+          <!-- The hero above renders Running[0]'s countdown, so that ONE row drops its own numerals
+               (see the RemainingText TextBlock below) or the number is on screen twice. The row
+               itself stays: it keeps pause/reset/cancel bound to its own item, its label, its finish
+               time, its sound tag and its IsNext dot, none of which the hero carries. Hiding a
+               non-focusable TextBlock is inert; hiding the whole row collapsed a focusable subtree
+               out from under the caret every time a resumed timer sorted to the front.
+               ItemsSource stays bound to Running itself - a re-projected Running.Skip(1) would hand
+               the control a new collection every tick and rebuild every container. -->
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <Border Background="{StaticResource CardBg}" BorderThickness="1"
-                      CornerRadius="{StaticResource RadiusMd}" Padding="16" Margin="0,0,0,12">
+              <!-- The caster carries the shadow so the row's own numerals are not rasterised with
+                   it; the fade-in moves to the Grid so card and shadow appear together. -->
+              <Grid Margin="{StaticResource RowGap}">
+                <Grid.Triggers>
+                  <EventTrigger RoutedEvent="Loaded">
+                    <BeginStoryboard><Storyboard>
+                      <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18"/>
+                    </Storyboard></BeginStoryboard>
+                  </EventTrigger>
+                </Grid.Triggers>
+                <Border Style="{StaticResource CardShadowCaster}"/>
+                <Border Background="{StaticResource CardBg}" BorderThickness="1"
+                      CornerRadius="{StaticResource RadiusMd}" Padding="16">
                 <Border.Style>
                   <Style TargetType="Border">
                     <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
@@ -91,13 +190,6 @@
                     </Style.Triggers>
                   </Style>
                 </Border.Style>
-                <Border.Triggers>
-                  <EventTrigger RoutedEvent="Loaded">
-                    <BeginStoryboard><Storyboard>
-                      <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18"/>
-                    </Storyboard></BeginStoryboard>
-                  </EventTrigger>
-                </Border.Triggers>
                 <DockPanel>
                   <Button DockPanel.Dock="Right" Content="&#xE711;"
                           Command="{Binding DataContext.CancelTimerCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
@@ -114,20 +206,25 @@
                   <StackPanel>
                     <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"/>
                     <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="{Binding RemainingText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource Text2xl}">
-                      <TextBlock.Foreground><SolidColorBrush Color="#F4F7FA"/></TextBlock.Foreground>
+                    <!-- The hero card above already shows this one countdown at 42px, so the row it
+                         belongs to hides its own numerals and nothing else. Margin sits here rather
+                         than on the finish time so the two close up cleanly when it goes. -->
+                    <TextBlock Text="{Binding RemainingText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource Text2xl}"
+                               Margin="0,0,10,0"
+                               Visibility="{Binding IsCountdownInHero, Converter={StaticResource BoolToCollapsed}}">
+                      <TextBlock.Foreground><SolidColorBrush Color="{StaticResource TextColor}"/></TextBlock.Foreground>
                       <TextBlock.Style>
                         <Style TargetType="TextBlock">
                           <Style.Triggers>
                             <DataTrigger Binding="{Binding IsPaused}" Value="True">
                               <DataTrigger.EnterActions>
                                 <BeginStoryboard><Storyboard>
-                                  <ColorAnimation Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)" To="#B4BDC7" Duration="0:0:0.18"/>
+                                  <ColorAnimation Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)" To="{StaticResource TextMutedColor}" Duration="0:0:0.18"/>
                                 </Storyboard></BeginStoryboard>
                               </DataTrigger.EnterActions>
                               <DataTrigger.ExitActions>
                                 <BeginStoryboard><Storyboard>
-                                  <ColorAnimation Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)" To="#F4F7FA" Duration="0:0:0.18"/>
+                                  <ColorAnimation Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)" To="{StaticResource TextColor}" Duration="0:0:0.18"/>
                                 </Storyboard></BeginStoryboard>
                               </DataTrigger.ExitActions>
                             </DataTrigger>
@@ -136,14 +233,15 @@
                       </TextBlock.Style>
                     </TextBlock>
                       <TextBlock Text="{Binding FinishText}" Foreground="{StaticResource TextFaint}"
-                                 FontSize="{StaticResource TextXs}" VerticalAlignment="Center" Margin="10,0,0,0"
+                                 FontSize="{StaticResource TextXs}" VerticalAlignment="Center"
                                  AutomationProperties.Name="{Binding FinishText}"
                                  Visibility="{Binding ShowFinish, Converter={StaticResource BoolToVisible}}"/>
                     </StackPanel>
                     <TextBlock Text="{Binding SoundTag}" Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}"/>
                   </StackPanel>
                 </DockPanel>
-              </Border>
+                </Border>
+              </Grid>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -153,13 +251,27 @@
 
       <ScrollViewer VerticalScrollBarVisibility="Auto"
                     Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisible}, ConverterParameter=1}">
-        <StackPanel x:Name="DayPanel">
+        <!-- ONE MEASURE for the whole tab. The cap lives here, on the content panel, so the composer
+             card and every alarm row share a maximum width and centre together as one column — the card
+             surface hugs its contents and the leftover space is PAGE, not card.
 
-        <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
-                CornerRadius="{StaticResource RadiusMd}" Padding="16">
+             This is the third layer this cap was tried on, and the first that looks intentional:
+             capping the COLUMN pinned the fields left with dead space beside them; capping the FORM
+             left a full-width card with a small form floating inside it. HorizontalAlignment stays
+             Stretch on purpose — a Stretch element constrained by MaxWidth is CENTRED by WPF, which is
+             the whole mechanism. Below 502 everything fills the window exactly as before.
+
+             502 = the 470 the form wants + 2x16 CardPadding. The tab strip and the bottom bars sit
+             outside this panel and stay full width, so the window still reads as a window. -->
+        <StackPanel MaxWidth="502" x:Name="DayPanel">
+
+        <Grid>
+          <Border Style="{StaticResource CardShadowCaster}"/>
+          <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+                  CornerRadius="{StaticResource RadiusMd}" Padding="16">
           <StackPanel>
             <Grid>
-              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+<Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
               <TextBox Grid.Column="0" Width="90" x:Name="AlarmTimeBox"
                        Text="{Binding AlarmTimeInput, UpdateSourceTrigger=PropertyChanged}"
                        AutomationProperties.Name="Time" ToolTip="24-hour time, e.g. 14:30" Tag="14:30">
@@ -207,13 +319,14 @@
                        Margin="0,8,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"
                        Visibility="{Binding AlarmError, Converter={StaticResource NullToCollapsed}}"/>
           </StackPanel>
-        </Border>
+          </Border>
+        </Grid>
 
         <TextBlock Text="Nothing scheduled yet — add an alarm" Foreground="{StaticResource TextFaint}"
-                   FontSize="{StaticResource TextSm}" Margin="0,14,0,0"
+                   FontSize="{StaticResource TextSm}" Margin="{StaticResource SectionGap}"
                    Visibility="{Binding IsDayEmpty, Converter={StaticResource BoolToVisible}}"/>
 
-        <ItemsControl ItemsSource="{Binding Alarms}" Margin="0,14,0,0">
+        <ItemsControl ItemsSource="{Binding Alarms}" Margin="{StaticResource SectionGap}">
           <!-- The name belongs on the generated container: a Border has no automation peer, so a name
                set inside the template never reaches the tree and the row falls back to ToString(). -->
           <ItemsControl.ItemContainerStyle>
@@ -223,21 +336,26 @@
           </ItemsControl.ItemContainerStyle>
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <Border Padding="16" Margin="0,0,0,12" CornerRadius="{StaticResource RadiusMd}"
-                      Background="{StaticResource CardBg}" BorderThickness="1">
-                <Border.Triggers>
+              <!-- Shadow on a childless sibling, never on the row itself: an Effect rasterises the
+                   whole subtree and would soften the alarm time and every label inside. -->
+              <Grid Margin="{StaticResource RowGap}">
+                <Grid.Triggers>
                   <EventTrigger RoutedEvent="Loaded">
                     <BeginStoryboard><Storyboard>
                       <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18"/>
                     </Storyboard></BeginStoryboard>
                   </EventTrigger>
-                </Border.Triggers>
+                </Grid.Triggers>
+                <Border Style="{StaticResource CardShadowCaster}"/>
+                <Border x:Name="row" Padding="16" CornerRadius="{StaticResource RadiusMd}"
+                      Background="{StaticResource CardBg}" BorderThickness="1">
                 <Border.Style>
                   <Style TargetType="Border">
                     <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
                     <Style.Triggers>
                       <DataTrigger Binding="{Binding IsNext}" Value="True">
-                        <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+                        <Setter Property="Background" Value="{StaticResource ElevatedBg}"/>
+                        <Setter Property="BorderBrush" Value="{StaticResource BorderControl}"/>
                       </DataTrigger>
                     </Style.Triggers>
                   </Style>
@@ -246,7 +364,7 @@
                   <Button DockPanel.Dock="Right" Content="&#xE711;"
                           Command="{Binding DataContext.DeleteAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                           CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                          AutomationProperties.Name="{Binding DeleteLabel}" ToolTip="{Binding DeleteLabel}" Style="{StaticResource QuietAction}"/>
+                          AutomationProperties.Name="{Binding DeleteLabel}" ToolTip="{Binding DeleteLabel}" Style="{StaticResource DangerAction}"/>
                   <Button DockPanel.Dock="Right" Content="&#xE70F;"
                           Command="{Binding DataContext.BeginEditAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                           CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
@@ -284,7 +402,8 @@
                     </StackPanel>
                   </StackPanel>
                 </DockPanel>
-              </Border>
+                </Border>
+              </Grid>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
@@ -293,8 +412,10 @@
       </ScrollViewer>
     </Grid>
 
-    <Border Grid.Row="2" Margin="0,12,0,0"
-            Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+    <!-- No shadow caster here on purpose: the strip is recessed chrome on PanelBg, a hair BELOW the
+         page in intent, and a drop shadow would claim it floats above it. -->
+    <Border Grid.Row="2" Margin="{StaticResource SectionGap}"
+            Background="{StaticResource PanelBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
             CornerRadius="{StaticResource RadiusMd}" Padding="12"
             Visibility="{Binding ShowStrip, Converter={StaticResource BoolToVisible}}">
       <!-- The name belongs on the TextBlock caption: a Border has no automation peer, so a name
@@ -326,10 +447,11 @@
       </Grid>
     </Border>
 
-    <Border Grid.Row="3" Margin="0,12,0,0"
-            Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
-            CornerRadius="{StaticResource RadiusMd}" Padding="16"
-            Visibility="{Binding MissedNote, Converter={StaticResource NullToCollapsed}}">
+    <Grid Grid.Row="3" Margin="{StaticResource SectionGap}"
+          Visibility="{Binding MissedNote, Converter={StaticResource NullToCollapsed}}">
+      <Border Style="{StaticResource CardShadowCaster}"/>
+      <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+            CornerRadius="{StaticResource RadiusMd}" Padding="16">
       <DockPanel>
         <Button DockPanel.Dock="Right" Content="&#xE711;" Command="{Binding DismissMissedNoteCommand}"
                 FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
@@ -337,12 +459,16 @@
         <TextBlock Text="{Binding MissedNote}" Foreground="{StaticResource TextMuted}" TextWrapping="Wrap"
                    VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite"/>
       </DockPanel>
-    </Border>
+      </Border>
+    </Grid>
 
-    <Border Grid.Row="4" Margin="0,12,0,0"
-            Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+    <!-- LiveSetting stays on the Border that holds the announced text, not on the wrapper Grid:
+         moving it would change which element UIA reports the polite update from. -->
+    <Grid Grid.Row="4" Margin="{StaticResource SectionGap}"
+          Visibility="{Binding PendingDeleteLabel, Converter={StaticResource NullToCollapsed}}">
+      <Border Style="{StaticResource CardShadowCaster}"/>
+      <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
             CornerRadius="{StaticResource RadiusMd}" Padding="16"
-            Visibility="{Binding PendingDeleteLabel, Converter={StaticResource NullToCollapsed}}"
             AutomationProperties.LiveSetting="Polite">
       <DockPanel>
         <Button DockPanel.Dock="Right" Content="Undo" Command="{Binding UndoDeleteCommand}"
@@ -350,8 +476,9 @@
         <TextBlock Text="{Binding PendingDeleteLabel}" Foreground="{StaticResource TextMuted}"
                    VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite"/>
       </DockPanel>
-    </Border>
+      </Border>
+    </Grid>
 
-    <Button Grid.Row="5" Content="Settings" HorizontalAlignment="Left" Click="OnSettings" Style="{StaticResource QuietAction}" Margin="0,16,0,0"/>
+    <Button Grid.Row="5" Content="Settings" HorizontalAlignment="Left" Click="OnSettings" Style="{StaticResource QuietAction}" Margin="{StaticResource SectionGap}"/>
   </Grid>
 </Window>

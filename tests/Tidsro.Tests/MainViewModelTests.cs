@@ -1145,10 +1145,37 @@ public class MainViewModelTests
         var vm = New(out _, out _);
         vm.CustomInput = "30:00"; vm.Label = "long";  vm.StartCustomCommand.Execute(null);
         vm.CustomInput = "5:00";  vm.Label = "short"; vm.StartCustomCommand.Execute(null);
+        vm.SelectedTabIndex = 1;   // the strip is for the Schedule tab; Quick timers has the hero
 
         Assert.True(vm.ShowStrip);
         Assert.Equal("Short", vm.StripTimer!.Label);
         Assert.Equal("+1 more", vm.StripExtraText);   // counts what the strip is NOT showing
+    }
+
+    // The hero on Quick timers shows the same countdown as the strip, so showing both would repeat
+    // the value on screen and report one piece of state twice to a screen reader.
+    [Fact]
+    public void Strip_yields_to_the_hero_on_the_quick_timers_tab()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.Label = "short"; vm.StartCustomCommand.Execute(null);
+
+        vm.SelectedTabIndex = 0;
+        Assert.True(vm.ShowHero);
+        Assert.False(vm.ShowStrip);
+
+        vm.SelectedTabIndex = 1;
+        Assert.False(vm.ShowHero);
+        Assert.True(vm.ShowStrip);
+    }
+
+    [Fact]
+    public void Neither_hero_nor_strip_shows_without_a_countdown()
+    {
+        var vm = New(out _, out _);
+        vm.SelectedTabIndex = 0;
+        Assert.False(vm.ShowHero);
+        Assert.False(vm.ShowStrip);
     }
 
     [Fact]
@@ -1196,5 +1223,180 @@ public class MainViewModelTests
 
         Assert.Null(vm.StripTimer);
         Assert.Contains(nameof(MainViewModel.StripTimer), raised);
+    }
+
+    // ShowHero and ShowStrip are expression-bodied (computed from StripTimer + SelectedTabIndex), so
+    // they always read live-correct regardless of whether a notification ever fired. Asserting the
+    // property values alone (as above) can't catch a deleted OnPropertyChanged call - only watching
+    // the PropertyChanged event itself can.
+    [Fact]
+    public void Switching_tabs_raises_notifications_for_hero_and_strip()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
+        vm.SelectedTabIndex = 0;
+
+        var raised = new List<string?>();
+        vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        vm.SelectedTabIndex = 1;
+
+        Assert.Contains(nameof(MainViewModel.ShowHero), raised);
+        Assert.Contains(nameof(MainViewModel.ShowStrip), raised);
+    }
+
+    [Fact]
+    public void Starting_a_countdown_raises_notifications_for_hero_and_strip()
+    {
+        var vm = New(out _, out _);
+        var raised = new List<string?>();
+        vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
+
+        Assert.Contains(nameof(MainViewModel.ShowHero), raised);
+        Assert.Contains(nameof(MainViewModel.ShowStrip), raised);
+    }
+
+    [Fact]
+    public void Cancelling_the_last_countdown_raises_notifications_for_hero_and_strip()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
+
+        var raised = new List<string?>();
+        vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        vm.CancelTimerCommand.Execute(vm.StripTimer);
+
+        Assert.Contains(nameof(MainViewModel.ShowHero), raised);
+        Assert.Contains(nameof(MainViewModel.ShowStrip), raised);
+    }
+
+    // The bar must not linger on Schedule once the last quick timer stops. Every other cancellation
+    // test above runs on the Quick timers tab, where ShowStrip is false either way and so cannot tell
+    // a working teardown from a broken one. This one stays on Schedule across the cancel: the flag has
+    // to go false AND say so, because a computed property reads correct whether or not the UI is told.
+    [Fact]
+    public void Cancelling_the_last_countdown_hides_the_strip_while_the_schedule_tab_is_showing()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
+        vm.SelectedTabIndex = 1;
+        Assert.True(vm.ShowStrip);
+
+        var raised = new List<string?>();
+        vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+        vm.CancelTimerCommand.Execute(vm.StripTimer);
+
+        Assert.False(vm.ShowStrip);
+        Assert.Null(vm.StripTimer);
+        Assert.Contains(nameof(MainViewModel.ShowStrip), raised);
+    }
+
+    // Same teardown by the other route: the timer leaves the scheduler behind the view model's back
+    // (a completion card dismissed, or the tray), and RefreshAll — what the tick loop calls — is what
+    // reaps the row. The strip must go with it rather than surviving until the next tab switch.
+    [Fact]
+    public void A_timer_reaped_by_the_tick_loop_hides_the_strip_while_the_schedule_tab_is_showing()
+    {
+        var vm = New(out _, out var sched);
+        vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
+        vm.SelectedTabIndex = 1;
+        Assert.True(vm.ShowStrip);
+
+        sched.Cancel(vm.StripTimer!.Item);   // gone from the scheduler, row not yet reaped
+        vm.RefreshAll();
+
+        Assert.Null(vm.StripTimer);
+        Assert.False(vm.ShowStrip);
+    }
+
+    [Fact]
+    public void The_strip_stays_hidden_on_the_schedule_tab_when_nothing_is_running()
+    {
+        var vm = New(out _, out _);
+        vm.SelectedTabIndex = 1;
+
+        Assert.False(vm.ShowStrip);
+        Assert.False(vm.ShowHero);
+    }
+
+    // The hero card and the Running list render the SAME collection, so the countdown was on screen
+    // twice on Quick timers - the exact duplication that justified collapsing the strip there.
+    // IsCountdownInHero is how the one row the hero borrows from drops its own numerals. The ROW
+    // stays: its buttons, label, finish time, sound tag and "next" dot are all things the hero does
+    // not carry, and a row that vanishes takes keyboard focus with it. Only the numerals go, and the
+    // ItemsSource is never re-projected (which would rebuild every container on every one-second tick).
+    [Fact]
+    public void Only_the_timer_the_hero_shows_drops_its_own_countdown()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "30:00"; vm.Label = "long";  vm.StartCustomCommand.Execute(null);
+        vm.CustomInput = "5:00";  vm.Label = "short"; vm.StartCustomCommand.Execute(null);
+
+        Assert.Same(vm.StripTimer, vm.Running[0]);
+        Assert.True(vm.Running[0].IsCountdownInHero);
+        Assert.False(vm.Running[1].IsCountdownInHero);
+        Assert.Equal(2, vm.Running.Count);   // both rows are still there - only a TextBlock hides
+    }
+
+    [Fact]
+    public void Cancelling_the_heros_timer_moves_the_countdown_mark_to_the_next_one()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "30:00"; vm.Label = "long";  vm.StartCustomCommand.Execute(null);
+        vm.CustomInput = "5:00";  vm.Label = "short"; vm.StartCustomCommand.Execute(null);
+
+        vm.CancelTimerCommand.Execute(vm.StripTimer);
+
+        var remaining = Assert.Single(vm.Running);
+        Assert.Equal("Long", remaining.Label);
+        Assert.True(remaining.IsCountdownInHero);
+    }
+
+    // Resuming a paused timer that then sorts to the front is the case that made hiding the whole row
+    // untenable: the row moved, and under the old design it collapsed with keyboard focus inside it.
+    // SortRunning reorders with Move, so the marks have to follow the reorder, not the insertion order.
+    [Fact]
+    public void Resuming_a_timer_that_sorts_to_the_front_moves_the_countdown_mark_with_it()
+    {
+        var vm = New(out _, out _);
+        vm.StartPresetCommand.Execute(5);    // soonest, so the hero borrows this one first
+        vm.StartPresetCommand.Execute(60);
+        var soon = vm.Running[0];
+        var late = vm.Running[1];
+        Assert.True(soon.IsCountdownInHero);
+
+        soon.PauseResumeCommand.Execute(null);   // paused timers park below the active ones
+        vm.RefreshAll();
+
+        Assert.Same(late, vm.Running[0]);
+        Assert.True(late.IsCountdownInHero);
+        Assert.False(soon.IsCountdownInHero);
+
+        soon.PauseResumeCommand.Execute(null);   // resumed, and it finishes soonest again
+        vm.RefreshAll();
+
+        Assert.Same(soon, vm.Running[0]);
+        Assert.True(soon.IsCountdownInHero);
+        Assert.False(late.IsCountdownInHero);
+        Assert.Equal(2, vm.Running.Count);       // reordered in place: neither row was ever removed
+    }
+
+    [Fact]
+    public void No_row_drops_its_countdown_once_nothing_is_running()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
+        var only = vm.Running[0];
+        Assert.True(only.IsCountdownInHero);
+
+        vm.CancelTimerCommand.Execute(only);
+
+        Assert.Null(vm.StripTimer);
+        Assert.Empty(vm.Running);
+        Assert.False(only.IsCountdownInHero);   // the mark leaves with the row, not after it
     }
 }

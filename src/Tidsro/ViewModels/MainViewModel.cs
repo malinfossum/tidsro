@@ -43,6 +43,14 @@ public partial class MainViewModel : ObservableObject
     public bool ShowCustomDays => AlarmRepeat == RepeatOption.Custom;
     partial void OnAlarmRepeatChanged(RepeatOption value) => OnPropertyChanged(nameof(ShowCustomDays));
 
+    // Both derived flags depend on the selected tab, and CommunityToolkit only raises
+    // SelectedTabIndex itself.
+    partial void OnSelectedTabIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(ShowHero));
+        OnPropertyChanged(nameof(ShowStrip));
+    }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasAnythingToClear))]
     private string? _missedNote;
@@ -76,7 +84,15 @@ public partial class MainViewModel : ObservableObject
     /// IsNext-based strip would go blank the moment every timer was paused.</summary>
     public TimerItemViewModel? StripTimer => Running.FirstOrDefault();
 
-    public bool ShowStrip => StripTimer is not null;
+    /// <summary>The hero countdown at the top of Quick timers. Same timer the strip would show.</summary>
+    public bool ShowHero => StripTimer is not null && SelectedTabIndex == QuickTimersTab;
+
+    /// <summary>The bottom strip exists to keep a running timer visible from the OTHER tab. On Quick
+    /// timers the hero already shows it, and rendering both repeats the value on screen and reports
+    /// one piece of state twice to a screen reader.</summary>
+    public bool ShowStrip => StripTimer is not null && SelectedTabIndex != QuickTimersTab;
+
+    private const int QuickTimersTab = 0;
 
     /// <summary>The timers the strip is not showing, or null when there is only one.</summary>
     public string? StripExtraText => Running.Count > 1 ? $"+{Running.Count - 1} more" : null;
@@ -89,7 +105,30 @@ public partial class MainViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(StripTimer));
         OnPropertyChanged(nameof(ShowStrip));
+        OnPropertyChanged(nameof(ShowHero));
         OnPropertyChanged(nameof(StripExtraText));
+        MarkHero();
+    }
+
+    /// <summary>Flag the one timer whose countdown the hero card is already rendering, so its row in
+    /// the list below can drop its own numerals. The hero and the Running list are bound to the SAME
+    /// collection, so without this the countdown sits on screen twice on Quick timers — the
+    /// duplication that collapsing the strip there was meant to prevent.
+    ///
+    /// Only the numerals go. The row itself stays, with its pause/reset/cancel buttons bound to their
+    /// own item, its label, its finish time, its sound tag and its IsNext dot. Hiding the whole row
+    /// cost all of that, and it collapsed a focusable subtree out from under the caret whenever a
+    /// resumed timer sorted to the front — the failure MainWindow's RescueFocusFromHiddenPanel exists
+    /// to prevent for panels. A TextBlock cannot hold focus, so hiding only that is inert.
+    ///
+    /// Marking at the item level is deliberate: re-projecting the ItemsSource as Running.Skip(1) would
+    /// hand the ItemsControl a new collection on every one-second tick, rebuilding every container and
+    /// restarting the rows' fade-in. Only Running[0] can be the hero's, so no tab check is needed —
+    /// the hero and the list live in the same panel and appear together.</summary>
+    private void MarkHero()
+    {
+        var hero = StripTimer;
+        foreach (var vm in Running) vm.IsCountdownInHero = ReferenceEquals(vm, hero);
     }
 
     /// <summary>True when Settings' "Clear all alarms" would actually change anything: armed alarms,
@@ -103,7 +142,15 @@ public partial class MainViewModel : ObservableObject
         _sound = sound;
         _selectedSound = defaultSound;   // seed the picker from the global default; per-timer override lives here after
         _alarmSound = defaultSound;   // the alarm sound picker starts at the global default too
-        Running.CollectionChanged += (_, _) => RefreshStrip();
+        Running.CollectionChanged += (_, e) =>
+        {
+            // A row removed from the collection is not the hero's, and MarkHero only walks what is
+            // still in Running — so unmark the departing rows here. (Clear() reports no OldItems,
+            // but it discards every row anyway.)
+            if (e.OldItems is not null)
+                foreach (TimerItemViewModel row in e.OldItems) row.IsCountdownInHero = false;
+            RefreshStrip();
+        };
     }
 
     // The Settings "default sound" changed: move the picker to match (last edit wins with a manual per-timer pick).

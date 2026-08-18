@@ -39,6 +39,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "..\dist\{#AppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\src\Tidsro\Assets\fonts\OFL.txt"; DestDir: "{app}"; DestName: "OFL-IBMPlex.txt"; Flags: ignoreversion
 
 [Registry]
 ; Records where we installed. The app reads this to tell the installed copy from a dev build or a
