@@ -1,4 +1,4 @@
-<Window x:Class="Tidsro.Views.MainWindow"
+﻿<Window x:Class="Tidsro.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
@@ -30,7 +30,19 @@
     <Grid x:Name="Panels" Grid.Row="1" Margin="{StaticResource SectionGap}">
       <ScrollViewer VerticalScrollBarVisibility="Auto"
                     Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisible}, ConverterParameter=0}">
-        <StackPanel x:Name="QuickPanel">
+        <!-- ONE MEASURE for the whole tab. The cap lives here, on the content panel, so the composer
+             card and every alarm row share a maximum width and centre together as one column — the card
+             surface hugs its contents and the leftover space is PAGE, not card.
+
+             This is the third layer this cap was tried on, and the first that looks intentional:
+             capping the COLUMN pinned the fields left with dead space beside them; capping the FORM
+             left a full-width card with a small form floating inside it. HorizontalAlignment stays
+             Stretch on purpose — a Stretch element constrained by MaxWidth is CENTRED by WPF, which is
+             the whole mechanism. Below 502 everything fills the window exactly as before.
+
+             502 = the 470 the form wants + 2x16 CardPadding. The tab strip and the bottom bars sit
+             outside this panel and stay full width, so the window still reads as a window. -->
+        <StackPanel MaxWidth="502" x:Name="QuickPanel">
 
         <!-- Hero countdown. The accessible name lives on the caption TextBlock: a Border has no
              automation peer. Deliberately NOT a live region - a countdown that announces every
@@ -239,7 +251,19 @@
 
       <ScrollViewer VerticalScrollBarVisibility="Auto"
                     Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisible}, ConverterParameter=1}">
-        <StackPanel x:Name="DayPanel">
+        <!-- ONE MEASURE for the whole tab. The cap lives here, on the content panel, so the composer
+             card and every alarm row share a maximum width and centre together as one column — the card
+             surface hugs its contents and the leftover space is PAGE, not card.
+
+             This is the third layer this cap was tried on, and the first that looks intentional:
+             capping the COLUMN pinned the fields left with dead space beside them; capping the FORM
+             left a full-width card with a small form floating inside it. HorizontalAlignment stays
+             Stretch on purpose — a Stretch element constrained by MaxWidth is CENTRED by WPF, which is
+             the whole mechanism. Below 502 everything fills the window exactly as before.
+
+             502 = the 470 the form wants + 2x16 CardPadding. The tab strip and the bottom bars sit
+             outside this panel and stay full width, so the window still reads as a window. -->
+        <StackPanel MaxWidth="502" x:Name="DayPanel">
 
         <Grid>
           <Border Style="{StaticResource CardShadowCaster}"/>
@@ -247,7 +271,7 @@
                   CornerRadius="{StaticResource RadiusMd}" Padding="16">
           <StackPanel>
             <Grid>
-              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+<Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
               <TextBox Grid.Column="0" Width="90" x:Name="AlarmTimeBox"
                        Text="{Binding AlarmTimeInput, UpdateSourceTrigger=PropertyChanged}"
                        AutomationProperties.Name="Time" ToolTip="24-hour time, e.g. 14:30" Tag="14:30">
@@ -340,7 +364,7 @@
                   <Button DockPanel.Dock="Right" Content="&#xE711;"
                           Command="{Binding DataContext.DeleteAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                           CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                          AutomationProperties.Name="{Binding DeleteLabel}" ToolTip="{Binding DeleteLabel}" Style="{StaticResource QuietAction}"/>
+                          AutomationProperties.Name="{Binding DeleteLabel}" ToolTip="{Binding DeleteLabel}" Style="{StaticResource DangerAction}"/>
                   <Button DockPanel.Dock="Right" Content="&#xE70F;"
                           Command="{Binding DataContext.BeginEditAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                           CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
