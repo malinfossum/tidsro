@@ -11,7 +11,7 @@ All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
 ### Changed
 - **A new look** — near-black surfaces with a single brass accent, drawn from the app's own icon. Cards are separated by shadow and a lit top edge rather than by outlines, text fields read as recessed into the card they sit on, and the scrollbar is no longer the stock Windows one.
-- **The window has a measure** — widen Tidsro and the content now stops at a comfortable width and centres, instead of stretching a dropdown that says "Once" across the whole screen.
+- **The window has a measure** — widen Tidsro and the content takes a steady share of the window, centred, instead of stretching a dropdown that says "Once" across the whole screen or freezing at one width while the page grows around it.
 - **Deleting is easier to aim at** — the delete button turns red as you point at it, and only then.
 
 ## [1.7.0] — 2026-08-11
