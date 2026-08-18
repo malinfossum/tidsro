@@ -2,6 +2,18 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
+## [1.8.0] — 2026-08-18
+
+### Added
+- **Tabs** — the window is split into **Quick timers** and **Schedule** instead of one long scrolling page, so the half you are not using stays out of the way. A slim strip along the bottom keeps any running timer visible from the Schedule tab, and Tidsro reopens on the tab you left it on.
+- **A countdown worth looking at** — the running timer is lifted out of the list into a card of its own, with the finish time beside it. The next alarm gets the same treatment on the Schedule tab.
+- **Its own typeface** — IBM Plex Sans and IBM Plex Mono ship inside the app, so Tidsro looks the same on every machine. Times are monospaced, which stops the digits shuffling sideways as a timer counts down.
+
+### Changed
+- **A new look** — near-black surfaces with a single brass accent, drawn from the app's own icon. Cards are separated by shadow and a lit top edge rather than by outlines, text fields read as recessed into the card they sit on, and the scrollbar is no longer the stock Windows one.
+- **The window has a measure** — widen Tidsro and the content now stops at a comfortable width and centres, instead of stretching a dropdown that says "Once" across the whole screen.
+- **Deleting is easier to aim at** — the delete button turns red as you point at it, and only then.
+
 ## [1.7.0] — 2026-08-11
 
 ### Added
@@ -59,6 +71,7 @@ Clock-time alarms — a "Your day" agenda with one-shot fire-at-HH:MM alarms, op
 ## [1.0.0] — 2026-06-16
 First release — countdown timers with presets or custom durations, pause/resume, reset, and per-timer sounds.
 
+[1.8.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.8.0
 [1.7.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.7.0
 [1.6.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.6.0
 [1.5.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.5.0
