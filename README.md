@@ -9,7 +9,7 @@ A calm, dark-mode-first desktop timer for Windows — countdown timers and clock
 > **Tidsro** is Norwegian: *tid* (time) + *ro* (calm / peace) — roughly *"calm time."* The name is the whole idea: a timer that's visible when you need it and invisible when you don't.
 
 <p align="center">
-  <img src="docs/screenshots/main-window.png" alt="Tidsro main window on the Quick timers tab: two timers counting down, each showing its remaining time alongside the wall-clock time it will finish (e.g. done 00:34), with a Schedule tab alongside for weekday alarms, each row with an on/off toggle and one alarm switched off and dimmed at the bottom, in a dark theme with gold accents." width="720">
+  <img src="docs/screenshots/main-window.png" alt="Tidsro on the Quick timers tab: the running countdown shown large in its own card (29:42, done 19:52), preset buttons for 5, 30, and 60 minutes, fields for a custom duration and label with a sound picker, and two more timers stacked below — near-black surfaces with a single gold accent." width="560">
 </p>
 
 ## Who it's for
@@ -51,11 +51,16 @@ Launching Tidsro opens its window — it remembers where you last placed it and 
   - Multiple finished cards stack upward and dismiss independently.
 
 <p align="center">
-  <img src="docs/screenshots/completion-card.png" alt="A finished timer shown as a small card in the corner with +5 min, Restart, and Dismiss buttons." width="320"><br>
+  <img src="docs/screenshots/completion-card.png" alt="A finished timer shown as a small dark card reading complete, Laundry done, with +5 min, Restart, and Dismiss buttons." width="320"><br>
   <em>A finished timer surfaces as a calm corner card — it never steals focus.</em>
 </p>
 
 The **Schedule** is its own tab next to Quick timers, and a compact strip below the tab content shows whatever is counting down, whichever tab you're on. Type a time — `14:30`, or shorthand like `9`, `930`, or `1430` (24-hour) — an optional label, choose a sound, set **Repeat** (Once, or a weekday set), and click **Add** (or press **Enter**). The alarm is saved immediately. Turn on **Warn me 5 minutes before** for a quiet heads-up ahead of the alarm.
+
+<p align="center">
+  <img src="docs/screenshots/schedule.png" alt="The Schedule tab: a form for adding an alarm (time, label, sound, repeat, and a pre-alarm warning toggle), three weekday alarms below with gold on/off toggles, and a slim strip along the bottom showing a timer still counting down on the other tab (Running 00:10, Laundry done)." width="560"><br>
+  <em>The Schedule — and the strip along the bottom keeping a running timer in view.</em>
+</p>
 
 - A one-shot alarm fires once; a recurring alarm repeats on its days, and the Schedule stays sorted by what's next.
 - If Tidsro isn't running when an alarm time passes, it fires within a 5-minute grace window on next launch.
@@ -65,7 +70,7 @@ The **Schedule** is its own tab next to Quick timers, and a compact strip below 
 - When an alarm fires, the same quiet bottom-right card appears, with **Snooze +5** (re-arms it 5 minutes later in the Schedule) and **Dismiss**.
 
 <p align="center">
-  <img src="docs/screenshots/alarm-dialog.png" alt="The Edit alarm dialog: time, label, sound picker, repeat, and a gold toggle switch for the optional 5-minute pre-alarm warning." width="346"><br>
+  <img src="docs/screenshots/alarm-dialog.png" alt="The Edit alarm dialog: an 08:00 alarm labelled School start, with a sound picker on Piano jingle, repeat set to Weekdays, the 5-minute pre-alarm warning switched on with a gold toggle, and Save and Cancel buttons." width="344"><br>
   <em>Editing an alarm — per-alarm sound, repeat, and the optional 5-minute warning.</em>
 </p>
 
