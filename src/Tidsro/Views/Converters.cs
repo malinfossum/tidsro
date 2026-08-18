@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 using Tidsro.Models;
@@ -67,6 +67,27 @@ public sealed class IndexToVisibleConverter : IValueConverter
         && selected == own
             ? Visibility.Visible
             : Visibility.Collapsed;
+
+    public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
+}
+
+/// <summary>The content measure for a tab panel, from the width available to it.
+/// A fixed MaxWidth made a wide window feel like it was ignoring the resize: the column froze at
+/// 502 while the page grew around it. Instead the column takes a steady share of the window once
+/// there is room to spare - never narrower than Floor (the width the composer form wants plus its
+/// card padding), never wider than Ceiling (past which the alarm rows read as stretched again).
+/// Below the floor the clamp returns Floor, which is wider than what is available, so the panel
+/// simply fills the window exactly as it did before the measure existed.</summary>
+public sealed class WidthToMeasureConverter : IValueConverter
+{
+    public const double Floor = 502;
+    public const double Ceiling = 720;
+    public const double Share = 0.66;
+
+    public object Convert(object? v, Type t, object? p, CultureInfo c) =>
+        v is double available && !double.IsNaN(available)
+            ? Math.Clamp(available * Share, Floor, Ceiling)
+            : Floor;
 
     public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
 }

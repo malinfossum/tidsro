@@ -38,11 +38,14 @@
              capping the COLUMN pinned the fields left with dead space beside them; capping the FORM
              left a full-width card with a small form floating inside it. HorizontalAlignment stays
              Stretch on purpose — a Stretch element constrained by MaxWidth is CENTRED by WPF, which is
-             the whole mechanism. Below 502 everything fills the window exactly as before.
+             the whole mechanism.
 
-             502 = the 470 the form wants + 2x16 CardPadding. The tab strip and the bottom bars sit
-             outside this panel and stay full width, so the window still reads as a window. -->
-        <StackPanel MaxWidth="502" x:Name="QuickPanel">
+             The measure is PROPORTIONAL, not fixed - WidthToMeasureConverter clamps 66% of the
+             available width between 502 (the form width plus card padding) and 720. A fixed cap
+             made a wide window feel ignored: the column froze while the page grew around it. The
+             tab strip and the bottom bars sit outside this panel and stay full width, so the
+             window still reads as a window. -->
+        <StackPanel MaxWidth="{Binding ActualWidth, ElementName=Panels, Converter={StaticResource WidthToMeasure}}" x:Name="QuickPanel">
 
         <!-- Hero countdown. The accessible name lives on the caption TextBlock: a Border has no
              automation peer. Deliberately NOT a live region - a countdown that announces every
@@ -259,11 +262,14 @@
              capping the COLUMN pinned the fields left with dead space beside them; capping the FORM
              left a full-width card with a small form floating inside it. HorizontalAlignment stays
              Stretch on purpose — a Stretch element constrained by MaxWidth is CENTRED by WPF, which is
-             the whole mechanism. Below 502 everything fills the window exactly as before.
+             the whole mechanism.
 
-             502 = the 470 the form wants + 2x16 CardPadding. The tab strip and the bottom bars sit
-             outside this panel and stay full width, so the window still reads as a window. -->
-        <StackPanel MaxWidth="502" x:Name="DayPanel">
+             The measure is PROPORTIONAL, not fixed - WidthToMeasureConverter clamps 66% of the
+             available width between 502 (the form width plus card padding) and 720. A fixed cap
+             made a wide window feel ignored: the column froze while the page grew around it. The
+             tab strip and the bottom bars sit outside this panel and stay full width, so the
+             window still reads as a window. -->
+        <StackPanel MaxWidth="{Binding ActualWidth, ElementName=Panels, Converter={StaticResource WidthToMeasure}}" x:Name="DayPanel">
 
         <Grid>
           <Border Style="{StaticResource CardShadowCaster}"/>
