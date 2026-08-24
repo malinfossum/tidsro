@@ -222,4 +222,38 @@ public class PersistenceServiceTests : IDisposable
         svc.Save(new TidsroData { Settings = new AppSettings { SelectedTab = 1 } });
         Assert.Equal(1, svc.Load().Settings!.SelectedTab);
     }
+
+    [Fact]
+    public void WriteTo_does_not_delete_a_corrupt_file_beside_the_destination()
+    {
+        var target = Path.Combine(_dir, "export.json");
+        var neighbour = target + ".corrupt";
+        File.WriteAllText(neighbour, "someone else's file");
+
+        PersistenceService.WriteTo(target, TidsroData.Defaults());
+
+        Assert.True(File.Exists(target));
+        Assert.True(File.Exists(neighbour));   // export must not clear quarantine outside AppData
+    }
+
+    [Fact]
+    public void WriteTo_leaves_no_temp_file_when_the_write_fails()
+    {
+        // A directory where the file should go: the write throws, and the temp must not survive.
+        var target = Path.Combine(_dir, "export.json");
+        Directory.CreateDirectory(target);
+
+        Assert.ThrowsAny<Exception>(() => PersistenceService.WriteTo(target, TidsroData.Defaults()));
+        Assert.False(File.Exists(target + ".tmp"));
+    }
+
+    [Fact]
+    public void Save_still_clears_the_quarantine_copy()
+    {
+        File.WriteAllText(_path + ".corrupt", "quarantined");
+
+        new PersistenceService(_path).Save(TidsroData.Defaults());
+
+        Assert.False(File.Exists(_path + ".corrupt"));   // a good save retires the recovery copy
+    }
 }
