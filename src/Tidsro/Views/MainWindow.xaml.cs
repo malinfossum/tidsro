@@ -80,6 +80,25 @@ public partial class MainWindow : Window
         Top = (work.Height - Height) / 2 + work.Top;
     }
 
+    /// <summary>Move an already-visible window to imported coordinates. Writing the settings alone is
+    /// not enough: OnClosing writes the current placement back on every close, so the restore would
+    /// silently revert. Off-screen coordinates fall back to centring — the same guard the launch path
+    /// applies, for the same reason (an unplugged monitor or a lower resolution).</summary>
+    public void ApplyPlacement(AppSettings settings)
+    {
+        if (settings.WindowWidth is double w) Width = w;
+        if (settings.WindowHeight is double h) Height = h;
+        if (settings.WindowLeft is double left && settings.WindowTop is double top && IsOnScreen(left, top))
+        {
+            Left = left;
+            Top = top;
+        }
+        else
+        {
+            ResetPlacement();
+        }
+    }
+
     // Guard against a saved position stranded off-screen by an unplugged monitor or lower resolution.
     private static bool IsOnScreen(double left, double top)
     {

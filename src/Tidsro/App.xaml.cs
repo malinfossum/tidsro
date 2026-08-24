@@ -270,7 +270,8 @@ public partial class App : Application
                     // Also returns the live view to the first tab; clearing the stored value alone
                     // would leave the reset invisible until the next launch.
                     resetWindowPlacement: () => { _main?.ResetPlacement(); _mainVm.SelectedTabIndex = 0; },
-                    confirm: confirm)),
+                    confirm: confirm,
+                    dataPorts: BuildDataPorts())),
             editFactory, _settings, SaveData);
         Application.Current.MainWindow = _main;
         _main.Show();
@@ -290,16 +291,61 @@ public partial class App : Application
         Shutdown();
     }
 
-    private void SaveData()
+    // The data dialogs belong to the Settings window while it is up, so they centre on it and the
+    // modal chain stays intact.
+    private Window DataDialogOwner =>
+        Application.Current.Windows.OfType<SettingsWindow>().FirstOrDefault() ?? (Window)_main!;
+
+    private DataPorts BuildDataPorts() => new(
+        Dialogs: new FileDialogService(),
+        Transfer: new DataTransferService(PersistenceService.DefaultPath),
+        BuildData: BuildData,
+        AskImportChoice: message => ChoiceDialog.AskImport(DataDialogOwner, message),
+        ApplyImport: ApplyImport,
+        ShowMessage: (title, message) => ChoiceDialog.ShowMessage(DataDialogOwner, title, message),
+        Today: () => DateTime.Today);
+
+    // Replacing the schedule raises AlarmsChanged, which persists through the existing SaveData path.
+    private void ApplyImport(TidsroData data, bool includeSettings)
+    {
+        _mainVm.ReplaceAllAlarms(data.Alarms, data.RecurringAlarms);
+        if (!includeSettings || data.Settings is not AppSettings imported) return;
+
+        // Startup goes through the service, never the field alone — a checkbox that disagrees with the
+        // HKCU Run key is the class of bug PR #16 fixed.
+        var startup = new StartupService(StartupService.CurrentExePath);
+        if (imported.LaunchAtStartup) startup.Enable(); else startup.Disable();
+
+        _settings.LaunchAtStartup = imported.LaunchAtStartup;
+        _settings.DefaultSound = imported.DefaultSound;
+        _settings.SelectedTab = imported.SelectedTab;
+        _settings.WindowLeft = imported.WindowLeft;
+        _settings.WindowTop = imported.WindowTop;
+        _settings.WindowWidth = imported.WindowWidth;
+        _settings.WindowHeight = imported.WindowHeight;
+
+        _mainVm.SetDefaultSound(imported.DefaultSound);
+        _mainVm.SelectedTabIndex = imported.SelectedTab;
+        _main?.ApplyPlacement(imported);   // the live window, or OnClosing overwrites the restore
+        SaveData();
+    }
+
+    // The live state as a document. Export uses this too, so an export still captures good data when
+    // saves have been failing — which is exactly when someone reaches for a backup.
+    private TidsroData BuildData()
     {
         var armed = _scheduler.Alarms;
-        var data = new TidsroData
+        return new TidsroData
         {
             Settings = _settings,
             Alarms = armed.Where(a => a.TriggerType == TriggerType.ClockTime).Select(ToRecord).ToList(),
             RecurringAlarms = armed.Where(a => a.TriggerType == TriggerType.Recurring).Select(ToRecurringRecord).ToList(),
         };
-        try { _persistence.Save(data); }
+    }
+
+    private void SaveData()
+    {
+        try { _persistence.Save(BuildData()); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // Log() returns true for a fresh error, false for a duplicate suppressed within its 5 s

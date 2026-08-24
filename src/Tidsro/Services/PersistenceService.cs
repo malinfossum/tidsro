@@ -46,12 +46,29 @@ public sealed class PersistenceService
 
     public void Save(TidsroData data)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-        var tmp = _path + ".tmp";
-        File.WriteAllText(tmp, JsonSerializer.Serialize(data, Options));   // flushed on close
-        if (File.Exists(_path)) File.Replace(tmp, _path, null);            // atomic, same volume
-        else File.Move(tmp, _path);
+        WriteTo(_path, data);
         ClearQuarantine();   // a good save means any stale .corrupt recovery copy is no longer needed
+    }
+
+    /// <summary>The atomic write on its own: create the directory, write a temp file, replace. Export
+    /// uses this rather than <see cref="Save"/> — Save also clears the quarantine copy, which is right
+    /// for our own data file and quietly destructive against a path the user chose.</summary>
+    public static void WriteTo(string path, TidsroData data)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        var tmp = path + ".tmp";
+        try
+        {
+            File.WriteAllText(tmp, JsonSerializer.Serialize(data, Options));   // flushed on close
+            if (File.Exists(path)) File.Replace(tmp, path, null);              // atomic, same volume
+            else File.Move(tmp, path);
+        }
+        catch
+        {
+            // Never leave a half-written temp beside a file the user chose.
+            try { if (File.Exists(tmp)) File.Delete(tmp); } catch { /* best effort */ }
+            throw;
+        }
     }
 
     private void Quarantine()

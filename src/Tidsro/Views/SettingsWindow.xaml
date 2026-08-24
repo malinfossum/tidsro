@@ -22,6 +22,14 @@
                FontWeight="SemiBold"/>
     <TextBlock Text="These take effect immediately. Cancel will not undo them."
                TextWrapping="Wrap" Margin="0,0,0,10" Foreground="{StaticResource Text}"/>
+    <Button Content="Export data…" Style="{StaticResource QuietAction}"
+            HorizontalAlignment="Left" MinWidth="150" Margin="0,0,0,8"
+            Command="{Binding ExportDataCommand}"
+            AutomationProperties.Name="Export data to a file"/>
+    <Button Content="Import data…" Style="{StaticResource QuietAction}"
+            HorizontalAlignment="Left" MinWidth="150" Margin="0,0,0,8"
+            Command="{Binding ImportDataCommand}"
+            AutomationProperties.Name="Import data from a file"/>
     <Button Content="Clear all alarms" Style="{StaticResource QuietAction}"
             HorizontalAlignment="Left" MinWidth="150" Margin="0,0,0,8"
             Command="{Binding ClearAlarmsCommand}"

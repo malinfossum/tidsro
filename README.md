@@ -20,7 +20,7 @@ Anyone who works or studies at a computer and wants to hold their focus through 
 
 ## Status
 
-**Shipped, with versioned [releases](https://github.com/malinfossum/tidsro/releases/latest).** Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms** — fire once at an HH:MM time, or repeat on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms can be **switched off without deleting** (kept and parked at the bottom until switched back on), edited in a dialog, and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**.
+**Shipped, with versioned [releases](https://github.com/malinfossum/tidsro/releases/latest).** Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms** — fire once at an HH:MM time, or repeat on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms can be **switched off without deleting** (kept and parked at the bottom until switched back on), edited in a dialog, and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**, and your alarms and settings can be **exported to a file and imported back**.
 
 See the [changelog](CHANGELOG.md) for what's new in each release.
 
@@ -76,9 +76,19 @@ The **Schedule** is its own tab next to Quick timers, and a compact strip below 
 
 - Open **Settings** (bottom-left of the main window) to toggle launch-at-startup and choose a default sound. Changes apply when you click **Save**; **Cancel**, **Esc**, or closing the window discards them.
 
+### Backup and restore
+
+**Settings → Data → Export data…** writes everything — your alarms *and* your settings — to a JSON file wherever you choose. **Import data…** reads one back, and asks first whether to restore only the alarms or everything, so a file from another machine can't move your window or change your launch-at-startup setting unless you say so.
+
+Before an import replaces anything, Tidsro copies your current data to `%AppData%\Tidsro\data-before-import.json`. If an import turns out to be the wrong file, import *that* file to get back where you were.
+
+There is only ever one such copy, and **every import replaces it** — so if an import wasn't what you wanted, restore it before importing anything else. Two imports in a row and the copy describes the first import, not your original data. If you want a backup that stays put, export one.
+
+An export is an ordinary, unencrypted JSON file — your alarm labels are readable by anything on the machine. Windows also redirects **Documents** into OneDrive on many installs, so saving there uploads a copy; pick a local folder if you would rather it stayed on the machine.
+
 ## Roadmap
 
-- Cloud sync / backup
+- Weekly timetable view
 
 ## Stack
 
