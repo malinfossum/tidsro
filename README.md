@@ -82,6 +82,8 @@ The **Schedule** is its own tab next to Quick timers, and a compact strip below 
 
 Before an import replaces anything, Tidsro copies your current data to `%AppData%\Tidsro\data-before-import.json`. If an import turns out to be the wrong file, import *that* file to get back where you were.
 
+There is only ever one such copy, and **every import replaces it** — so if an import wasn't what you wanted, restore it before importing anything else. Two imports in a row and the copy describes the first import, not your original data. If you want a backup that stays put, export one.
+
 An export is an ordinary, unencrypted JSON file — your alarm labels are readable by anything on the machine. Windows also redirects **Documents** into OneDrive on many installs, so saving there uploads a copy; pick a local folder if you would rather it stayed on the machine.
 
 ## Roadmap

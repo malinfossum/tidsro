@@ -259,6 +259,12 @@ force-kill discards unsaved in-memory edits.
   README says "no accounts, no network — your data stays on your machine", that is worth stating
   outright. Documented rather than solved in code — the user picks the path, and encrypting a file
   they must be able to restore without a password would be theatre.
+- **Two imports in a row destroy the original pre-import copy.** The snapshot is a single slot, so the
+  second import overwrites the first import's copy and the "undo" then describes the first import
+  rather than the user's own data. Found in the manual pass on 2026-08-24, where it was easy to hit on
+  the first try. Accepted rather than fixed: the alternative is the rolling rotation rejected above.
+  The choice dialog and the README now say the copy is replaced by each import, so the user is told at
+  the moment they can still act on it. Revisit only if it bites in real use.
 - **An alarm can fire while the import dialogs are open.** The 250 ms tick keeps running through the
   Open dialog and the choice dialog, so an alarm can raise a completion popup over the modal, add a
   missed note, and trigger a `SaveData` that the import then wipes. Accepted: nothing is lost that

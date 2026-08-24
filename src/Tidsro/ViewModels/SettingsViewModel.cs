@@ -122,7 +122,8 @@ public partial class SettingsViewModel : ObservableObject
         var choice = _data.AskImportChoice(
             $"This file holds {Plural(imported.Alarms.Count)} and "
           + $"{recurring} recurring {(recurring == 1 ? "alarm" : "alarms")}. "
-          + "Your current data is copied to data-before-import.json first.");
+          + "Your current data is copied to data-before-import.json first — "
+          + "each import replaces that copy, so restore it before importing again.");
         if (choice == ImportChoice.Cancel) return;   // no snapshot: nothing is being replaced
 
         _data.Transfer.SnapshotBeforeImport();

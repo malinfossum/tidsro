@@ -6,7 +6,7 @@ All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
 ### Added
 - **Back up your alarms and restore them** — a new *Export data…* in **Settings ▸ Data** writes everything, alarms and settings alike, to a JSON file wherever you choose. *Import data…* reads one back and asks first whether to restore only the alarms or everything, so a file from another machine can't quietly move your window or flip launch-at-startup.
-- **A way back from a mistaken import** — before an import replaces anything, your current data is copied to `%AppData%\Tidsro\data-before-import.json`. Import that file to undo.
+- **A way back from a mistaken import** — before an import replaces anything, your current data is copied to `%AppData%\Tidsro\data-before-import.json`. Import that file to undo. There is only one such copy and each import replaces it, so restore it before importing anything else.
 
 ## [2.0.0] — 2026-08-18
 
