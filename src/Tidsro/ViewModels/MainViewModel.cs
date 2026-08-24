@@ -373,6 +373,58 @@ public partial class MainViewModel : ObservableObject
         Announce("All alarms cleared");
     }
 
+    /// <summary>Replace the whole schedule with an imported one. This is ClearAllAlarms with an arming
+    /// pass on the end, and it keeps that method's three invariants: walk the scheduler rather than the
+    /// derived view collections (SaveData persists from the scheduler, so anything the agenda has not
+    /// caught up with would survive and be written straight back), disarm before emptying so nothing
+    /// can fire from the tick in between, and close open cards first — an open card's Snooze would
+    /// re-arm into the set we are about to discard.</summary>
+    public void ReplaceAllAlarms(IEnumerable<AlarmRecord> alarms, IEnumerable<RecurringAlarmRecord> recurring)
+    {
+        CommitPendingDelete();                 // settle any outstanding undo first
+        ClosePopupsRequested?.Invoke(this, EventArgs.Empty);
+
+        foreach (var item in _scheduler.Running.ToList()) _scheduler.Cancel(item);
+        foreach (var item in _scheduler.Alarms.ToList()) _scheduler.Cancel(item);
+
+        Running.Clear();
+        Alarms.Clear();
+        MissedNote = null;
+
+        var armed = 0;
+        foreach (var r in alarms)
+        {
+            // A residual bad record must never abort the import — the same posture as launch.
+            try
+            {
+                _scheduler.ArmClockAlarm(LocalToOffset(r.FireAt), r.Label, r.Sound, r.Id, r.WarnBefore, r.Enabled);
+                armed++;
+            }
+            catch { /* skip it and keep going */ }
+        }
+
+        foreach (var r in recurring)
+        {
+            try
+            {
+                _scheduler.ArmRecurringAlarm(r.Hour, r.Minute, r.Days, r.Label, r.Sound, r.Id,
+                    LocalToOffset(r.NextFireAt), r.WarnBefore, r.Enabled);
+                armed++;
+            }
+            catch { /* skip it and keep going */ }
+        }
+
+        RebuildAgenda();
+        OnPropertyChanged(nameof(IsDayEmpty));
+        AlarmsChanged?.Invoke(this, EventArgs.Empty);
+        Announce(armed == 1 ? "Imported 1 alarm" : $"Imported {armed} alarms");
+    }
+
+    // A persisted alarm time is a wall-clock local time; tag it Local before lifting to DateTimeOffset
+    // so the scheduler compares against the right instant. Mirrors App's loader.
+    private static DateTimeOffset LocalToOffset(DateTime local) =>
+        new(DateTime.SpecifyKind(local, DateTimeKind.Local));
+
     [RelayCommand]
     private void ToggleAlarm(AlarmItemViewModel? row)
     {

@@ -1399,4 +1399,113 @@ public class MainViewModelTests
         Assert.Empty(vm.Running);
         Assert.False(only.IsCountdownInHero);   // the mark leaves with the row, not after it
     }
+
+    // --- ReplaceAllAlarms (import) ---------------------------------------------------------------
+
+    private static AlarmRecord ImportedAlarm(string? label = null) => new()
+    {
+        Id = Guid.NewGuid(),
+        FireAt = new DateTime(2026, 1, 1, 18, 0, 0, DateTimeKind.Local),
+        Label = label,
+        Sound = SoundChoice.None,
+        Enabled = true,
+    };
+
+    private static RecurringAlarmRecord ImportedRecurring(int hour, string? label = null) => new()
+    {
+        Id = Guid.NewGuid(),
+        Hour = hour,
+        Minute = 0,
+        Days = Weekdays.Mon,
+        Label = label,
+        Sound = SoundChoice.None,
+        NextFireAt = new DateTime(2026, 1, 5, 8, 0, 0, DateTimeKind.Local),
+        Enabled = true,
+    };
+
+    [Fact]
+    public void ReplaceAllAlarms_clears_the_scheduler_before_arming_the_imported_set()
+    {
+        var vm = New(out var clock, out var sched);
+        sched.ArmClockAlarm(clock.Now.AddHours(1), "old", SoundChoice.None);
+        vm.RefreshAll();
+
+        vm.ReplaceAllAlarms(new[] { ImportedAlarm("new") }, Array.Empty<RecurringAlarmRecord>());
+
+        var armed = Assert.Single(sched.Alarms);
+        Assert.Equal("new", armed.Label);   // the old alarm left the scheduler, not just the view
+    }
+
+    [Fact]
+    public void ReplaceAllAlarms_cancels_running_countdowns_too()
+    {
+        var vm = New(out _, out var sched);
+        vm.CustomInput = "5:00";
+        vm.StartCustomCommand.Execute(null);
+
+        vm.ReplaceAllAlarms(Array.Empty<AlarmRecord>(), Array.Empty<RecurringAlarmRecord>());
+
+        Assert.Empty(sched.Running);
+        Assert.Empty(vm.Running);
+    }
+
+    [Fact]
+    public void ReplaceAllAlarms_closes_open_popups_before_arming()
+    {
+        var vm = New(out _, out var sched);
+        var armedWhenPopupsClosed = -1;
+        vm.ClosePopupsRequested += (_, _) => armedWhenPopupsClosed = sched.Alarms.Count;
+
+        vm.ReplaceAllAlarms(new[] { ImportedAlarm() }, Array.Empty<RecurringAlarmRecord>());
+
+        Assert.Equal(0, armedWhenPopupsClosed);   // cards close before the imported set is armed
+    }
+
+    [Fact]
+    public void ReplaceAllAlarms_raises_AlarmsChanged_once_so_the_import_is_persisted()
+    {
+        var vm = New(out _, out _);
+        var changes = 0;
+        vm.AlarmsChanged += (_, _) => changes++;
+
+        vm.ReplaceAllAlarms(new[] { ImportedAlarm() }, Array.Empty<RecurringAlarmRecord>());
+
+        Assert.Equal(1, changes);
+    }
+
+    [Fact]
+    public void ReplaceAllAlarms_arms_both_kinds_of_record()
+    {
+        var vm = New(out _, out var sched);
+
+        vm.ReplaceAllAlarms(new[] { ImportedAlarm("one-shot") }, new[] { ImportedRecurring(8, "weekly") });
+
+        Assert.Equal(2, sched.Alarms.Count);
+        Assert.Contains(sched.Alarms, a => a.Label == "one-shot");
+        Assert.Contains(sched.Alarms, a => a.Label == "weekly");
+    }
+
+    [Fact]
+    public void ReplaceAllAlarms_clears_the_missed_note()
+    {
+        var vm = New(out var clock, out var sched);
+        var missed = sched.ArmClockAlarm(clock.Now.AddMinutes(1), "missed", SoundChoice.None);
+        vm.AddMissed(missed);
+
+        vm.ReplaceAllAlarms(Array.Empty<AlarmRecord>(), Array.Empty<RecurringAlarmRecord>());
+
+        Assert.Null(vm.MissedNote);
+    }
+
+    [Fact]
+    public void ReplaceAllAlarms_announces_the_count_for_a_screen_reader()
+    {
+        var vm = New(out _, out _);
+        string? announced = null;
+        vm.Announcement += (_, m) => announced = m;
+
+        vm.ReplaceAllAlarms(new[] { ImportedAlarm() }, new[] { ImportedRecurring(8) });
+
+        Assert.Equal("Imported 2 alarms", announced);
+    }
 }
