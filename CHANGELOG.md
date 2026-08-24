@@ -2,6 +2,12 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
+## [Unreleased]
+
+### Added
+- **Back up your alarms and restore them** — a new *Export data…* in **Settings ▸ Data** writes everything, alarms and settings alike, to a JSON file wherever you choose. *Import data…* reads one back and asks first whether to restore only the alarms or everything, so a file from another machine can't quietly move your window or flip launch-at-startup.
+- **A way back from a mistaken import** — before an import replaces anything, your current data is copied to `%AppData%\Tidsro\data-before-import.json`. Import that file to undo.
+
 ## [2.0.0] — 2026-08-18
 
 ### Added
@@ -71,6 +77,7 @@ Clock-time alarms — a "Your day" agenda with one-shot fire-at-HH:MM alarms, op
 ## [1.0.0] — 2026-06-16
 First release — countdown timers with presets or custom durations, pause/resume, reset, and per-timer sounds.
 
+[Unreleased]: https://github.com/malinfossum/tidsro/compare/v2.0.0...main
 [2.0.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.0.0
 [1.7.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.7.0
 [1.6.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.6.0
