@@ -3,7 +3,8 @@ namespace Tidsro.Services;
 // Decides whether a critical failure earns a modal dialog, so a repeating failure cannot storm the
 // user with stacked dialogs. Pure decision logic — no I/O, no WPF types. Called from the UI thread
 // only (App's DispatcherTimer tick and its exception handlers); not thread-safe by design, so it
-// does not lock.
+// does not lock. Every successful Try* claim must be paired with a ReleaseDialog() call in a
+// finally, or _dialogOpen wedges true and silences every failure dialog for the rest of the run.
 public sealed class FailureAlertPolicy
 {
     private bool _dialogOpen;
@@ -14,6 +15,18 @@ public sealed class FailureAlertPolicy
     public bool TryClaimSaveFailure()
     {
         if (_dialogOpen || _saveFailureAnnounced) return false;
+        _saveFailureAnnounced = true;
+        _dialogOpen = true;
+        return true;
+    }
+
+    // A final save happens at most once per run, so — unlike TryClaimSaveFailure — it ignores
+    // _saveFailureAnnounced: in a sustained outage the mid-session dialog claims first and no save
+    // ever succeeds to clear that flag, which would otherwise defeat the strictly more urgent
+    // quit-time warning every time it matters. Still honours the open-dialog guard.
+    public bool TryClaimFinalSaveFailure()
+    {
+        if (_dialogOpen) return false;
         _saveFailureAnnounced = true;
         _dialogOpen = true;
         return true;

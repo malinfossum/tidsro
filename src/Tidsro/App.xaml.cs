@@ -96,7 +96,7 @@ public partial class App : Application
     }
 
     // Open the folder holding the crash log, selecting the file if it exists. Reachable from the tray
-    // so the log is discoverable after a balloon. Best-effort — opening a folder must never crash.
+    // so the log is discoverable after a failure dialog. Best-effort — opening a folder must never crash.
     private void OpenLogFolder()
     {
         try
@@ -298,10 +298,16 @@ public partial class App : Application
     private Window? DialogOwner =>
         Application.Current.Windows.OfType<SettingsWindow>().FirstOrDefault() ?? (Window?)_main;
 
-    // Guarantees the policy's dialog-open flag clears even if ShowMessage throws.
+    // Always on top so it cannot land underneath a Topmost alarm card (whose buttons would otherwise
+    // go inert without looking disabled). Catches rather than lets an exception escape: from
+    // OnDispatcherUnhandledException that would skip e.Handled = true and kill the process on a
+    // survivable glitch; from Quit() it would abort after the timer and hotkey are already torn down,
+    // leaving the app alive with its heartbeat stopped and no alarm ever firing again. The finally
+    // still guarantees the policy's dialog-open flag clears either way.
     private void ShowFailureDialog(string title, string message)
     {
-        try { ChoiceDialog.ShowMessage(DialogOwner, title, message); }
+        try { ChoiceDialog.ShowMessage(DialogOwner, title, message, alwaysOnTop: true); }
+        catch (Exception ex) { _log.Log(ex, "ShowFailureDialog"); }
         finally { _alerts.ReleaseDialog(); }
     }
 
@@ -309,7 +315,7 @@ public partial class App : Application
         Dialogs: new FileDialogService(),
         Transfer: new DataTransferService(PersistenceService.DefaultPath),
         BuildData: BuildData,
-        AskImportChoice: message => ChoiceDialog.AskImport(DialogOwner!, message),
+        AskImportChoice: message => ChoiceDialog.AskImport(DialogOwner, message),
         ApplyImport: ApplyImport,
         ShowMessage: (title, message) => ChoiceDialog.ShowMessage(DialogOwner, title, message),
         Today: () => DateTime.Today);
@@ -369,7 +375,11 @@ public partial class App : Application
             // Always logged (its own 5 s dedup still governs the log file); the policy alone decides
             // the dialog now, so the two are no longer coupled.
             _log.Log(ex, "SaveData");
-            if (_alerts.TryClaimSaveFailure())
+            // A final save ignores whether a mid-session failure was already announced (see
+            // TryClaimFinalSaveFailure) — otherwise the strictly more urgent quit-time warning would
+            // be defeated by the ordering that happens in nearly every sustained outage.
+            var claimed = finalSave ? _alerts.TryClaimFinalSaveFailure() : _alerts.TryClaimSaveFailure();
+            if (claimed)
                 ShowFailureDialog("Couldn't save", finalSave
                     ? "Tidsro couldn't save your latest changes. They will be lost when Tidsro closes. See Tray ▸ Open log folder for details."
                     : "Tidsro couldn't save your changes to disk. Your alarms are still here, but they may not survive closing the app. See Tray ▸ Open log folder for details.");

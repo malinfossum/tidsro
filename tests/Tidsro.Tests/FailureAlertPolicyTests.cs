@@ -67,4 +67,49 @@ public class FailureAlertPolicyTests
         Assert.False(policy.TryClaimSaveFailure());
         Assert.False(policy.TryClaimCrash());
     }
+
+    [Fact]
+    public void TryClaimFinalSaveFailure_is_announced_even_after_a_mid_session_failure_already_was()
+    {
+        var policy = new FailureAlertPolicy();
+
+        Assert.True(policy.TryClaimSaveFailure());   // the mid-session dialog claims first, as it will in nearly every sustained outage
+        policy.ReleaseDialog();
+
+        Assert.True(policy.TryClaimFinalSaveFailure());   // the strictly more urgent quit-time warning must still get through
+    }
+
+    [Fact]
+    public void TryClaimFinalSaveFailure_is_still_refused_while_a_dialog_is_open()
+    {
+        var policy = new FailureAlertPolicy();
+
+        Assert.True(policy.TryClaimSaveFailure());   // opens the dialog, unreleased
+
+        Assert.False(policy.TryClaimFinalSaveFailure());
+    }
+
+    [Fact]
+    public void A_crash_claim_refused_by_an_open_dialog_does_not_burn_the_crash_announcement()
+    {
+        var policy = new FailureAlertPolicy();
+
+        Assert.True(policy.TryClaimSaveFailure());   // opens the dialog
+        Assert.False(policy.TryClaimCrash());         // refused only because the dialog is open
+        policy.ReleaseDialog();
+
+        Assert.True(policy.TryClaimCrash());           // the crash was never announced, so it still claims
+    }
+
+    [Fact]
+    public void A_save_failure_claim_refused_by_an_open_dialog_does_not_burn_the_save_announcement()
+    {
+        var policy = new FailureAlertPolicy();
+
+        Assert.True(policy.TryClaimCrash());              // opens the dialog
+        Assert.False(policy.TryClaimSaveFailure());        // refused only because the dialog is open
+        policy.ReleaseDialog();
+
+        Assert.True(policy.TryClaimSaveFailure());          // the save failure was never announced, so it still claims
+    }
 }

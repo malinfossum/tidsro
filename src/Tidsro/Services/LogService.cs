@@ -40,10 +40,9 @@ public sealed class LogService
     }
 
     /// <summary>
-    /// Records one unhandled exception. Returns true when this is a fresh error worth surfacing to the
-    /// user (a balloon), false when it is a consecutive duplicate suppressed within the dedupe window.
-    /// The return reflects the throttle decision only — it stays true even if the file write fails,
-    /// because the user should still be told.
+    /// Records one unhandled exception. Returns true when this is a fresh error, false when it is a
+    /// consecutive duplicate suppressed within the dedupe window. The return reflects the throttle
+    /// decision only — it stays true even if the file write fails, since the entry was still new.
     /// </summary>
     public bool Log(Exception ex, string source)
     {
