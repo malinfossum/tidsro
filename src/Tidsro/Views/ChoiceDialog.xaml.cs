@@ -28,11 +28,14 @@ public partial class ChoiceDialog : Window
         return dialog._choice;
     }
 
-    /// <summary>A single-OK message. Used for both export results and import failures — never a tray
-    /// balloon, which is invisible on machines with notifications turned off.</summary>
-    public static void ShowMessage(Window owner, string title, string message)
+    /// <summary>A single-OK message. Used for export results, import failures, and critical failures
+    /// (a failed save, a caught crash) — never a tray balloon, which is invisible on machines with
+    /// notifications turned off. <paramref name="owner"/> may be null when no window is available yet
+    /// (e.g. very early in startup); the dialog then centres on the screen instead of an owner.</summary>
+    public static void ShowMessage(Window? owner, string title, string message)
     {
         var dialog = new ChoiceDialog(title, message) { Owner = owner };
+        if (owner is null) dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;   // CenterOwner with no owner lands top-left
         dialog.ChoiceButtons.Visibility = Visibility.Collapsed;
         dialog.CancelButton.Content = "OK";
         dialog.CancelButton.SetValue(AutomationProperties.NameProperty, "OK");
