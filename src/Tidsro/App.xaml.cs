@@ -50,7 +50,7 @@ public partial class App : Application
             WireSchedulerEvents();
             StartTickLoop();
             RegisterHotkey();
-            _tray = TrayBuilder.Create(ShowMainWindow, FocusLatestAlert, OpenLogFolder, Quit);
+            _tray = TrayBuilder.Create(ShowMainWindow, FocusLatestAlert, () => _openPopups.Count > 0, OpenLogFolder, Quit);
             ShowWindowUnlessBootLaunch(e);
         }
         catch (Exception ex)
