@@ -1508,4 +1508,58 @@ public class MainViewModelTests
 
         Assert.Equal("Imported 2 alarms", announced);
     }
+
+    // ── Timetable: the Week tab's projection tracks the alarm set ──────────
+
+    [Fact]
+    public void Timetable_redraws_when_an_alarm_is_added()
+    {
+        var clock = new FakeClock { Now = new DateTimeOffset(2026, 1, 1, 8, 0, 0, TimeSpan.Zero) };
+        var scheduler = new SchedulerService(clock);
+        var vm = new MainViewModel(scheduler, new FakeSoundService(), SoundChoice.None);
+
+        Assert.True(vm.Timetable.Week.IsEmpty);
+
+        scheduler.ArmRecurringAlarm(9, 0, Weekdays.Mon, "Class", SoundChoice.None);
+        vm.RefreshAll();
+
+        Assert.False(vm.Timetable.Week.IsEmpty);
+    }
+
+    [Fact]
+    public void Timetable_empties_when_all_alarms_are_cleared()
+    {
+        var clock = new FakeClock { Now = new DateTimeOffset(2026, 1, 1, 8, 0, 0, TimeSpan.Zero) };
+        var scheduler = new SchedulerService(clock);
+        var vm = new MainViewModel(scheduler, new FakeSoundService(), SoundChoice.None);
+        scheduler.ArmRecurringAlarm(9, 0, Weekdays.Mon, "Class", SoundChoice.None);
+        vm.RefreshAll();
+        Assert.False(vm.Timetable.Week.IsEmpty);
+
+        vm.ClearAllAlarms();
+
+        Assert.True(vm.Timetable.Week.IsEmpty);
+    }
+
+    [Fact]
+    public void Timetable_redraws_when_an_import_replaces_the_alarms()
+    {
+        var clock = new FakeClock { Now = new DateTimeOffset(2026, 1, 1, 8, 0, 0, TimeSpan.Zero) };
+        var scheduler = new SchedulerService(clock);
+        var vm = new MainViewModel(scheduler, new FakeSoundService(), SoundChoice.None);
+
+        vm.ReplaceAllAlarms(
+            Array.Empty<AlarmRecord>(),
+            new[]
+            {
+                new RecurringAlarmRecord
+                {
+                    Hour = 9, Minute = 0, Days = Weekdays.Mon, Label = "Imported",
+                    NextFireAt = new DateTime(2026, 1, 5, 9, 0, 0),
+                },
+            });
+
+        Assert.False(vm.Timetable.Week.IsEmpty);
+        Assert.Equal("Imported", vm.Timetable.Week.Days.Single(d => d.Day == Weekdays.Mon).Entries.Single().Label);
+    }
 }

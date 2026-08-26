@@ -26,6 +26,9 @@ public partial class MainViewModel : ObservableObject
 
     public ObservableCollection<AlarmItemViewModel> Alarms { get; } = new();
 
+    /// <summary>The Week tab's projection. Constructed once and held for the app's lifetime.</summary>
+    public TimetableViewModel Timetable { get; }
+
     [ObservableProperty] private string _alarmTimeInput = "";
     [ObservableProperty] private string _alarmLabel = "";
     [ObservableProperty] private string? _alarmError;
@@ -142,6 +145,8 @@ public partial class MainViewModel : ObservableObject
         _sound = sound;
         _selectedSound = defaultSound;   // seed the picker from the global default; per-timer override lives here after
         _alarmSound = defaultSound;   // the alarm sound picker starts at the global default too
+        Timetable = new TimetableViewModel(scheduler);
+        AlarmsChanged += (_, _) => Timetable.Rebuild();
         Running.CollectionChanged += (_, e) =>
         {
             // A row removed from the collection is not the hero's, and MarkHero only walks what is
@@ -268,8 +273,15 @@ public partial class MainViewModel : ObservableObject
 
         // Reconcile the alarm agenda only when it actually changed — an add/remove/one-shot fire (ids)
         // or a recurring roll-forward (EndsAt). Otherwise leave the collection alone so focus and
-        // announcements aren't disrupted every second.
-        if (!AgendaSignature().SetEquals(_agendaSignature)) RebuildAgenda();
+        // announcements aren't disrupted every second. The same signature also catches an alarm armed
+        // straight on the scheduler (Snooze/Restart-style, bypassing AlarmsChanged) for the Week tab.
+        if (!AgendaSignature().SetEquals(_agendaSignature))
+        {
+            RebuildAgenda();
+            Timetable.Rebuild();
+        }
+
+        Timetable.RefreshForTick();
     }
 
     // Add-only now: editing happens in the modal Edit-alarm dialog (see BeginEditAlarm / ApplyAlarmEdit).
