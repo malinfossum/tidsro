@@ -533,8 +533,22 @@
                           Margin="0,0,10,0">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
-                  <TextBlock Text="{Binding Label}" Height="24" FontFamily="{StaticResource FontMono}"
-                             FontSize="{StaticResource TextXs}" Foreground="{StaticResource TextFaint}"/>
+                  <!-- Past a twelve-hour span (LabelWholeHoursOnly) only whole-hour slots print
+                       their label — the TextBlock itself stays put at its full Height so the
+                       gutter's rows never drift out of line with the day columns, and the row
+                       stays in the tree rather than opening a gap where a screen reader would
+                       otherwise expect one. -->
+                  <TextBlock Height="24" FontFamily="{StaticResource FontMono}"
+                             FontSize="{StaticResource TextXs}" Foreground="{StaticResource TextFaint}">
+                    <TextBlock.Text>
+                      <MultiBinding Converter="{StaticResource SlotLabel}">
+                        <Binding Path="Label"/>
+                        <Binding Path="IsWholeHour"/>
+                        <Binding Path="DataContext.Timetable.Week.LabelWholeHoursOnly"
+                                 RelativeSource="{RelativeSource AncestorType=ItemsControl}"/>
+                      </MultiBinding>
+                    </TextBlock.Text>
+                  </TextBlock>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
@@ -565,7 +579,6 @@
                                        4.5:1. The "off" state is also in the accessible name and is
                                        never carried by dimming alone. -->
                                   <Setter Property="TextElement.Foreground" Value="{StaticResource TextMuted}"/>
-                                  <Setter Property="Opacity" Value="0.85"/>
                                 </DataTrigger>
                               </Style.Triggers>
                             </Style>
