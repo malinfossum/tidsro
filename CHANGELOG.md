@@ -2,6 +2,15 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
+## [2.2.0] — 2026-08-26
+
+### Added
+- **Tidsro tells you when a save fails** — if your alarms cannot be written to disk, or an error is caught before it can close the app, you now get a dialog instead of a tray balloon that Windows may never have been allowed to show. A repeating failure cannot stack dialogs on top of each other: a failed save is announced once per outage and only speaks up again after a save has succeeded, and a caught error once per run.
+- **The warning at quit says what is actually at stake** — a save that fails as Tidsro closes loses the changes rather than merely risking them, so it gets its own wording.
+
+### Fixed
+- **"Focus latest alert" is no longer a dead menu item** — the tray menu entry stayed available with no alert on screen and then quietly did nothing. It is now greyed out when there is nothing to focus, which a screen reader announces as unavailable.
+
 ## [2.1.0] — 2026-08-24
 
 ### Added
@@ -77,6 +86,7 @@ Clock-time alarms — a "Your day" agenda with one-shot fire-at-HH:MM alarms, op
 ## [1.0.0] — 2026-06-16
 First release — countdown timers with presets or custom durations, pause/resume, reset, and per-timer sounds.
 
+[2.2.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.2.0
 [2.1.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.1.0
 [2.0.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.0.0
 [1.7.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.7.0

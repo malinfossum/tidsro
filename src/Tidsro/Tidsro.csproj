@@ -11,7 +11,7 @@
     <RootNamespace>Tidsro</RootNamespace>
 
     <!-- App identity / version — used by exe properties and the installer -->
-    <Version>2.1.0</Version>
+    <Version>2.2.0</Version>
     <Product>Tidsro</Product>
     <Authors>Malin Fossum</Authors>
     <Company>Malin Fossum</Company>
