@@ -2,6 +2,13 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
+## [2.3.0] — 2026-08-26
+
+### Added
+- **Week tab** — a read-only view of your repeating alarms laid out Monday to Sunday. Narrow windows
+  show a day-by-day agenda; widen past 760px for a seven-column grid. The scale fits the hours you
+  actually use rather than showing an empty 24 hours.
+
 ## [2.2.0] — 2026-08-26
 
 ### Added
@@ -86,6 +93,7 @@ Clock-time alarms — a "Your day" agenda with one-shot fire-at-HH:MM alarms, op
 ## [1.0.0] — 2026-06-16
 First release — countdown timers with presets or custom durations, pause/resume, reset, and per-timer sounds.
 
+[2.3.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.3.0
 [2.2.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.2.0
 [2.1.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.1.0
 [2.0.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.0.0

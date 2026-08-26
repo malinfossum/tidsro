@@ -76,6 +76,8 @@ The **Schedule** is its own tab next to Quick timers, and a compact strip below 
 
 - Open **Settings** (bottom-left of the main window) to toggle launch-at-startup and choose a default sound. Changes apply when you click **Save**; **Cancel**, **Esc**, or closing the window discards them.
 
+The **Week** tab shows your repeating alarms laid out Monday to Sunday — a day-by-day agenda on narrow screens and a seven-column grid when wide (760px+), with the time scale fitted to the hours you actually use.
+
 ### Backup and restore
 
 **Settings → Data → Export data…** writes everything — your alarms *and* your settings — to a JSON file wherever you choose. **Import data…** reads one back, and asks first whether to restore only the alarms or everything, so a file from another machine can't move your window or change your launch-at-startup setting unless you say so.
