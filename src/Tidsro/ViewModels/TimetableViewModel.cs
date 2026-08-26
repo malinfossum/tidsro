@@ -8,8 +8,9 @@ namespace Tidsro.ViewModels;
 /// Read-only projection of the scheduler's recurring alarms into a week. No commands: the Week tab
 /// shows, it does not edit.
 ///
-/// <para>Owned by <see cref="MainViewModel"/> for the application's lifetime — deliberately not created
-/// per tab activation, which would leak a subscription per visit.</para>
+/// <para>Owned by <see cref="MainViewModel"/> for the application's lifetime and rebuilt by it. This
+/// type subscribes to nothing — the alarm set lives on the scheduler and MainViewModel decides when a
+/// change is worth re-projecting — so there is nothing here to unsubscribe and no teardown path.</para>
 /// </summary>
 public sealed partial class TimetableViewModel : ObservableObject
 {

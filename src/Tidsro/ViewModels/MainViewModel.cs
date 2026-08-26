@@ -145,8 +145,13 @@ public partial class MainViewModel : ObservableObject
         _sound = sound;
         _selectedSound = defaultSound;   // seed the picker from the global default; per-timer override lives here after
         _alarmSound = defaultSound;   // the alarm sound picker starts at the global default too
+        // No AlarmsChanged hook for the week. That event means "the alarm set is now worth writing to
+        // disk", which is not the same question as "does the week still draw what the scheduler
+        // holds" — DeleteAlarm deliberately does NOT raise it, because the delete is not committed
+        // until the undo window closes, and the week was consequently stale for the whole nine
+        // seconds. RebuildAgenda is the honest funnel: it runs on every path that changes what is
+        // armed, including delete and undo. See RebuildAgenda.
         Timetable = new TimetableViewModel(scheduler);
-        AlarmsChanged += (_, _) => Timetable.Rebuild();
         Running.CollectionChanged += (_, e) =>
         {
             // A row removed from the collection is not the hero's, and MarkHero only walks what is
@@ -275,11 +280,7 @@ public partial class MainViewModel : ObservableObject
         // or a recurring roll-forward (EndsAt). Otherwise leave the collection alone so focus and
         // announcements aren't disrupted every second. The same signature also catches an alarm armed
         // straight on the scheduler (Snooze/Restart-style, bypassing AlarmsChanged) for the Week tab.
-        if (!AgendaSignature().SetEquals(_agendaSignature))
-        {
-            RebuildAgenda();
-            Timetable.Rebuild();
-        }
+        if (!AgendaSignature().SetEquals(_agendaSignature)) RebuildAgenda();   // rebuilds the week too
 
         Timetable.RefreshForTick();
     }
@@ -379,10 +380,11 @@ public partial class MainViewModel : ObservableObject
         Running.Clear();
         Alarms.Clear();
         MissedNote = null;
-        // ClearAllAlarms manages Alarms itself rather than going through RebuildAgenda, so refresh the
-        // signature here too — otherwise the next RefreshAll tick sees a stale signature, mismatches
-        // against the now-empty scheduler, and redoes RebuildAgenda() and Timetable.Rebuild() a second
-        // time within 250 ms of the AlarmsChanged-driven rebuild below.
+        // ClearAllAlarms manages Alarms itself rather than going through RebuildAgenda — clearing a
+        // collection is cheaper than re-deriving an empty one — so it owes RebuildAgenda's two exit
+        // duties by hand: re-project the week, and resync the signature so the next RefreshAll tick
+        // does not mismatch against the now-empty scheduler and redo the whole thing 250 ms later.
+        Timetable.Rebuild();
         _agendaSignature = AgendaSignature();
 
         OnPropertyChanged(nameof(IsDayEmpty));
@@ -525,7 +527,14 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void DismissMissedNote() => MissedNote = null;
 
-    /// <summary>Rebuild the agenda from the scheduler's armed alarms: sorted, with tomorrow/next cues.</summary>
+    /// <summary>Rebuild the agenda from the scheduler's armed alarms: sorted, with tomorrow/next cues.
+    ///
+    /// <para>Also re-projects the Week tab, and this is the ONLY place that does for anything short of
+    /// a bulk wipe. Both views read the same scheduler set, so anything that moves one moves the
+    /// other; hanging the week off AlarmsChanged instead left DeleteAlarm — which does not raise it,
+    /// because the record stays on disk through the undo window — drawing a deleted alarm for nine
+    /// seconds, with RefreshAll's signature gate comparing equal on every tick in between because
+    /// this method resyncs it on its way out.</para></summary>
     private void RebuildAgenda()
     {
         var today = _scheduler.Now.Date;
@@ -554,6 +563,7 @@ public partial class MainViewModel : ObservableObject
             Alarms.Add(new AlarmItemViewModel(a, isTomorrow, isNext));
         }
         OnPropertyChanged(nameof(IsDayEmpty));
+        Timetable.Rebuild();
         _agendaSignature = AgendaSignature();
     }
 }
