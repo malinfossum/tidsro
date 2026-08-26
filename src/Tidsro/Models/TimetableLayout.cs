@@ -64,7 +64,15 @@ public sealed record TimetableCell(Weekdays Day, string DayName, IReadOnlyList<T
 
 /// <summary>One horizontal band of the wide grid: a slot and the seven cells beside it, Monday
 /// first. Row-major on purpose — see <see cref="TimetableLayout"/>.</summary>
-public sealed record TimetableRow(TimetableSlot Slot, IReadOnlyList<TimetableCell> Cells);
+public sealed record TimetableRow(TimetableSlot Slot, IReadOnlyList<TimetableCell> Cells)
+{
+    /// <summary>A belt-and-braces guard, not a display value. The grid's row containers carry no
+    /// AutomationProperties.Name on purpose — a row that is empty should contribute nothing to the
+    /// automation tree — but a WPF item container that does end up with a peer names itself from
+    /// ToString(), and a record's generated ToString() would read out the entire row. If that
+    /// fallback ever fires, it should say the time the row is, which is at least true.</summary>
+    public override string ToString() => Slot.Label;
+}
 
 /// <summary>The whole projected week. Immutable; rebuilt rather than mutated.</summary>
 public sealed record TimetableWeek(

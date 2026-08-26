@@ -711,7 +711,7 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </StackPanel>
-          </Grid>
+          </Grid>   <!-- /the IsEmpty gate around both renderings -->
         </Grid>
       </ScrollViewer>
     </Grid>

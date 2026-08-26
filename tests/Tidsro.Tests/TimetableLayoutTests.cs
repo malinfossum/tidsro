@@ -391,4 +391,16 @@ public class TimetableLayoutTests
         Assert.True(today.ShowInAgenda);
         Assert.False(today.IsFreeToday);
     }
+
+    [Fact]
+    public void A_row_names_itself_by_its_time_if_anything_ever_asks()
+    {
+        // Not a display value: the grid names nothing per row. But a WPF item container that does
+        // acquire an automation peer falls back to ToString(), and a record would read out the
+        // whole row.
+        var week = TimetableLayout.Build(new[] { Recurring(9, 0, Weekdays.Mon) }, At(1, 9, 0));
+
+        Assert.Equal("06:00", week.Rows[0].ToString());
+        Assert.Equal("06:30", week.Rows[1].ToString());
+    }
 }
