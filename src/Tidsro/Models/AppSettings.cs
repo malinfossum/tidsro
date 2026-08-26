@@ -6,11 +6,11 @@ public sealed class AppSettings
     public bool LaunchAtStartup { get; set; }
     public SoundChoice DefaultSound { get; set; } = SoundChoice.None;
 
-    /// <summary>Index of the tab the main window opens on. 0 = Quick timers, 1 = Schedule.</summary>
+    /// <summary>Index of the tab the main window opens on. 0 = Quick timers, 1 = Schedule, 2 = Week.</summary>
     public int SelectedTab { get; set; }
 
-    /// <summary>Tabs the shell has. The weekly timetable slice makes this 3 and needs no other change here.</summary>
-    public const int TabCount = 2;
+    /// <summary>Tabs the shell has: 0 Quick timers, 1 Schedule, 2 Week.</summary>
+    public const int TabCount = 3;
 
     // Last on-screen window position; null until the window has been shown and dismissed once.
     public double? WindowLeft { get; set; }

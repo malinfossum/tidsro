@@ -25,6 +25,7 @@
                 SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
       <TabItem Header="Quick timers"/>
       <TabItem Header="Schedule"/>
+      <TabItem Header="Week"/>
     </TabControl>
 
     <Grid x:Name="Panels" Grid.Row="1" Margin="{StaticResource SectionGap}">
@@ -415,6 +416,22 @@
         </ItemsControl>
 
         </StackPanel>
+      </ScrollViewer>
+
+      <!-- Week: a read-only projection of the recurring alarms. Two renderings of one structure —
+           the agenda works at the 380px minimum, the grid needs room. Both are built from
+           Timetable.Week; WidthToVisible collapses whichever does not fit.
+           Focusable so a keyboard user can scroll it: the tab is read-only, so without this it
+           contains no tab stop at all and the grid could only ever be read from the top. -->
+      <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="True"
+                    AutomationProperties.Name="Week timetable"
+                    Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisible}, ConverterParameter=2}">
+        <Grid x:Name="WeekPanel" Margin="0,8,0,0">
+          <TextBlock Text="No repeating alarms yet — add one on the Schedule tab."
+                     Foreground="{StaticResource TextMuted}" TextWrapping="Wrap"
+                     HorizontalAlignment="Center" Margin="16,32,16,32"
+                     Visibility="{Binding Timetable.Week.IsEmpty, Converter={StaticResource BoolToVisible}}"/>
+        </Grid>
       </ScrollViewer>
     </Grid>
 

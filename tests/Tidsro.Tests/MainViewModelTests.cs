@@ -1586,4 +1586,19 @@ public class MainViewModelTests
 
         Assert.Same(afterClear, vm.Timetable.Week);   // no redundant rebuild on the next tick
     }
+
+    [Fact]
+    public void Ctrl_tab_cycles_through_three_tabs()
+    {
+        var clock = new FakeClock { Now = new DateTimeOffset(2026, 1, 1, 8, 0, 0, TimeSpan.Zero) };
+        var vm = new MainViewModel(new SchedulerService(clock), new FakeSoundService(), SoundChoice.None);
+
+        Assert.Equal(0, vm.SelectedTabIndex);
+        vm.AdvanceTabCommand.Execute(null);
+        Assert.Equal(1, vm.SelectedTabIndex);
+        vm.AdvanceTabCommand.Execute(null);
+        Assert.Equal(2, vm.SelectedTabIndex);
+        vm.AdvanceTabCommand.Execute(null);
+        Assert.Equal(0, vm.SelectedTabIndex);
+    }
 }
