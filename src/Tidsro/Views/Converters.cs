@@ -116,16 +116,6 @@ public sealed class WidthToVisibleConverter : IValueConverter
     public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
 }
 
-/// <summary>Collapses a section whose collection is empty — an empty weekday heading in the agenda
-/// is noise, not information.</summary>
-public sealed class CountToVisibleConverter : IValueConverter
-{
-    public object Convert(object? v, Type t, object? p, CultureInfo c) =>
-        v is int count && count > 0 ? Visibility.Visible : Visibility.Collapsed;
-
-    public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
-}
-
 /// <summary>Thins the wide grid's time gutter on a long week (<see cref="TimetableWeek.LabelWholeHoursOnly"/>)
 /// without touching row height: past a twelve-hour span, only the top of each hour prints its label,
 /// and every other slot's TextBlock stays in place with empty text. Blanking rather than collapsing
