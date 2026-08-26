@@ -65,7 +65,7 @@ public class TimetableLayoutTests
         string? label = "Class", bool enabled = true) => new()
     {
         Label = label,
-        TriggerType = TriggerType.ClockTime,
+        TriggerType = TriggerType.Recurring,
         RecurringDays = days,
         EndsAt = At(1, hour, minute),
         IsEnabled = enabled,
@@ -101,9 +101,12 @@ public class TimetableLayoutTests
     {
         var week = TimetableLayout.Build(
             new[] { Recurring(9, 0, Weekdays.Mon), Recurring(15, 0, Weekdays.Tue) }, At(1, 9, 0));
-        Assert.Equal(8, week.Slots[0].Hour);                    // 09:00 floored, minus 1h
-        Assert.Equal(16, week.Slots[^1].Hour);                  // 15:00 ceiled, plus 1h, last slot starts 15:30
-        Assert.Equal(15, week.Slots[^1].Minute);                // sanity: see next assertion
+        // 08:00 through 16:00 is 8 hours = 16 slots; the LAST SLOT STARTS at 15:30, not at the span end.
+        Assert.Equal(8, week.Slots[0].Hour);
+        Assert.Equal(0, week.Slots[0].Minute);
+        Assert.Equal(16, week.Slots.Count);
+        Assert.Equal(15, week.Slots[^1].Hour);
+        Assert.Equal(30, week.Slots[^1].Minute);
     }
 
     [Fact]
