@@ -34,6 +34,7 @@ public partial class App : Application
     private readonly Dictionary<CompletionPopup, DateTimeOffset> _warningFireTimes = new();
     private Mutex? _instanceMutex;
     private EventWaitHandle? _showEvent;
+    private readonly FailureAlertPolicy _alerts = new();
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -76,8 +77,9 @@ public partial class App : Application
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
-        if (_log.Log(e.Exception, "DispatcherUnhandledException"))
-            _tray?.ShowNotification("Tidsro", "Tidsro hit a problem but is still running. See Tray ▸ Open log folder.");
+        _log.Log(e.Exception, "DispatcherUnhandledException");   // always logged; the policy alone decides the dialog
+        if (_alerts.TryClaimCrash())
+            ShowFailureDialog("Tidsro", "Tidsro hit a problem but is still running. See Tray ▸ Open log folder.");
         e.Handled = true;   // a single glitch must never silently kill an alarm app
     }
 
@@ -94,7 +96,7 @@ public partial class App : Application
     }
 
     // Open the folder holding the crash log, selecting the file if it exists. Reachable from the tray
-    // so the log is discoverable after a balloon. Best-effort — opening a folder must never crash.
+    // so the log is discoverable after a failure dialog. Best-effort — opening a folder must never crash.
     private void OpenLogFolder()
     {
         try
@@ -285,24 +287,37 @@ public partial class App : Application
         _hotkey.Dispose();
         _mainVm.CommitPendingDelete();   // an uncommitted delete commits on quit (spec §3.1)
         _main?.CaptureWindowState();   // the tray's Quit never runs OnClosing; null when the window was never opened
-        SaveData();                      // flush the final armed set — its failure path notifies via
-                                         // _tray, so the tray must still be alive when this runs
+        SaveData(finalSave: true);       // flush the final armed set before the window that would own a failure dialog goes away
         _tray?.Dispose();
         Shutdown();
     }
 
-    // The data dialogs belong to the Settings window while it is up, so they centre on it and the
-    // modal chain stays intact.
-    private Window DataDialogOwner =>
-        Application.Current.Windows.OfType<SettingsWindow>().FirstOrDefault() ?? (Window)_main!;
+    // The owner for every app-level dialog: the data dialogs and the failure alerts alike. While
+    // Settings is up, dialogs centre on it so the modal chain stays intact; otherwise the main window
+    // when it exists, or null (very early in startup, before any window has been built).
+    private Window? DialogOwner =>
+        Application.Current.Windows.OfType<SettingsWindow>().FirstOrDefault() ?? (Window?)_main;
+
+    // Always on top so it cannot land underneath a Topmost alarm card (whose buttons would otherwise
+    // go inert without looking disabled). Catches rather than lets an exception escape: from
+    // OnDispatcherUnhandledException that would skip e.Handled = true and kill the process on a
+    // survivable glitch; from Quit() it would abort after the timer and hotkey are already torn down,
+    // leaving the app alive with its heartbeat stopped and no alarm ever firing again. The finally
+    // still guarantees the policy's dialog-open flag clears either way.
+    private void ShowFailureDialog(string title, string message)
+    {
+        try { ChoiceDialog.ShowMessage(DialogOwner, title, message, alwaysOnTop: true); }
+        catch (Exception ex) { _log.Log(ex, "ShowFailureDialog"); }
+        finally { _alerts.ReleaseDialog(); }
+    }
 
     private DataPorts BuildDataPorts() => new(
         Dialogs: new FileDialogService(),
         Transfer: new DataTransferService(PersistenceService.DefaultPath),
         BuildData: BuildData,
-        AskImportChoice: message => ChoiceDialog.AskImport(DataDialogOwner, message),
+        AskImportChoice: message => ChoiceDialog.AskImport(DialogOwner, message),
         ApplyImport: ApplyImport,
-        ShowMessage: (title, message) => ChoiceDialog.ShowMessage(DataDialogOwner, title, message),
+        ShowMessage: (title, message) => ChoiceDialog.ShowMessage(DialogOwner, title, message),
         Today: () => DateTime.Today);
 
     // Replacing the schedule raises AlarmsChanged, which persists through the existing SaveData path.
@@ -343,15 +358,31 @@ public partial class App : Application
         };
     }
 
-    private void SaveData()
+    // Passed as a method group in ShowMainWindow (to SettingsViewModel and to MainWindow), so an
+    // overload is needed here rather than an optional parameter — that would not convert to a
+    // zero-argument delegate.
+    private void SaveData() => SaveData(finalSave: false);
+
+    private void SaveData(bool finalSave)
     {
-        try { _persistence.Save(BuildData()); }
+        try
+        {
+            _persistence.Save(BuildData());
+            _alerts.NoteSaveSucceeded();
+        }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            // Log() returns true for a fresh error, false for a duplicate suppressed within its 5 s
-            // window (see LogService) — mirrors the OnDispatcherUnhandledException balloon pattern.
-            if (_log.Log(ex, "SaveData"))
-                _tray?.ShowNotification("Tidsro", "Tidsro couldn't save your changes. See Tray ▸ Open log folder.");
+            // Always logged (its own 5 s dedup still governs the log file); the policy alone decides
+            // the dialog now, so the two are no longer coupled.
+            _log.Log(ex, "SaveData");
+            // A final save ignores whether a mid-session failure was already announced (see
+            // TryClaimFinalSaveFailure) — otherwise the strictly more urgent quit-time warning would
+            // be defeated by the ordering that happens in nearly every sustained outage.
+            var claimed = finalSave ? _alerts.TryClaimFinalSaveFailure() : _alerts.TryClaimSaveFailure();
+            if (claimed)
+                ShowFailureDialog("Couldn't save", finalSave
+                    ? "Tidsro couldn't save your latest changes. They will be lost when Tidsro closes. See Tray ▸ Open log folder for details."
+                    : "Tidsro couldn't save your changes to disk. Your alarms are still here, but they may not survive closing the app. See Tray ▸ Open log folder for details.");
         }
     }
 
