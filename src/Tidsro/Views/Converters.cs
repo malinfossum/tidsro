@@ -115,3 +115,13 @@ public sealed class WidthToVisibleConverter : IValueConverter
 
     public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
 }
+
+/// <summary>Collapses a section whose collection is empty — an empty weekday heading in the agenda
+/// is noise, not information.</summary>
+public sealed class CountToVisibleConverter : IValueConverter
+{
+    public object Convert(object? v, Type t, object? p, CultureInfo c) =>
+        v is int count && count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+    public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
+}

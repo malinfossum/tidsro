@@ -431,6 +431,64 @@
                      Foreground="{StaticResource TextMuted}" TextWrapping="Wrap"
                      HorizontalAlignment="Center" Margin="16,32,16,32"
                      Visibility="{Binding Timetable.Week.IsEmpty, Converter={StaticResource BoolToVisible}}"/>
+
+          <!-- Agenda: the narrow rendering, and the one that works at the 380px minimum.
+               Days with no entries are collapsed — an empty Tuesday heading is noise, not
+               information. -->
+          <ItemsControl ItemsSource="{Binding Timetable.Week.Days}"
+                        Visibility="{Binding ActualWidth, ElementName=Panels, Converter={StaticResource WidthToVisible}, ConverterParameter=Narrow}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Margin="0,0,0,16"
+                            Visibility="{Binding Entries.Count, Converter={StaticResource CountToVisible}}">
+                  <TextBlock FontSize="{StaticResource TextXs}" Foreground="{StaticResource TextFaint}">
+                    <Run Text="{Binding Name, Mode=OneWay}"/>
+                  </TextBlock>
+                  <ItemsControl ItemsSource="{Binding Entries}" Margin="0,4,0,0">
+                    <ItemsControl.ItemContainerStyle>
+                      <!-- The accessible name MUST live here, on the ContentPresenter. A Border at
+                           the root of the DataTemplate gets no automation peer, so a name set there
+                           is dead and every row announces as its class name. -->
+                      <Style TargetType="ContentPresenter">
+                        <Setter Property="AutomationProperties.Name" Value="{Binding AccessibleName}"/>
+                      </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <!-- Border root, not Grid: the disabled-state trigger sets
+                             TextElement.Foreground for the whole row, and a Border is the natural
+                             carrier for that in both renderings. -->
+                        <Border Margin="0,0,0,6" ToolTip="{Binding Label}" Background="Transparent">
+                          <Border.Style>
+                            <Style TargetType="Border">
+                              <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                                  <!-- TextMuted, never TextFaint: a disabled row still has to clear
+                                       4.5:1. "Off" is also in the accessible name — dimming alone
+                                       never encodes state. -->
+                                  <Setter Property="TextElement.Foreground" Value="{StaticResource TextMuted}"/>
+                                </DataTrigger>
+                              </Style.Triggers>
+                            </Style>
+                          </Border.Style>
+                          <Grid>
+                            <Grid.ColumnDefinitions>
+                              <ColumnDefinition Width="Auto"/>
+                              <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding TimeText}" FontFamily="{StaticResource FontMono}"
+                                       Margin="0,0,10,0" VerticalAlignment="Top"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Label}" TextWrapping="Wrap"
+                                       MaxHeight="40"/>
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
         </Grid>
       </ScrollViewer>
     </Grid>
