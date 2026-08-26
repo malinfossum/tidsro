@@ -6,12 +6,18 @@ public sealed record TimetableEntry(
 {
     public string TimeText => $"{Hour:D2}:{Minute:D2}";
 
+    /// <summary>The label as it is drawn and announced. The add form permits an alarm with no label,
+    /// so the raw <see cref="Label"/> can be null or blank — which would draw an empty box and
+    /// announce with a leading comma (", Monday, 09:00"). "No label" is the same stand-in the
+    /// Schedule tab's rows already use, so the two tabs name an unlabelled alarm identically.</summary>
+    public string DisplayLabel => string.IsNullOrWhiteSpace(Label) ? "No label" : Label!;
+
     /// <summary>What a screen reader reads for this row. Carries the weekday, because the grid
     /// rendering is reached by widening the window and its column headers are easy to navigate past;
     /// and carries the off state, which is otherwise encoded only by dimming.</summary>
     public string AccessibleName => IsEnabled
-        ? $"{Label}, {DayName}, {TimeText}"
-        : $"{Label}, {DayName}, {TimeText}, off";
+        ? $"{DisplayLabel}, {DayName}, {TimeText}"
+        : $"{DisplayLabel}, {DayName}, {TimeText}, off";
 }
 
 /// <summary>One row of the vertical axis: a 30-minute band starting at Hour:Minute.</summary>
@@ -40,10 +46,32 @@ public sealed record TimetableDay(Weekdays Day, string Name, bool IsToday, IRead
             return IsToday ? $"{Name}, today, {count}" : $"{Name}, {count}";
         }
     }
+
+    /// <summary>Whether the agenda draws this day at all. Days with nothing on them are noise — an
+    /// empty Tuesday heading tells you nothing — but today is the exception: a week view that
+    /// silently omits the day you are standing in is worse than one empty heading, and the agenda is
+    /// the rendering most people actually see (the window opens at 440px).</summary>
+    public bool ShowInAgenda => Entries.Count > 0 || IsToday;
+
+    /// <summary>True only for a today with nothing on it, which is the one case that needs a line of
+    /// its own rather than a bare heading.</summary>
+    public bool IsFreeToday => IsToday && Entries.Count == 0;
 }
 
+/// <summary>One day's share of one slot: the entries that fall in this half hour on this weekday.
+/// Usually empty, occasionally one, rarely two.</summary>
+public sealed record TimetableCell(Weekdays Day, string DayName, IReadOnlyList<TimetableEntry> Entries);
+
+/// <summary>One horizontal band of the wide grid: a slot and the seven cells beside it, Monday
+/// first. Row-major on purpose — see <see cref="TimetableLayout"/>.</summary>
+public sealed record TimetableRow(TimetableSlot Slot, IReadOnlyList<TimetableCell> Cells);
+
 /// <summary>The whole projected week. Immutable; rebuilt rather than mutated.</summary>
-public sealed record TimetableWeek(bool IsEmpty, IReadOnlyList<TimetableSlot> Slots, IReadOnlyList<TimetableDay> Days)
+public sealed record TimetableWeek(
+    bool IsEmpty,
+    IReadOnlyList<TimetableSlot> Slots,
+    IReadOnlyList<TimetableDay> Days,
+    IReadOnlyList<TimetableRow> Rows)
 {
     /// <summary>Past a twelve-hour span the gutter labels only whole hours, so the text thins while the rows stay.</summary>
     public bool LabelWholeHoursOnly => Slots.Count > 24;
@@ -58,6 +86,13 @@ public sealed record TimetableWeek(bool IsEmpty, IReadOnlyList<TimetableSlot> Sl
 /// deliberate departure from RecurrenceRules.NextOccurrence, which throws on an empty day set: right
 /// for arming an alarm, wrong for drawing one, where one bad row would otherwise reach the global
 /// exception handler and read as "Tidsro is broken".</para>
+///
+/// <para><b>Two shapes of the same week.</b> <c>Days</c> is column-major (a weekday and everything on
+/// it) and drives the agenda. <c>Rows</c> is row-major (a slot and its seven cells) and drives the
+/// wide grid, where a gutter label and the seven day cells at the same half hour have to sit on one
+/// line. Bucketing here rather than in XAML is what makes that alignment structural: the grid draws
+/// one element per row and the gutter is part of it, so nothing can drift. It is also what keeps the
+/// arithmetic testable — see the rejected "layout maths in XAML converters" in the spec.</para>
 /// </summary>
 public static class TimetableLayout
 {
@@ -97,7 +132,27 @@ public static class TimetableLayout
             days.Add(new TimetableDay(flag, name, flag == today, entries));
         }
 
-        return new TimetableWeek(IsEmpty: false, slots, days);
+        return new TimetableWeek(IsEmpty: false, slots, days, BuildRows(slots, days));
+    }
+
+    /// <summary>Turn the seven day columns inside out into one row per slot. The wide grid draws
+    /// these directly, so a row's gutter label and its seven cells are one element and cannot fall
+    /// out of line with each other.</summary>
+    private static List<TimetableRow> BuildRows(List<TimetableSlot> slots, List<TimetableDay> days)
+    {
+        // One pass per day, not one scan per cell: 48 slots x 7 days would otherwise re-walk the
+        // day's entries 48 times for a week that usually has a handful.
+        var bySlot = days.Select(d => d.Entries.ToLookup(e => e.SlotIndex)).ToList();
+
+        var rows = new List<TimetableRow>(slots.Count);
+        foreach (var slot in slots)
+        {
+            var cells = new List<TimetableCell>(days.Count);
+            for (var i = 0; i < days.Count; i++)
+                cells.Add(new TimetableCell(days[i].Day, days[i].Name, bySlot[i][slot.Index].ToList()));
+            rows.Add(new TimetableRow(slot, cells));
+        }
+        return rows;
     }
 
     private readonly record struct Placed(
@@ -160,7 +215,7 @@ public static class TimetableLayout
         var days = Week
             .Select(d => new TimetableDay(d.Flag, d.Name, d.Flag == today, Array.Empty<TimetableEntry>()))
             .ToList();
-        return new TimetableWeek(IsEmpty: true, Array.Empty<TimetableSlot>(), days);
+        return new TimetableWeek(IsEmpty: true, Array.Empty<TimetableSlot>(), days, Array.Empty<TimetableRow>());
     }
 
     private static int FloorToSlot(int minutes) => minutes / SlotMinutes * SlotMinutes;
