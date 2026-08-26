@@ -99,8 +99,9 @@ Holds the current `TimetableWeek` and rebuilds it. It subscribes to `MainViewMod
 
 **Day rollover is a cached comparison, never a per-tick rebuild.** The view model keeps the
 `DateOnly` it last built for. On each scheduler tick it compares that to today's date and re-projects
-**only when the two differ**. Rebuilding on every tick would be 86,400 full week projections a day,
-each allocating, in an app whose whole point is to sit quietly in the tray. The comparison also
+**only when the two differ**. The tick loop runs at 250 ms (`App.xaml.cs:170`), so rebuilding on every
+tick would be roughly 345,000 full week projections a day, each allocating, in an app whose whole
+point is to sit quietly in the tray. The comparison also
 survives the machine sleeping through midnight for free, because it measures a date rather than
 elapsed time.
 
