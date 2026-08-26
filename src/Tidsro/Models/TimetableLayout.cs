@@ -22,7 +22,25 @@ public sealed record TimetableSlot(int Index, int Hour, int Minute)
 }
 
 /// <summary>One weekday column, Monday first.</summary>
-public sealed record TimetableDay(Weekdays Day, string Name, bool IsToday, IReadOnlyList<TimetableEntry> Entries);
+public sealed record TimetableDay(Weekdays Day, string Name, bool IsToday, IReadOnlyList<TimetableEntry> Entries)
+{
+    /// <summary>Names the column for a screen reader. Without it the wide grid is navigable but
+    /// structureless — the rendering is chosen by window width, which is a poor proxy for eyesight,
+    /// so the grid has to stand on its own.</summary>
+    public string AccessibleName
+    {
+        get
+        {
+            var count = Entries.Count switch
+            {
+                0 => "no alarms",
+                1 => "1 alarm",
+                var n => $"{n} alarms",
+            };
+            return IsToday ? $"{Name}, today, {count}" : $"{Name}, {count}";
+        }
+    }
+}
 
 /// <summary>The whole projected week. Immutable; rebuilt rather than mutated.</summary>
 public sealed record TimetableWeek(bool IsEmpty, IReadOnlyList<TimetableSlot> Slots, IReadOnlyList<TimetableDay> Days)

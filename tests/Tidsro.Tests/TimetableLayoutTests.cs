@@ -225,4 +225,27 @@ public class TimetableLayoutTests
         Assert.Equal("Code class, Wednesday, 09:00",
             week.Days.Single(d => d.Day == Weekdays.Wed).Entries.Single().AccessibleName);
     }
+
+    [Fact]
+    public void A_day_column_announces_its_name_and_load()
+    {
+        var week = TimetableLayout.Build(new[] { Recurring(9, 0, Weekdays.Mon) }, At(1, 9, 0));
+        Assert.Equal("Monday, 1 alarm", week.Days.Single(d => d.Day == Weekdays.Mon).AccessibleName);
+    }
+
+    [Fact]
+    public void Today_is_named_as_today()
+    {
+        // Jan 1 2026 is a Thursday, and nothing repeats on it here.
+        var week = TimetableLayout.Build(new[] { Recurring(9, 0, Weekdays.Mon) }, At(1, 9, 0));
+        Assert.Equal("Thursday, today, no alarms", week.Days.Single(d => d.Day == Weekdays.Thu).AccessibleName);
+    }
+
+    [Fact]
+    public void Two_alarms_pluralise()
+    {
+        var week = TimetableLayout.Build(
+            new[] { Recurring(9, 0, Weekdays.Mon, "A"), Recurring(11, 0, Weekdays.Mon, "B") }, At(1, 9, 0));
+        Assert.Equal("Monday, 2 alarms", week.Days.Single(d => d.Day == Weekdays.Mon).AccessibleName);
+    }
 }
