@@ -6,8 +6,8 @@ All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
 ### Added
 - **Week tab** — a read-only view of your repeating alarms laid out Monday to Sunday. Narrow windows
-  show a day-by-day agenda; widen past 760px for a seven-column grid. The scale fits the hours you
-  actually use rather than showing an empty 24 hours.
+  show a day-by-day agenda; widen the window and it becomes a seven-column grid. The scale fits the
+  hours you actually use rather than showing an empty 24 hours. Today is marked in both.
 
 ## [2.2.0] — 2026-08-26
 

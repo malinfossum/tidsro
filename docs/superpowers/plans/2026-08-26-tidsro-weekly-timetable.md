@@ -23,7 +23,7 @@
 - Disabled entries use `TextMuted` (never `TextFaint`) and must clear **4.5:1**.
 - Commit after every task. Never use `--no-verify`. **No `Co-Authored-By` and no Claude attribution in any commit message.**
 - Full suite must be green before each commit: `dotnet test` from the repo root.
-- **Tidsro must not be running** during build or test — it locks `bin/.../Tidsro.exe` (MSB3027). If a build fails that way: `Get-Process Tidsro | Stop-Process -Force`.
+- **Tidsro must not be running** during build or test — it locks `bin/.../Tidsro.exe` (MSB3027). **Do not force-stop it.** Tidsro writes `data.json` on `OnExit`, so `Stop-Process -Force` discards every schedule edit the running app is holding. Close it from its own tray menu, or stop and report that it is running.
 
 ---
 

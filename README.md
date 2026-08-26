@@ -76,7 +76,7 @@ The **Schedule** is its own tab next to Quick timers, and a compact strip below 
 
 - Open **Settings** (bottom-left of the main window) to toggle launch-at-startup and choose a default sound. Changes apply when you click **Save**; **Cancel**, **Esc**, or closing the window discards them.
 
-The **Week** tab shows your repeating alarms laid out Monday to Sunday — a day-by-day agenda on narrow screens and a seven-column grid when wide (760px+), with the time scale fitted to the hours you actually use.
+The **Week** tab shows your repeating alarms laid out Monday to Sunday — a day-by-day agenda on narrow screens, becoming a seven-column grid once the window is wide enough, with the time scale fitted to the hours you actually use. Today is marked in both.
 
 ### Backup and restore
 
