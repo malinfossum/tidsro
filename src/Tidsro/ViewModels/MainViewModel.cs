@@ -379,6 +379,11 @@ public partial class MainViewModel : ObservableObject
         Running.Clear();
         Alarms.Clear();
         MissedNote = null;
+        // ClearAllAlarms manages Alarms itself rather than going through RebuildAgenda, so refresh the
+        // signature here too — otherwise the next RefreshAll tick sees a stale signature, mismatches
+        // against the now-empty scheduler, and redoes RebuildAgenda() and Timetable.Rebuild() a second
+        // time within 250 ms of the AlarmsChanged-driven rebuild below.
+        _agendaSignature = AgendaSignature();
 
         OnPropertyChanged(nameof(IsDayEmpty));
         AlarmsChanged?.Invoke(this, EventArgs.Empty);

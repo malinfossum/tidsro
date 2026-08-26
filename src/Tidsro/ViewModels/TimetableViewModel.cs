@@ -28,7 +28,7 @@ public sealed partial class TimetableViewModel : ObservableObject
     public void Rebuild()
     {
         var now = _scheduler.Now;
-        _builtFor = DateOnly.FromDateTime(now.LocalDateTime);
+        _builtFor = DateOnly.FromDateTime(now.Date);
         Week = TimetableLayout.Build(_scheduler.Alarms, now);
     }
 
@@ -37,9 +37,16 @@ public sealed partial class TimetableViewModel : ObservableObject
     /// The tick loop runs at 250 ms, so an unconditional rebuild here would be roughly 345,000 week
     /// projections a day. Comparing the date also survives the machine sleeping through midnight,
     /// because it measures a date rather than elapsed time.
+    ///
+    /// <para>Uses <see cref="DateTimeOffset.Date"/> — the date component in the value's own offset —
+    /// rather than converting to the machine's local zone. <see cref="TimetableLayout.Build"/> decides
+    /// "today" off the same value's <c>DayOfWeek</c>, which also reads in the value's own offset; a
+    /// <see cref="DateTimeOffset.LocalDateTime"/> conversion here would agree with that only by
+    /// coincidence (it happens to match under <c>DateTimeOffset.Now</c>, whose offset is the local
+    /// zone), and could disagree near midnight for any clock whose offset differs from the machine's.</para>
     /// </summary>
     public void RefreshForTick()
     {
-        if (DateOnly.FromDateTime(_scheduler.Now.LocalDateTime) != _builtFor) Rebuild();
+        if (DateOnly.FromDateTime(_scheduler.Now.Date) != _builtFor) Rebuild();
     }
 }

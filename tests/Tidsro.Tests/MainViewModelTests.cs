@@ -1562,4 +1562,28 @@ public class MainViewModelTests
         Assert.False(vm.Timetable.Week.IsEmpty);
         Assert.Equal("Imported", vm.Timetable.Week.Days.Single(d => d.Day == Weekdays.Mon).Entries.Single().Label);
     }
+
+    // ClearAllAlarms manages Alarms/Running itself rather than calling RebuildAgenda, so it must also
+    // refresh _agendaSignature — otherwise the very next RefreshAll tick sees a stale signature, thinks
+    // the alarm set just changed again, and redoes RebuildAgenda() + Timetable.Rebuild() a second time
+    // within 250 ms of the AlarmsChanged-driven rebuild that already happened.
+    [Fact]
+    public void ClearAllAlarms_does_not_cause_a_redundant_week_rebuild_on_the_next_tick()
+    {
+        var clock = new FakeClock { Now = new DateTimeOffset(2026, 1, 1, 8, 0, 0, TimeSpan.Zero) };
+        var scheduler = new SchedulerService(clock);
+        var vm = new MainViewModel(scheduler, new FakeSoundService(), SoundChoice.None);
+        vm.AlarmTimeInput = "14:30";
+        vm.AlarmRepeat = RepeatOption.Daily;
+        vm.AddAlarmCommand.Execute(null);
+        Assert.False(vm.Timetable.Week.IsEmpty);
+
+        vm.ClearAllAlarms();
+        var afterClear = vm.Timetable.Week;
+        Assert.True(afterClear.IsEmpty);
+
+        vm.RefreshAll();
+
+        Assert.Same(afterClear, vm.Timetable.Week);   // no redundant rebuild on the next tick
+    }
 }

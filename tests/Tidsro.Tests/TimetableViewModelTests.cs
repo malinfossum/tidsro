@@ -81,6 +81,32 @@ public class TimetableViewModelTests
         Assert.True(vm.Week.Days.Single(d => d.Day == Weekdays.Fri).IsToday);
     }
 
+    // The cached rollover date and TimetableLayout's IsToday must both read off the DateTimeOffset
+    // value's own offset, never the machine's local zone. They previously disagreed near midnight for
+    // any clock whose offset differs from the machine's — the .LocalDateTime conversion here saw a
+    // different wall-clock date than TimetableLayout.Build's DayOfWeek (which never converts). Picking
+    // an offset exactly 12 hours from the machine's own makes that disagreement reproduce regardless of
+    // what timezone this test happens to run in.
+    [Fact]
+    public void RefreshForTick_uses_the_clocks_own_offset_not_the_machines_local_zone()
+    {
+        var localHours = (int)Math.Round(TimeZoneInfo.Local.GetUtcOffset(DateTimeOffset.UtcNow).TotalHours);
+        var offsetHours = localHours >= 0 ? localHours - 12 : localHours + 12;
+        var offset = TimeSpan.FromHours(offsetHours);
+
+        // 2026-01-01 is a Thursday. Just before midnight IN THE CLOCK'S OWN OFFSET.
+        var clock = new FakeClock { Now = new DateTimeOffset(2026, 1, 1, 23, 59, 0, offset) };
+        var scheduler = new SchedulerService(clock);
+        scheduler.ArmRecurringAlarm(9, 0, Weekdays.Mon, "Class", SoundChoice.None);
+        var vm = new TimetableViewModel(scheduler);
+        Assert.True(vm.Week.Days.Single(d => d.Day == Weekdays.Thu).IsToday);
+
+        clock.Now = clock.Now.AddMinutes(2);   // 00:01 the next day, same offset -> its own date rolled
+        vm.RefreshForTick();
+
+        Assert.True(vm.Week.Days.Single(d => d.Day == Weekdays.Fri).IsToday);
+    }
+
     [Fact]
     public void Raises_property_changed_so_the_view_redraws()
     {
