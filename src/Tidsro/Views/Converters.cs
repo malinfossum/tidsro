@@ -91,3 +91,27 @@ public sealed class WidthToMeasureConverter : IValueConverter
 
     public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
 }
+
+/// <summary>Picks one of two renderings of the same content by the width available to them.
+/// The Week tab draws an agenda when narrow and a seven-column grid when wide; both panels exist,
+/// and this collapses the one that does not fit. Same mechanism as IndexToVisibleConverter, which
+/// already swaps the tab panels, and it reads the same ActualWidth WidthToMeasureConverter does.
+/// A width WPF has not measured yet arrives as NaN — that falls back to Narrow, which is the
+/// rendering that works at any size.</summary>
+public sealed class WidthToVisibleConverter : IValueConverter
+{
+    public const double Threshold = 760;
+
+    public object Convert(object? v, Type t, object? p, CultureInfo c)
+    {
+        var wide = v is double available && !double.IsNaN(available) && available >= Threshold;
+        return p switch
+        {
+            "Wide" => wide ? Visibility.Visible : Visibility.Collapsed,
+            "Narrow" => wide ? Visibility.Collapsed : Visibility.Visible,
+            _ => Visibility.Collapsed,
+        };
+    }
+
+    public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
+}
