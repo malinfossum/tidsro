@@ -17,10 +17,21 @@
          none. Factored into a style because the row template places seven of them by index and they
          have to be identical - seven copies of this markup inline is where they would drift apart.
 
-         An empty cell is an ItemsControl with no items: it generates no containers, so it puts
-         nothing in the automation tree. That is what keeps the grid's tree the same handful of
-         items the agenda's is rather than a 48x7 lattice of blanks (spec 6). -->
+         An empty cell generates no item containers, but the ItemsControl still publishes its OWN
+         peer: a nameless list. Seven per row over nineteen rows measured as 133 lists in the UIA
+         tree, 105 of them empty (2026-08-27). Collapsing an empty cell is what keeps them out.
+         The row places its seven cells in fixed Grid columns, so a collapsed cell costs no
+         alignment - that is exactly why this is a Grid and not a UniformGrid (see the row
+         template). Do not reach for AutomationProperties.AccessibilityView here: it is a
+         UWP/WinUI property, and WPF's own escape hatch (no automation peer) would take the
+         entries' accessible names down with it - those names come from the ContentPresenter
+         peers that the ItemsControl's peer generates. -->
     <Style x:Key="TimetableCell" TargetType="ItemsControl">
+      <Style.Triggers>
+        <Trigger Property="HasItems" Value="False">
+          <Setter Property="Visibility" Value="Collapsed"/>
+        </Trigger>
+      </Style.Triggers>
       <Setter Property="ItemContainerStyle">
         <Setter.Value>
           <!-- The accessible name MUST live here, on the ContentPresenter. A Border at the root of
