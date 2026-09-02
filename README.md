@@ -58,7 +58,7 @@ Launching Tidsro opens its window — it remembers where you last placed it and 
 The **Schedule** is its own tab next to Quick timers, and a compact strip below the tab content shows whatever is counting down, whichever tab you're on. Type a time — `14:30`, or shorthand like `9`, `930`, or `1430` (24-hour) — an optional label, choose a sound, set **Repeat** (Once, or a weekday set), and click **Add** (or press **Enter**). The alarm is saved immediately. Turn on **Warn me 5 minutes before** for a quiet heads-up ahead of the alarm.
 
 <p align="center">
-  <img src="docs/screenshots/schedule.png" alt="The Schedule tab: a form for adding an alarm (time, label, sound, repeat, and a pre-alarm warning toggle), three alarms below with gold on/off toggles — 08:00 on weekdays, 10:30 on Thursday, 11:30 on weekdays — and a slim strip along the bottom showing a timer still counting down on the other tab (Running 04:58, Laundry done)." width="560"><br>
+  <img src="docs/screenshots/schedule.png" alt="The Schedule tab: a form for adding an alarm (time, label, sound, repeat, and a pre-alarm warning toggle), three alarms below with gold on/off toggles — 08:00 on weekdays, 10:30 on Thursday, 11:30 on weekdays — and a slim strip along the bottom showing a timer still counting down on the other tab (Running 05:00, Laundry done)." width="560"><br>
   <em>The Schedule — and the strip along the bottom keeping a running timer in view.</em>
 </p>
 
