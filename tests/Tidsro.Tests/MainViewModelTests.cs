@@ -1508,4 +1508,136 @@ public class MainViewModelTests
 
         Assert.Equal("Imported 2 alarms", announced);
     }
+
+    // ── Timetable: the Week tab's projection tracks the alarm set ──────────
+
+    [Fact]
+    public void Timetable_redraws_when_an_alarm_is_added()
+    {
+        var clock = new FakeClock { Now = new DateTimeOffset(2026, 1, 1, 8, 0, 0, TimeSpan.Zero) };
+        var scheduler = new SchedulerService(clock);
+        var vm = new MainViewModel(scheduler, new FakeSoundService(), SoundChoice.None);
+
+        Assert.True(vm.Timetable.Week.IsEmpty);
+
+        scheduler.ArmRecurringAlarm(9, 0, Weekdays.Mon, "Class", SoundChoice.None);
+        vm.RefreshAll();
+
+        Assert.False(vm.Timetable.Week.IsEmpty);
+    }
+
+    [Fact]
+    public void Timetable_empties_when_all_alarms_are_cleared()
+    {
+        var clock = new FakeClock { Now = new DateTimeOffset(2026, 1, 1, 8, 0, 0, TimeSpan.Zero) };
+        var scheduler = new SchedulerService(clock);
+        var vm = new MainViewModel(scheduler, new FakeSoundService(), SoundChoice.None);
+        scheduler.ArmRecurringAlarm(9, 0, Weekdays.Mon, "Class", SoundChoice.None);
+        vm.RefreshAll();
+        Assert.False(vm.Timetable.Week.IsEmpty);
+
+        vm.ClearAllAlarms();
+
+        Assert.True(vm.Timetable.Week.IsEmpty);
+    }
+
+    [Fact]
+    public void Timetable_redraws_when_an_import_replaces_the_alarms()
+    {
+        var clock = new FakeClock { Now = new DateTimeOffset(2026, 1, 1, 8, 0, 0, TimeSpan.Zero) };
+        var scheduler = new SchedulerService(clock);
+        var vm = new MainViewModel(scheduler, new FakeSoundService(), SoundChoice.None);
+
+        vm.ReplaceAllAlarms(
+            Array.Empty<AlarmRecord>(),
+            new[]
+            {
+                new RecurringAlarmRecord
+                {
+                    Hour = 9, Minute = 0, Days = Weekdays.Mon, Label = "Imported",
+                    NextFireAt = new DateTime(2026, 1, 5, 9, 0, 0),
+                },
+            });
+
+        Assert.False(vm.Timetable.Week.IsEmpty);
+        Assert.Equal("Imported", vm.Timetable.Week.Days.Single(d => d.Day == Weekdays.Mon).Entries.Single().Label);
+    }
+
+    // The Week tab draws what is ARMED. DeleteAlarm disarms at once — only the on-disk record lingers
+    // through the undo window — but it deliberately raises no AlarmsChanged, and RebuildAgenda resyncs
+    // the tick signature on its way out, so while the week hung off AlarmsChanged nothing whatsoever
+    // told it: it kept drawing the deleted alarm until CommitPendingDelete fired ~9 seconds later.
+    [Fact]
+    public void Timetable_drops_a_deleted_alarm_before_the_undo_window_closes()
+    {
+        var clock = new FakeClock { Now = new DateTimeOffset(2026, 1, 1, 8, 0, 0, TimeSpan.Zero) };
+        var scheduler = new SchedulerService(clock);
+        var vm = new MainViewModel(scheduler, new FakeSoundService(), SoundChoice.None);
+        vm.AlarmTimeInput = "14:30";
+        vm.AlarmRepeat = RepeatOption.Daily;
+        vm.AddAlarmCommand.Execute(null);
+        Assert.False(vm.Timetable.Week.IsEmpty);
+
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
+
+        // No tick, no timer, no commit — the week is current the moment the row leaves the screen.
+        Assert.True(vm.HasPendingDelete);   // the undo really is still outstanding
+        Assert.True(vm.Timetable.Week.IsEmpty);
+    }
+
+    [Fact]
+    public void Timetable_brings_a_deleted_alarm_back_when_the_delete_is_undone()
+    {
+        var clock = new FakeClock { Now = new DateTimeOffset(2026, 1, 1, 8, 0, 0, TimeSpan.Zero) };
+        var scheduler = new SchedulerService(clock);
+        var vm = new MainViewModel(scheduler, new FakeSoundService(), SoundChoice.None);
+        vm.AlarmTimeInput = "14:30";
+        vm.AlarmRepeat = RepeatOption.Daily;
+        vm.AddAlarmCommand.Execute(null);
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
+        Assert.True(vm.Timetable.Week.IsEmpty);
+
+        vm.UndoDeleteCommand.Execute(null);
+
+        Assert.False(vm.Timetable.Week.IsEmpty);
+    }
+
+    // ClearAllAlarms manages Alarms/Running itself rather than calling RebuildAgenda, so it owes that
+    // method's exit duties by hand: rebuild the week, and refresh _agendaSignature — otherwise the very
+    // next RefreshAll tick sees a stale signature, thinks the alarm set just changed again, and redoes
+    // the whole rebuild a second time within 250 ms.
+    [Fact]
+    public void ClearAllAlarms_does_not_cause_a_redundant_week_rebuild_on_the_next_tick()
+    {
+        var clock = new FakeClock { Now = new DateTimeOffset(2026, 1, 1, 8, 0, 0, TimeSpan.Zero) };
+        var scheduler = new SchedulerService(clock);
+        var vm = new MainViewModel(scheduler, new FakeSoundService(), SoundChoice.None);
+        vm.AlarmTimeInput = "14:30";
+        vm.AlarmRepeat = RepeatOption.Daily;
+        vm.AddAlarmCommand.Execute(null);
+        Assert.False(vm.Timetable.Week.IsEmpty);
+
+        vm.ClearAllAlarms();
+        var afterClear = vm.Timetable.Week;
+        Assert.True(afterClear.IsEmpty);
+
+        vm.RefreshAll();
+
+        Assert.Same(afterClear, vm.Timetable.Week);   // no redundant rebuild on the next tick
+    }
+
+    [Fact]
+    public void Ctrl_tab_cycles_through_three_tabs()
+    {
+        var clock = new FakeClock { Now = new DateTimeOffset(2026, 1, 1, 8, 0, 0, TimeSpan.Zero) };
+        var vm = new MainViewModel(new SchedulerService(clock), new FakeSoundService(), SoundChoice.None);
+
+        Assert.Equal(0, vm.SelectedTabIndex);
+        vm.AdvanceTabCommand.Execute(null);
+        Assert.Equal(1, vm.SelectedTabIndex);
+        vm.AdvanceTabCommand.Execute(null);
+        Assert.Equal(2, vm.SelectedTabIndex);
+        vm.AdvanceTabCommand.Execute(null);
+        Assert.Equal(0, vm.SelectedTabIndex);
+    }
 }

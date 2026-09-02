@@ -11,6 +11,114 @@
          puts Panels beside Tabs rather than inside it, so this has to be restored at the window level. -->
     <KeyBinding Key="Tab" Modifiers="Ctrl" Command="{Binding AdvanceTabCommand}"/>
   </Window.InputBindings>
+
+  <Window.Resources>
+    <!-- One cell of the wide Week grid: the entries that fall in one slot on one weekday, usually
+         none. Factored into a style because the row template places seven of them by index and they
+         have to be identical - seven copies of this markup inline is where they would drift apart.
+
+         An empty cell generates no item containers, but the ItemsControl still publishes its OWN
+         peer: a nameless list. Seven per row over nineteen rows measured as 133 lists in the UIA
+         tree, 105 of them empty (2026-08-27). Collapsing an empty cell is what keeps them out.
+         The row places its seven cells in fixed Grid columns, so a collapsed cell costs no
+         alignment - that is exactly why this is a Grid and not a UniformGrid (see the row
+         template). Do not reach for AutomationProperties.AccessibilityView here: it is a
+         UWP/WinUI property, and WPF's own escape hatch (no automation peer) would take the
+         entries' accessible names down with it - those names come from the ContentPresenter
+         peers that the ItemsControl's peer generates. -->
+    <Style x:Key="TimetableCell" TargetType="ItemsControl">
+      <Style.Triggers>
+        <Trigger Property="HasItems" Value="False">
+          <Setter Property="Visibility" Value="Collapsed"/>
+        </Trigger>
+      </Style.Triggers>
+      <!-- Not focusable, like every other ItemsControl in the Week tab. An ItemsControl is focusable
+           by default, so each one became a nameless tab stop: Tab through a read-only tab landed on
+           a run of unnamed List peers. The one intended stop is the ScrollViewer around them, which
+           is what scrolls. Focusable is keyboard focus only - the peers, and the entries' accessible
+           names that ride on them, are untouched. -->
+      <Setter Property="Focusable" Value="False"/>
+      <!-- Centred in the row band, with the gutter label beside it. Top-aligned, every row read as
+           top-heavy: the text sat under the hairline with the rest of the band empty beneath it. -->
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="ItemContainerStyle">
+        <Setter.Value>
+          <!-- The accessible name MUST live here, on the ContentPresenter. A Border at the root of
+               the DataTemplate gets no automation peer, so a name set there is dead and every entry
+               announces as its class name. -->
+          <Style TargetType="ContentPresenter">
+            <Setter Property="AutomationProperties.Name" Value="{Binding AccessibleName}"/>
+          </Style>
+        </Setter.Value>
+      </Setter>
+      <Setter Property="ItemTemplate">
+        <Setter.Value>
+          <DataTemplate>
+            <!-- No box and no time. The row's gutter states the time once and the row's hairline
+                 does the containing, so repeating both in every cell only added ink: a near-uniform
+                 week drew five identical cards to say "every weekday", each stamped with a time the
+                 gutter had already given. A Grid, not a horizontal StackPanel, so the label column
+                 is constrained and TextTrimming has a width to trim against. -->
+            <Grid Margin="2,1,6,1" ToolTip="{Binding DisplayLabel}">
+              <Grid.Style>
+                <Style TargetType="Grid">
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                      <!-- TextMuted, never TextFaint: a disabled entry still has to clear 4.5:1.
+                           The dimming is a reinforcement, not the signal - the signal is the glyph
+                           beside it and the ", off" on the accessible name. -->
+                      <Setter Property="TextElement.Foreground" Value="{StaticResource TextMuted}"/>
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Grid.Style>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <!-- Only when the gutter cannot speak for it, which is now a row-level question: a
+                   row whose entries all start at 12:15 says 12:15 in its gutter, so the cells stay
+                   bare. Only a row holding more than one start time (ShowsCellTimes) makes its
+                   off-boundary entries name themselves - and there the time and the label share a
+                   column barely a hundred pixels wide, which is why this is the exception and not
+                   the rule. A MultiDataTrigger rather than a converter: both halves are plain
+                   bools, and the row is the cell ItemsControl's own DataContext. -->
+              <TextBlock Text="{Binding TimeText}" FontFamily="{StaticResource FontMono}"
+                         FontSize="{StaticResource TextXs}" Foreground="{StaticResource TextFaint}"
+                         Margin="0,0,6,0">
+                <TextBlock.Style>
+                  <Style TargetType="TextBlock">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Style.Triggers>
+                      <MultiDataTrigger>
+                        <MultiDataTrigger.Conditions>
+                          <Condition Binding="{Binding IsOnSlotBoundary}" Value="False"/>
+                          <Condition Binding="{Binding DataContext.ShowsCellTimes, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Value="True"/>
+                        </MultiDataTrigger.Conditions>
+                        <Setter Property="Visibility" Value="Visible"/>
+                      </MultiDataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </TextBlock.Style>
+              </TextBlock>
+              <!-- The "off" mark. Segoe Fluent Icons Cancel (E711), the same icon family the sound
+                   tags already use. Dimming alone never encodes state (spec 4), so an off entry
+                   carries a shape as well as a colour. -->
+              <TextBlock Grid.Column="1" Text="&#xE711;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                         FontSize="{StaticResource TextXs}" Margin="0,0,4,0"
+                         Visibility="{Binding IsEnabled, Converter={StaticResource BoolToCollapsed}}"/>
+              <!-- DisplayLabel, not Label: an unlabelled alarm is allowed, and it would otherwise
+                   draw a blank cell. -->
+              <TextBlock Grid.Column="2" Text="{Binding DisplayLabel}" FontSize="{StaticResource TextXs}"
+                         TextTrimming="CharacterEllipsis"/>
+            </Grid>
+          </DataTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </Window.Resources>
+
   <Grid Margin="{StaticResource WindowPadding}">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>   <!-- tab headers -->
@@ -25,6 +133,7 @@
                 SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
       <TabItem Header="Quick timers"/>
       <TabItem Header="Schedule"/>
+      <TabItem Header="Week"/>
     </TabControl>
 
     <Grid x:Name="Panels" Grid.Row="1" Margin="{StaticResource SectionGap}">
@@ -415,6 +524,293 @@
         </ItemsControl>
 
         </StackPanel>
+      </ScrollViewer>
+
+      <!-- Week: a read-only projection of the recurring alarms. Two renderings of one structure —
+           the agenda works at the 380px minimum, the grid needs room. Both are built from
+           Timetable.Week; WidthToVisible collapses whichever does not fit.
+           Focusable AND IsTabStop so a keyboard user can scroll it: the tab is read-only, so
+           without this it contains no tab stop at all and the grid could only ever be read from the
+           top. Focusable alone is not enough - ScrollViewer defaults IsTabStop to false, so the
+           region accepts focus programmatically but never appears in the tab sequence: Tab from the
+           Week header ran straight past it into the unnamed ItemsControls inside, and PageDown did
+           nothing because the scroll region never had focus. -->
+      <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="True" IsTabStop="True"
+                    AutomationProperties.Name="Week timetable"
+                    Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisible}, ConverterParameter=2}">
+        <Grid x:Name="WeekPanel" Margin="0,8,0,0">
+          <TextBlock Text="No repeating alarms yet — add one on the Schedule tab."
+                     Foreground="{StaticResource TextMuted}" TextWrapping="Wrap"
+                     HorizontalAlignment="Center" Margin="16,32,16,32"
+                     Visibility="{Binding Timetable.Week.IsEmpty, Converter={StaticResource BoolToVisible}}"/>
+
+          <!-- Both renderings drop out together when there is nothing to draw. Without this gate the
+               wide grid still painted seven weekday headers above the "no repeating alarms" line,
+               and the agenda still painted today's heading under it. -->
+          <Grid Visibility="{Binding Timetable.Week.IsEmpty, Converter={StaticResource BoolToCollapsed}}">
+
+          <!-- Agenda: the narrow rendering, and the one that works at the 380px minimum — and the
+               one most people ever see, since the window opens at 440px.
+               Days with nothing on them are collapsed: an empty Tuesday heading is noise. Today is
+               the exception and always draws, because a week view that silently omits the day you
+               are standing in is worse than one empty heading. ShowInAgenda decides that in the
+               model, where it is tested, rather than in a converter here. -->
+          <ItemsControl Focusable="False" ItemsSource="{Binding Timetable.Week.Days}"
+                        Visibility="{Binding ActualWidth, ElementName=Panels, Converter={StaticResource WidthToVisible}, ConverterParameter=Narrow}">
+            <ItemsControl.ItemContainerStyle>
+              <!-- Both setters belong on the container. The name because a Border at the root of a
+                   DataTemplate gets no automation peer; the visibility because collapsing an inner
+                   panel instead would leave a named but empty day sitting in the automation tree. -->
+              <Style TargetType="ContentPresenter">
+                <Setter Property="AutomationProperties.Name" Value="{Binding AccessibleName}"/>
+                <Setter Property="Visibility" Value="{Binding ShowInAgenda, Converter={StaticResource BoolToVisible}}"/>
+              </Style>
+            </ItemsControl.ItemContainerStyle>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <StackPanel Margin="0,0,0,16">
+                  <!-- Today is marked here exactly as it is in the grid's column headers: a dot AND
+                       the brass accent. Colour alone never encodes state (WCAG 1.4.1), and the word
+                       "today" is already in the day's accessible name above. -->
+                  <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="●" Margin="0,0,4,0" FontSize="{StaticResource TextXs}"
+                               Foreground="{StaticResource Accent}"
+                               Visibility="{Binding IsToday, Converter={StaticResource BoolToVisible}}"/>
+                    <TextBlock Text="{Binding Name}" FontSize="{StaticResource TextXs}">
+                      <!-- The default colour is a Setter, not a local attribute: a local value beats
+                           a style trigger in WPF, so setting Foreground inline here would make the
+                           accent below dead markup. -->
+                      <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                          <Setter Property="Foreground" Value="{StaticResource TextFaint}"/>
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsToday}" Value="True">
+                              <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </TextBlock.Style>
+                    </TextBlock>
+                  </StackPanel>
+                  <!-- The one case a bare heading would not explain: today, with nothing on it. -->
+                  <TextBlock Text="Nothing today." Margin="0,4,0,0" FontSize="{StaticResource TextXs}"
+                             Foreground="{StaticResource TextMuted}"
+                             Visibility="{Binding IsFreeToday, Converter={StaticResource BoolToVisible}}"/>
+                  <ItemsControl Focusable="False" ItemsSource="{Binding Entries}" Margin="0,4,0,0">
+                    <ItemsControl.ItemContainerStyle>
+                      <!-- The accessible name MUST live here, on the ContentPresenter. A Border at
+                           the root of the DataTemplate gets no automation peer, so a name set there
+                           is dead and every row announces as its class name. -->
+                      <Style TargetType="ContentPresenter">
+                        <Setter Property="AutomationProperties.Name" Value="{Binding AccessibleName}"/>
+                      </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <!-- Border root, not Grid: the disabled-state trigger sets
+                             TextElement.Foreground for the whole row, and a Border is the natural
+                             carrier for that in both renderings. -->
+                        <Border Margin="0,0,0,6" ToolTip="{Binding DisplayLabel}" Background="Transparent">
+                          <Border.Style>
+                            <Style TargetType="Border">
+                              <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                                  <!-- TextMuted, never TextFaint: a disabled row still has to clear
+                                       4.5:1. The dimming reinforces; the signal is the glyph beside
+                                       the time and the ", off" on the accessible name. -->
+                                  <Setter Property="TextElement.Foreground" Value="{StaticResource TextMuted}"/>
+                                </DataTrigger>
+                              </Style.Triggers>
+                            </Style>
+                          </Border.Style>
+                          <Grid>
+                            <Grid.ColumnDefinitions>
+                              <ColumnDefinition Width="Auto"/>
+                              <ColumnDefinition Width="Auto"/>
+                              <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding TimeText}" FontFamily="{StaticResource FontMono}"
+                                       Margin="0,0,10,0" VerticalAlignment="Top"/>
+                            <!-- The "off" mark. Segoe Fluent Icons Cancel (E711), the same icon
+                                 family the sound tags use. Dimming alone never encodes state. -->
+                            <TextBlock Grid.Column="1" Text="&#xE711;"
+                                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                       FontSize="{StaticResource TextXs}" Margin="0,2,6,0"
+                                       VerticalAlignment="Top"
+                                       Visibility="{Binding IsEnabled, Converter={StaticResource BoolToCollapsed}}"/>
+                            <!-- DisplayLabel, not Label: an unlabelled alarm is allowed and would
+                                 otherwise draw a blank line. -->
+                            <TextBlock Grid.Column="2" Text="{Binding DisplayLabel}" TextWrapping="Wrap"
+                                       MaxHeight="40"/>
+                          </Grid>
+                        </Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <!-- Grid: the wide rendering. A time gutter plus seven day columns, uniform rows from
+               Slots.
+
+               ROW-MAJOR, and that is the whole point. One element per slot, holding that slot's
+               gutter label AND its seven cells, so a row's label and its entries are the same
+               object and physically cannot drift apart. The earlier shape — a gutter ItemsControl
+               over Slots beside seven day ItemsControls over Entries — shared no row structure at
+               all: entries stacked from the top in list order, so a 15:00 alarm drew level with
+               the gutter's 07:30 and two alarms three hours apart read as simultaneous.
+
+               The obvious repair, a per-day Rows collection with a fixed row height in the gutter
+               and in every column, is rejected twice over: it needs the same magic number in eight
+               places to stay aligned, and it generates a container per slot per column — the 48x7
+               lattice of blanks spec §6 forbids. Here the only per-slot containers are the rows
+               themselves, and an empty cell generates nothing at all.
+
+               No arithmetic here: TimetableLayout.Build already decided which row each alarm is
+               in, and this draws the rows it was handed. -->
+          <StackPanel Grid.IsSharedSizeScope="True"
+                      Visibility="{Binding ActualWidth, ElementName=Panels, Converter={StaticResource WidthToVisible}, ConverterParameter=Wide}">
+
+            <!-- Day headers. The same two-column shape as a row, with the gutter column in the same
+                 shared-size group, so the headers sit over the columns they name however wide the
+                 gutter's labels turn out to be. The header's own gutter cell is empty on purpose —
+                 the group takes its width from the rows.
+
+                 The headings are chrome and the rows are the data, so they are separated three
+                 ways: a rule in BorderControl, twice as bright as the rows' own hairlines; the
+                 muted text colour the rest of the app gives its captions; and a clear band of space
+                 before the first row. One of the three alone left the two reading as one block. -->
+            <Border BorderBrush="{StaticResource BorderControl}" BorderThickness="0,0,0,1"
+                    Padding="0,0,0,6" Margin="0,0,0,4">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" SharedSizeGroup="TimetableGutter"/>
+                <ColumnDefinition Width="*"/>
+              </Grid.ColumnDefinitions>
+              <!-- GridDays, not Days: the grid gives the weekend columns only when the weekend has
+                   something on it, and a heading over a column that is not drawn would put every
+                   name one place out. -->
+              <ItemsControl Focusable="False" Grid.Column="1" ItemsSource="{Binding Timetable.Week.GridDays}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><UniformGrid Rows="1"/></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemContainerStyle>
+                  <Style TargetType="ContentPresenter">
+                    <Setter Property="AutomationProperties.Name" Value="{Binding AccessibleName}"/>
+                  </Style>
+                </ItemsControl.ItemContainerStyle>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <!-- Left, not centred, and on the cells' own left margin: the entries below
+                         are left-aligned text now that they have no boxes filling the column, so a
+                         centred heading floats half a column to the right of what it names. -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="2,0,0,0">
+                      <!-- Today is marked by a glyph as well as the accent: colour alone never
+                           encodes state (WCAG 1.4.1). -->
+                      <TextBlock Text="●" Margin="0,0,4,0" Foreground="{StaticResource Accent}"
+                                 Visibility="{Binding IsToday, Converter={StaticResource BoolToVisible}}"/>
+                      <TextBlock Text="{Binding Name}" FontSize="{StaticResource TextXs}"
+                                 FontWeight="SemiBold">
+                        <TextBlock.Style>
+                          <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
+                            <Style.Triggers>
+                              <!-- Today's name takes the accent as well as the dot beside it. The
+                                   dot is what carries the meaning; the colour only reinforces it
+                                   (WCAG 1.4.1). -->
+                              <DataTrigger Binding="{Binding IsToday}" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                              </DataTrigger>
+                            </Style.Triggers>
+                          </Style>
+                        </TextBlock.Style>
+                      </TextBlock>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Grid>
+            </Border>
+
+            <!-- The rows themselves. -->
+            <ItemsControl Focusable="False" ItemsSource="{Binding Timetable.Week.Rows}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <!-- The hairline is the row structure now that the cells carry no boxes of
+                       their own. It runs the full width, gutter included, so a time can be followed
+                       across the seven days.
+
+                       MinHeight is the ONE row-height value in this rendering, and because the
+                       gutter label and all seven cells live inside this Grid it governs every one
+                       of them at once. Every row is the same height and its content is centred in
+                       it: the rows carry one line each, they are the only rows there are now that
+                       an empty half hour draws nothing, and an even rhythm is what makes the panel
+                       read as a timetable. MinHeight rather than Height so a half hour holding two
+                       alarms still grows - and it grows across the whole width, so the gutter stays
+                       in line. -->
+                  <Border BorderBrush="{StaticResource Border}" BorderThickness="0,1,0,0">
+                  <Grid MinHeight="34">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="Auto" SharedSizeGroup="TimetableGutter"/>
+                      <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- GutterLabel, not Slot.Label: the slot is a half-hour band, and a row of
+                         12:15 alarms would be read off the band as 12:00. The row states the time
+                         its entries actually start at whenever they agree on one, which is the
+                         ordinary case - a class repeating on several days. No thinning of the
+                         labels either: every row here has an alarm in it, so blanking a label would
+                         take that alarm's only time off the tab. -->
+                    <TextBlock Text="{Binding GutterLabel}" Margin="0,0,10,0" VerticalAlignment="Center"
+                               FontFamily="{StaticResource FontMono}" FontSize="{StaticResource TextXs}"
+                               Foreground="{StaticResource TextFaint}"/>
+
+                    <!-- One equal column per VISIBLE child, in order, which is the alignment rule
+                         now that the number of columns varies: a UniformGrid with Rows="1" splits
+                         the width between the children it is actually drawing, left to right, so
+                         Monday can only ever be first and the weekend can only ever be last. The
+                         header strip above splits the same width the same way over GridDays, so the
+                         two agree by construction rather than by a shared magic number.
+
+                         The Borders are what hold the columns open. A Border gets no automation
+                         peer - the one WPF fact this file leans on twice - so an empty cell can
+                         still occupy its share of the width while the ItemsControl inside it
+                         collapses out of the automation tree, which is what a UniformGrid could not
+                         survive on its own: it skips a collapsed child and closes the gap. That is
+                         also exactly how the weekend is dropped, deliberately, below. -->
+                    <UniformGrid Grid.Column="1" Rows="1">
+                      <Border><ItemsControl Style="{StaticResource TimetableCell}" ItemsSource="{Binding Cells[0].Entries}"/></Border>
+                      <Border><ItemsControl Style="{StaticResource TimetableCell}" ItemsSource="{Binding Cells[1].Entries}"/></Border>
+                      <Border><ItemsControl Style="{StaticResource TimetableCell}" ItemsSource="{Binding Cells[2].Entries}"/></Border>
+                      <Border><ItemsControl Style="{StaticResource TimetableCell}" ItemsSource="{Binding Cells[3].Entries}"/></Border>
+                      <Border><ItemsControl Style="{StaticResource TimetableCell}" ItemsSource="{Binding Cells[4].Entries}"/></Border>
+                      <!-- Saturday and Sunday, dropped as a pair on a week with a free weekend. The
+                           week decides it once (HidesWeekend) and every row reads the same answer,
+                           so no row can end up a column wider than its neighbours. -->
+                      <Border Visibility="{Binding DataContext.Timetable.Week.HidesWeekend, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToCollapsed}}">
+                        <ItemsControl Style="{StaticResource TimetableCell}" ItemsSource="{Binding Cells[5].Entries}"/>
+                      </Border>
+                      <Border Visibility="{Binding DataContext.Timetable.Week.HidesWeekend, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToCollapsed}}">
+                        <ItemsControl Style="{StaticResource TimetableCell}" ItemsSource="{Binding Cells[6].Entries}"/>
+                      </Border>
+                    </UniformGrid>
+                  </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- What the grid left out, said rather than left to be noticed. A TextBlock, so it is
+                 announced with the rest of the panel: a screen reader cannot see two missing
+                 columns. It only appears when the columns are actually gone. -->
+            <TextBlock Text="Weekend — nothing scheduled" Margin="0,12,0,0"
+                       FontSize="{StaticResource TextXs}" Foreground="{StaticResource TextFaint}"
+                       Visibility="{Binding Timetable.Week.HidesWeekend, Converter={StaticResource BoolToVisible}}"/>
+          </StackPanel>
+          </Grid>   <!-- /the IsEmpty gate around both renderings -->
+        </Grid>
       </ScrollViewer>
     </Grid>
 

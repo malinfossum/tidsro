@@ -194,4 +194,18 @@ public class TidsroDataTests
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })!;
         Assert.Equal(0, data.Sanitized().Settings!.SelectedTab);
     }
+
+    [Fact]
+    public void The_week_tab_index_survives_sanitising()
+    {
+        var settings = new AppSettings { SelectedTab = 2 }.Sanitized();
+        Assert.Equal(2, settings.SelectedTab);
+    }
+
+    [Fact]
+    public void A_tab_index_past_the_last_tab_falls_back_to_the_first()
+    {
+        var settings = new AppSettings { SelectedTab = 3 }.Sanitized();
+        Assert.Equal(0, settings.SelectedTab);
+    }
 }

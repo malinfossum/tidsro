@@ -20,7 +20,7 @@ Anyone who works or studies at a computer and wants to hold their focus through 
 
 ## Status
 
-**Shipped, with versioned [releases](https://github.com/malinfossum/tidsro/releases/latest).** Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms** — fire once at an HH:MM time, or repeat on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms can be **switched off without deleting** (kept and parked at the bottom until switched back on), edited in a dialog, and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**, and your alarms and settings can be **exported to a file and imported back**.
+**Shipped, with versioned [releases](https://github.com/malinfossum/tidsro/releases/latest).** Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms** — fire once at an HH:MM time, or repeat on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms can be **switched off without deleting** (kept and parked at the bottom until switched back on), edited in a dialog, and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**, and your alarms and settings can be **exported to a file and imported back**. A **Week** tab lays the repeating alarms out as a timetable.
 
 See the [changelog](CHANGELOG.md) for what's new in each release.
 
@@ -76,6 +76,13 @@ The **Schedule** is its own tab next to Quick timers, and a compact strip below 
 
 - Open **Settings** (bottom-left of the main window) to toggle launch-at-startup and choose a default sound. Changes apply when you click **Save**; **Cancel**, **Esc**, or closing the window discards them.
 
+The **Week** tab lays your repeating alarms out as a timetable — a day-by-day agenda on a narrow window, becoming a grid once there is room for one. It lists only the times you have something on, so a free afternoon costs no space, and each row states its own time: an alarm at 12:15 says 12:15 rather than the half hour it falls in. Saturday and Sunday get columns only when something falls on them, or when today is one of them; otherwise the week stays five columns wide and says so beneath. Today is marked in both views. The tab is read-only — alarms are added and edited on the Schedule.
+
+<p align="center">
+  <img src="docs/screenshots/week.png" alt="The Week tab: five columns from Monday to Friday with Thursday marked as today by a gold dot and gold heading, seven rows of repeating alarms from 08:00 School start down to 15:30 Wind down with their times in a left-hand gutter, and a muted line beneath reading Weekend - nothing scheduled." width="560"><br>
+  <em>The Week tab — only the times you use, and no columns spent on a free weekend.</em>
+</p>
+
 ### Backup and restore
 
 **Settings → Data → Export data…** writes everything — your alarms *and* your settings — to a JSON file wherever you choose. **Import data…** reads one back, and asks first whether to restore only the alarms or everything, so a file from another machine can't move your window or change your launch-at-startup setting unless you say so.
@@ -88,7 +95,7 @@ An export is an ordinary, unencrypted JSON file — your alarm labels are readab
 
 ## Roadmap
 
-- Weekly timetable view
+- Timetable blocks with a start and an end time
 
 ## Stack
 
