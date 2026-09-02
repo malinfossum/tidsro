@@ -2,12 +2,15 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
-## [2.3.0] — 2026-08-26
+## [2.3.0] — 2026-09-03
 
 ### Added
-- **Week tab** — a read-only view of your repeating alarms laid out Monday to Sunday. Narrow windows
-  show a day-by-day agenda; widen the window and it becomes a seven-column grid. The scale fits the
-  hours you actually use rather than showing an empty 24 hours. Today is marked in both.
+- **Week tab** — a read-only timetable of your repeating alarms. Narrow windows show a day-by-day
+  agenda; widen the window and it becomes a grid. It lists only the times you have something on, so
+  a free afternoon costs no space, and every row states its own time — an alarm at 12:15 says 12:15
+  rather than the half hour it falls in. Saturday and Sunday get columns only when something falls
+  on them, or when today is one of them; otherwise the week is five columns wide and says beneath
+  that the weekend is free. Today is marked in both views.
 
 ## [2.2.0] — 2026-08-26
 
