@@ -80,7 +80,6 @@ public class TimetableLayoutTests
         var week = TimetableLayout.Build(
             new[] { Recurring(0, 30, Weekdays.Mon), Recurring(23, 30, Weekdays.Mon) }, At(1, 9, 0));
         Assert.Equal(48, week.Slots.Count);
-        Assert.True(week.LabelWholeHoursOnly);
     }
 
     [Fact]
@@ -255,13 +254,12 @@ public class TimetableLayoutTests
     // instead of two collections hoping to agree on a pixel height.
 
     [Fact]
-    public void There_is_one_row_per_slot_and_seven_cells_per_row()
+    public void Every_row_has_one_cell_per_column()
     {
         var week = TimetableLayout.Build(
             new[] { Recurring(7, 0, Weekdays.Mon), Recurring(15, 0, Weekdays.Mon) }, At(1, 9, 0));
 
-        Assert.Equal(week.Slots.Count, week.Rows.Count);
-        Assert.All(week.Rows, r => Assert.Equal(7, r.Cells.Count));
+        Assert.All(week.Rows, r => Assert.Equal(week.GridDays.Count, r.Cells.Count));
     }
 
     [Fact]
@@ -269,17 +267,27 @@ public class TimetableLayoutTests
     {
         var week = TimetableLayout.Build(new[] { Recurring(9, 0, Weekdays.Mon) }, At(1, 9, 0));
 
-        for (var i = 0; i < week.Rows.Count; i++) Assert.Same(week.Slots[i], week.Rows[i].Slot);
+        foreach (var row in week.Rows) Assert.Same(week.Slots[row.Slot.Index], row.Slot);
     }
 
     [Fact]
     public void Cells_are_Monday_first_like_the_columns()
     {
-        var week = TimetableLayout.Build(new[] { Recurring(9, 0, Weekdays.Mon) }, At(1, 9, 0));
+        // A Sunday alarm, so all seven columns are drawn and the full order is under test.
+        var week = TimetableLayout.Build(
+            new[] { Recurring(9, 0, Weekdays.Mon), Recurring(9, 0, Weekdays.Sun) }, At(1, 9, 0));
 
         Assert.Equal(
             new[] { Weekdays.Mon, Weekdays.Tue, Weekdays.Wed, Weekdays.Thu, Weekdays.Fri, Weekdays.Sat, Weekdays.Sun },
             week.Rows[0].Cells.Select(c => c.Day));
+    }
+
+    [Fact]
+    public void A_row_has_one_cell_per_column_in_the_columns_own_order()
+    {
+        var week = TimetableLayout.Build(new[] { Recurring(9, 0, Weekdays.Mon) }, At(1, 9, 0));
+
+        Assert.Equal(week.GridDays.Select(d => d.Day), week.Rows.Single().Cells.Select(c => c.Day));
     }
 
     [Fact]
@@ -293,11 +301,9 @@ public class TimetableLayoutTests
 
         var monday = week.Days.Single(d => d.Day == Weekdays.Mon);
         Assert.Equal(new[] { 2, 18 }, monday.Entries.Select(e => e.SlotIndex));
-        Assert.Equal("Gym", week.Rows[2].Cells[0].Entries.Single().DisplayLabel);
-        Assert.Equal("Code class", week.Rows[18].Cells[0].Entries.Single().DisplayLabel);
-        Assert.All(
-            week.Rows.Where(r => r.Slot.Index is not 2 and not 18),
-            r => Assert.Empty(r.Cells[0].Entries));
+        Assert.Equal("Gym", week.Rows.Single(r => r.Slot.Index == 2).Cells[0].Entries.Single().DisplayLabel);
+        Assert.Equal("Code class", week.Rows.Single(r => r.Slot.Index == 18).Cells[0].Entries.Single().DisplayLabel);
+        Assert.Equal(2, week.Rows.Count);
     }
 
     [Fact]
@@ -312,9 +318,11 @@ public class TimetableLayoutTests
             Recurring(9, 0, Weekdays.Tue, "Standup"),
         }, At(1, 9, 0));
 
-        Assert.Equal("Standup", week.Rows[6].Cells[1].Entries.Single().DisplayLabel);   // Tue 09:00
-        Assert.Empty(week.Rows[6].Cells[0].Entries);                                    // Mon is free at 09:00
-        Assert.Empty(week.Rows[2].Cells[1].Entries);                                    // Tue is free at 07:00
+        var nine = week.Rows.Single(r => r.Slot.Index == 6);
+        var seven = week.Rows.Single(r => r.Slot.Index == 2);
+        Assert.Equal("Standup", nine.Cells[1].Entries.Single().DisplayLabel);   // Tue 09:00
+        Assert.Empty(nine.Cells[0].Entries);                                    // Mon is free at 09:00
+        Assert.Empty(seven.Cells[1].Entries);                                   // Tue is free at 07:00
     }
 
     [Fact]
@@ -328,12 +336,179 @@ public class TimetableLayoutTests
         Assert.Equal(new[] { "A", "B" }, occupied[0].Cells[0].Entries.Select(e => e.DisplayLabel));
     }
 
+    // ── An entry that does not sit on a slot boundary ──────────────────────
+    // The gutter names the SLOT, so it can only speak for an entry that starts when the slot does.
+    // A 12:15 alarm lives in the 12:00 band and would otherwise be read off the gutter as 12:00.
+
+    [Fact]
+    public void An_entry_starting_with_its_slot_is_on_the_boundary()
+    {
+        var week = TimetableLayout.Build(
+            new[] { Recurring(9, 0, Weekdays.Mon), Recurring(9, 30, Weekdays.Mon) }, At(1, 9, 0));
+
+        var monday = week.Days.Single(d => d.Day == Weekdays.Mon);
+        Assert.All(monday.Entries, e => Assert.True(e.IsOnSlotBoundary));
+    }
+
+    [Fact]
+    public void An_entry_inside_a_slot_is_not_on_the_boundary()
+    {
+        var week = TimetableLayout.Build(new[] { Recurring(12, 15, Weekdays.Mon) }, At(1, 9, 0));
+
+        var entry = week.Days.Single(d => d.Day == Weekdays.Mon).Entries.Single();
+        Assert.False(entry.IsOnSlotBoundary);
+        Assert.Equal("12:15", entry.TimeText);
+    }
+
+    // ── Rows are the occupied slots, and nothing else ──────────────────────
+    // An empty half hour gets no row: the week lists the times it has something on, evenly spaced,
+    // the way a printed timetable does. The vertical scale is deliberately not proportional — 07:00
+    // and 15:00 sit next to each other when nothing falls between them. The earlier shape collapsed
+    // a run of empties into one thin "7h 30m" band; four of those broke the row rhythm and the grid
+    // stopped reading as a timetable.
+
+    [Fact]
+    public void An_empty_half_hour_between_entries_gets_no_row()
+    {
+        var week = TimetableLayout.Build(
+            new[] { Recurring(7, 0, Weekdays.Mon, "Gym"), Recurring(15, 0, Weekdays.Mon, "Code class") },
+            At(1, 9, 0));
+
+        Assert.Equal(new[] { "07:00", "15:00" }, week.Rows.Select(r => r.Slot.Label));
+    }
+
+    [Fact]
+    public void Empty_slots_before_the_first_entry_and_after_the_last_are_dropped()
+    {
+        // The span pads an hour each side and grows to a six-hour minimum, so a lone alarm sits in
+        // a mostly empty span — none of which earns a row.
+        var week = TimetableLayout.Build(new[] { Recurring(9, 0, Weekdays.Mon) }, At(1, 9, 0));
+
+        Assert.Single(week.Rows);
+        Assert.Equal("09:00", week.Rows[0].Slot.Label);
+    }
+
+    [Fact]
+    public void Entries_in_adjacent_slots_each_keep_their_own_row()
+    {
+        var week = TimetableLayout.Build(
+            new[] { Recurring(9, 0, Weekdays.Mon), Recurring(9, 30, Weekdays.Mon) }, At(1, 9, 0));
+
+        Assert.Equal(new[] { "09:00", "09:30" }, week.Rows.Select(r => r.Slot.Label));
+    }
+
     [Fact]
     public void An_empty_week_has_no_rows()
     {
         var week = TimetableLayout.Build(Array.Empty<TimerItem>(), At(1, 9, 0));
 
         Assert.Empty(week.Rows);
+    }
+
+    // ── The weekend only gets columns when it has something on it ──────────
+    // Two empty columns spend two sevenths of the grid saying nothing. When neither weekend day has
+    // an alarm the grid drops both and says so in one muted line instead — but never when the
+    // weekend is where you are standing, which is the same exception the agenda already makes.
+
+    [Fact]
+    public void A_weekday_only_week_gets_no_weekend_columns()
+    {
+        var week = TimetableLayout.Build(new[] { Recurring(9, 0, Weekdays.Mon | Weekdays.Fri) }, At(1, 9, 0));
+
+        Assert.Equal(
+            new[] { Weekdays.Mon, Weekdays.Tue, Weekdays.Wed, Weekdays.Thu, Weekdays.Fri },
+            week.GridDays.Select(d => d.Day));
+        Assert.True(week.HidesWeekend);
+    }
+
+    [Fact]
+    public void Dropping_the_weekend_columns_leaves_the_agenda_all_seven_days()
+    {
+        var week = TimetableLayout.Build(new[] { Recurring(9, 0, Weekdays.Mon) }, At(1, 9, 0));
+
+        Assert.Equal(5, week.GridDays.Count);
+        Assert.Equal(7, week.Days.Count);
+    }
+
+    [Fact]
+    public void One_alarm_on_a_weekend_day_brings_both_columns_back()
+    {
+        // Saturday alone brings Sunday with it: the weekend is drawn as a pair, so a lone Sunday
+        // column never appears at the end of a row on its own.
+        var week = TimetableLayout.Build(
+            new[] { Recurring(9, 0, Weekdays.Mon), Recurring(11, 0, Weekdays.Sat) }, At(1, 9, 0));
+
+        Assert.Equal(7, week.GridDays.Count);
+        Assert.False(week.HidesWeekend);
+    }
+
+    [Fact]
+    public void The_weekend_keeps_its_columns_when_today_is_a_weekend_day()
+    {
+        // 2026-01-03 is a Saturday. A grid that silently omits the day you are standing in is the
+        // defect TimetableDay.ShowInAgenda already avoids for the narrow rendering.
+        var week = TimetableLayout.Build(new[] { Recurring(9, 0, Weekdays.Mon) }, At(3, 9, 0));
+
+        Assert.Equal(7, week.GridDays.Count);
+        Assert.False(week.HidesWeekend);
+    }
+
+    [Fact]
+    public void An_empty_week_hides_nothing_because_it_draws_no_grid()
+    {
+        var week = TimetableLayout.Build(Array.Empty<TimerItem>(), At(1, 9, 0));
+
+        Assert.False(week.HidesWeekend);
+    }
+
+    // ── The gutter states the row's own time ───────────────────────────────
+    // The gutter names the SLOT, a half-hour band, so a row of 12:15 alarms would be read off it as
+    // 12:00. When every entry in the row starts at the same time the gutter states that time
+    // instead — the common case for a week of recurring alarms, and it keeps the exact time out of
+    // the cells, where a time plus a label does not fit a hundred-pixel column.
+
+    [Fact]
+    public void A_row_is_named_by_its_slot_when_the_entries_start_with_it()
+    {
+        var week = TimetableLayout.Build(new[] { Recurring(9, 0, Weekdays.Mon) }, At(1, 9, 0));
+
+        Assert.Equal("09:00", week.Rows.Single().GutterLabel);
+        Assert.False(week.Rows.Single().ShowsCellTimes);
+    }
+
+    [Fact]
+    public void A_row_whose_entries_share_an_off_slot_time_is_named_by_that_time()
+    {
+        var week = TimetableLayout.Build(
+            new[]
+            {
+                Recurring(12, 15, Weekdays.Mon, "Deep work"),
+                Recurring(12, 15, Weekdays.Tue, "Deep work"),
+            },
+            At(1, 9, 0));
+
+        var row = week.Rows.Single();
+        Assert.Equal("12:15", row.GutterLabel);
+        Assert.False(row.ShowsCellTimes);
+    }
+
+    [Fact]
+    public void A_row_of_mixed_times_keeps_its_slot_label_and_lets_the_cells_speak()
+    {
+        var week = TimetableLayout.Build(
+            new[] { Recurring(12, 0, Weekdays.Mon), Recurring(12, 15, Weekdays.Tue) }, At(1, 9, 0));
+
+        var row = week.Rows.Single();
+        Assert.Equal("12:00", row.GutterLabel);
+        Assert.True(row.ShowsCellTimes);
+    }
+
+    [Fact]
+    public void A_row_is_named_by_the_time_it_states_if_WPF_ever_asks()
+    {
+        var week = TimetableLayout.Build(new[] { Recurring(12, 15, Weekdays.Mon) }, At(1, 9, 0));
+
+        Assert.Equal("12:15", week.Rows.Single().ToString());
     }
 
     // ── An alarm with no label ─────────────────────────────────────────────
@@ -398,9 +573,10 @@ public class TimetableLayoutTests
         // Not a display value: the grid names nothing per row. But a WPF item container that does
         // acquire an automation peer falls back to ToString(), and a record would read out the
         // whole row.
-        var week = TimetableLayout.Build(new[] { Recurring(9, 0, Weekdays.Mon) }, At(1, 9, 0));
+        var week = TimetableLayout.Build(
+            new[] { Recurring(7, 0, Weekdays.Mon), Recurring(15, 0, Weekdays.Mon) }, At(1, 9, 0));
 
-        Assert.Equal("06:00", week.Rows[0].ToString());
-        Assert.Equal("06:30", week.Rows[1].ToString());
+        Assert.Equal("07:00", week.Rows[0].ToString());
+        Assert.Equal("15:00", week.Rows[^1].ToString());
     }
 }

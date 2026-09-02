@@ -6,6 +6,13 @@ public sealed record TimetableEntry(
 {
     public string TimeText => $"{Hour:D2}:{Minute:D2}";
 
+    /// <summary>Whether this entry starts exactly when its slot does. It decides whether the cell
+    /// prints a time, but only in a row that holds more than one start — see
+    /// <see cref="TimetableRow.ShowsCellTimes"/>. A row where every entry is at 12:15 says so in its
+    /// gutter and the cells stay bare; a row holding both 12:00 and 12:15 cannot, so there the
+    /// off-boundary entries print their own time.</summary>
+    public bool IsOnSlotBoundary => Minute % TimetableLayout.SlotMinutes == 0;
+
     /// <summary>The label as it is drawn and announced. The add form permits an alarm with no label,
     /// so the raw <see cref="Label"/> can be null or blank — which would draw an empty box and
     /// announce with a leading comma (", Monday, 09:00"). "No label" is the same stand-in the
@@ -62,16 +69,47 @@ public sealed record TimetableDay(Weekdays Day, string Name, bool IsToday, IRead
 /// Usually empty, occasionally one, rarely two.</summary>
 public sealed record TimetableCell(Weekdays Day, string DayName, IReadOnlyList<TimetableEntry> Entries);
 
-/// <summary>One horizontal band of the wide grid: a slot and the seven cells beside it, Monday
-/// first. Row-major on purpose — see <see cref="TimetableLayout"/>.</summary>
+/// <summary>One horizontal band of the wide grid: a slot that has something on it, and one cell per
+/// column beside it, Monday first — five of them on a week with a free weekend, seven otherwise.
+/// Row-major on purpose — see <see cref="TimetableLayout"/>.</summary>
 public sealed record TimetableRow(TimetableSlot Slot, IReadOnlyList<TimetableCell> Cells)
 {
+    /// <summary>The one time every entry in this row starts at, or null when they differ. Walked
+    /// rather than cached: a row holds a handful of entries, and a cached field would be copied
+    /// stale by the record's own <c>with</c>.</summary>
+    private string? SharedTime
+    {
+        get
+        {
+            string? shared = null;
+            foreach (var cell in Cells)
+                foreach (var entry in cell.Entries)
+                {
+                    if (shared is null) shared = entry.TimeText;
+                    else if (shared != entry.TimeText) return null;
+                }
+            return shared;
+        }
+    }
+
+    /// <summary>What the row's gutter states. The slot is a half-hour BAND, so naming the row after
+    /// it would read a 12:15 alarm as 12:00. When the whole row starts at one time — which is the
+    /// ordinary case for a week of recurring alarms, where a class repeats at the same time on
+    /// several days — the gutter states that time instead. Only a row of mixed starts falls back to
+    /// the band, and then the cells speak for themselves.</summary>
+    public string GutterLabel => SharedTime ?? Slot.Label;
+
+    /// <summary>Whether the cells in this row print their own times. False whenever the gutter has
+    /// already said it, which keeps a time out of a hundred-pixel column where it would push the
+    /// label into an ellipsis.</summary>
+    public bool ShowsCellTimes => SharedTime is null;
+
     /// <summary>A belt-and-braces guard, not a display value. The grid's row containers carry no
-    /// AutomationProperties.Name on purpose — a row that is empty should contribute nothing to the
-    /// automation tree — but a WPF item container that does end up with a peer names itself from
-    /// ToString(), and a record's generated ToString() would read out the entire row. If that
-    /// fallback ever fires, it should say the time the row is, which is at least true.</summary>
-    public override string ToString() => Slot.Label;
+    /// AutomationProperties.Name on purpose — the entries inside them are what is named — but a WPF
+    /// item container that does end up with a peer names itself from ToString(), and a record's
+    /// generated ToString() would read out the entire row. If that fallback ever fires, it should
+    /// say the time the row states, which is at least true.</summary>
+    public override string ToString() => GutterLabel;
 }
 
 /// <summary>The whole projected week. Immutable; rebuilt rather than mutated.</summary>
@@ -79,10 +117,14 @@ public sealed record TimetableWeek(
     bool IsEmpty,
     IReadOnlyList<TimetableSlot> Slots,
     IReadOnlyList<TimetableDay> Days,
+    IReadOnlyList<TimetableDay> GridDays,
     IReadOnlyList<TimetableRow> Rows)
 {
-    /// <summary>Past a twelve-hour span the gutter labels only whole hours, so the text thins while the rows stay.</summary>
-    public bool LabelWholeHoursOnly => Slots.Count > 24;
+    /// <summary>Whether the grid left the weekend out, which is what the line under it answers to.
+    /// Read off the two collections rather than stored: <see cref="GridDays"/> is
+    /// <see cref="Days"/> minus the weekend or nothing at all, so there is no third state to keep
+    /// in step.</summary>
+    public bool HidesWeekend => GridDays.Count < Days.Count;
 }
 
 /// <summary>
@@ -140,26 +182,55 @@ public static class TimetableLayout
             days.Add(new TimetableDay(flag, name, flag == today, entries));
         }
 
-        return new TimetableWeek(IsEmpty: false, slots, days, BuildRows(slots, days));
+        var gridDays = ResolveGridDays(days);
+        return new TimetableWeek(IsEmpty: false, slots, days, gridDays, BuildRows(slots, gridDays));
     }
 
-    /// <summary>Turn the seven day columns inside out into one row per slot. The wide grid draws
-    /// these directly, so a row's gutter label and its seven cells are one element and cannot fall
-    /// out of line with each other.</summary>
+    /// <summary>Which weekdays the grid gives a column to. Saturday and Sunday cost two sevenths of
+    /// the width between them, and on a term timetable they are usually two empty columns — so they
+    /// are dropped unless there is something to show. Two exceptions, both the same principle: an
+    /// alarm on either weekend day brings BOTH columns back, so a lone Sunday never turns up on its
+    /// own at the end of a row; and today always keeps its column, because a week view that omits
+    /// the day you are standing in is worse than an empty column (the agenda makes the same
+    /// exception in <see cref="TimetableDay.ShowInAgenda"/>). What is dropped is said in words
+    /// beneath the grid — see <see cref="TimetableWeek.HidesWeekend"/> — never silently.</summary>
+    private static List<TimetableDay> ResolveGridDays(List<TimetableDay> days)
+    {
+        static bool IsWeekend(TimetableDay d) => d.Day is Weekdays.Sat or Weekdays.Sun;
+
+        return days.Any(d => IsWeekend(d) && (d.Entries.Count > 0 || d.IsToday))
+            ? days
+            : days.Where(d => !IsWeekend(d)).ToList();
+    }
+
+    /// <summary>Turn the seven day columns inside out into rows the wide grid draws directly, so a
+    /// row's gutter label and its seven cells are one element and cannot fall out of line with each
+    /// other.
+    ///
+    /// <para><b>Only the slots that have something on them get a row.</b> An empty half hour is not
+    /// drawn, thinned, or collapsed into a band that states its own length — it is simply absent, so
+    /// the week reads as the list of times it has something on, evenly spaced. The vertical scale is
+    /// deliberately not proportional: 07:00 and 15:00 sit next to each other when nothing falls
+    /// between them, exactly as a printed timetable lists its periods.</para></summary>
     private static List<TimetableRow> BuildRows(List<TimetableSlot> slots, List<TimetableDay> days)
     {
         // One pass per day, not one scan per cell: 48 slots x 7 days would otherwise re-walk the
         // day's entries 48 times for a week that usually has a handful.
         var bySlot = days.Select(d => d.Entries.ToLookup(e => e.SlotIndex)).ToList();
 
-        var rows = new List<TimetableRow>(slots.Count);
+        var rows = new List<TimetableRow>();
         foreach (var slot in slots)
         {
+            var occupied = false;
+            for (var i = 0; i < days.Count && !occupied; i++) occupied = bySlot[i].Contains(slot.Index);
+            if (!occupied) continue;
+
             var cells = new List<TimetableCell>(days.Count);
             for (var i = 0; i < days.Count; i++)
                 cells.Add(new TimetableCell(days[i].Day, days[i].Name, bySlot[i][slot.Index].ToList()));
             rows.Add(new TimetableRow(slot, cells));
         }
+
         return rows;
     }
 
@@ -223,7 +294,10 @@ public static class TimetableLayout
         var days = Week
             .Select(d => new TimetableDay(d.Flag, d.Name, d.Flag == today, Array.Empty<TimetableEntry>()))
             .ToList();
-        return new TimetableWeek(IsEmpty: true, Array.Empty<TimetableSlot>(), days, Array.Empty<TimetableRow>());
+        // GridDays is the full week here rather than the weekday subset: an empty week draws the
+        // empty state instead of a grid, so there is no column to drop and nothing to explain.
+        return new TimetableWeek(
+            IsEmpty: true, Array.Empty<TimetableSlot>(), days, days, Array.Empty<TimetableRow>());
     }
 
     private static int FloorToSlot(int minutes) => minutes / SlotMinutes * SlotMinutes;

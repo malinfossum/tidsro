@@ -115,20 +115,3 @@ public sealed class WidthToVisibleConverter : IValueConverter
 
     public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
 }
-
-/// <summary>Thins the wide grid's time gutter on a long week (<see cref="TimetableWeek.LabelWholeHoursOnly"/>)
-/// without touching row height: past a twelve-hour span, only the top of each hour prints its label,
-/// and every other slot's TextBlock stays in place with empty text. Blanking rather than collapsing
-/// keeps the gutter's rows aligned with the day columns and keeps the same number of elements in the
-/// tree — no gaps open up where a screen reader would otherwise expect a row.
-/// Values: [0] the slot's Label, [1] the slot's IsWholeHour, [2] the week's LabelWholeHoursOnly.</summary>
-public sealed class SlotLabelConverter : IMultiValueConverter
-{
-    public object Convert(object[] values, Type targetType, object? parameter, CultureInfo culture) =>
-        values is [string label, bool isWholeHour, bool wholeHoursOnly]
-            ? (!wholeHoursOnly || isWholeHour ? label : "")
-            : "";
-
-    public object[] ConvertBack(object? value, Type[] targetTypes, object? parameter, CultureInfo culture) =>
-        throw new NotSupportedException();
-}

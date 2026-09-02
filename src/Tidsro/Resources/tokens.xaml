@@ -11,7 +11,6 @@
   <v:IndexToVisibleConverter x:Key="IndexToVisible"/>
   <v:WidthToMeasureConverter x:Key="WidthToMeasure"/>
   <v:WidthToVisibleConverter x:Key="WidthToVisible"/>
-  <v:SlotLabelConverter x:Key="SlotLabel"/>
 
   <!-- Surfaces — neutral, and lifted just off black so SHADOWS ACTUALLY RENDER. Three waves got
        here: walnut brown (rejected twice, §14 of the spec), then true black #000000, which killed
