@@ -32,6 +32,12 @@
           <Setter Property="Visibility" Value="Collapsed"/>
         </Trigger>
       </Style.Triggers>
+      <!-- Not focusable, like every other ItemsControl in the Week tab. An ItemsControl is focusable
+           by default, so each one became a nameless tab stop: Tab through a read-only tab landed on
+           a run of unnamed List peers. The one intended stop is the ScrollViewer around them, which
+           is what scrolls. Focusable is keyboard focus only - the peers, and the entries' accessible
+           names that ride on them, are untouched. -->
+      <Setter Property="Focusable" Value="False"/>
       <Setter Property="ItemContainerStyle">
         <Setter.Value>
           <!-- The accessible name MUST live here, on the ContentPresenter. A Border at the root of
@@ -519,7 +525,7 @@
                the exception and always draws, because a week view that silently omits the day you
                are standing in is worse than one empty heading. ShowInAgenda decides that in the
                model, where it is tested, rather than in a converter here. -->
-          <ItemsControl ItemsSource="{Binding Timetable.Week.Days}"
+          <ItemsControl Focusable="False" ItemsSource="{Binding Timetable.Week.Days}"
                         Visibility="{Binding ActualWidth, ElementName=Panels, Converter={StaticResource WidthToVisible}, ConverterParameter=Narrow}">
             <ItemsControl.ItemContainerStyle>
               <!-- Both setters belong on the container. The name because a Border at the root of a
@@ -560,7 +566,7 @@
                   <TextBlock Text="Nothing today." Margin="0,4,0,0" FontSize="{StaticResource TextXs}"
                              Foreground="{StaticResource TextMuted}"
                              Visibility="{Binding IsFreeToday, Converter={StaticResource BoolToVisible}}"/>
-                  <ItemsControl ItemsSource="{Binding Entries}" Margin="0,4,0,0">
+                  <ItemsControl Focusable="False" ItemsSource="{Binding Entries}" Margin="0,4,0,0">
                     <ItemsControl.ItemContainerStyle>
                       <!-- The accessible name MUST live here, on the ContentPresenter. A Border at
                            the root of the DataTemplate gets no automation peer, so a name set there
@@ -646,7 +652,7 @@
                 <ColumnDefinition Width="Auto" SharedSizeGroup="TimetableGutter"/>
                 <ColumnDefinition Width="*"/>
               </Grid.ColumnDefinitions>
-              <ItemsControl Grid.Column="1" ItemsSource="{Binding Timetable.Week.Days}">
+              <ItemsControl Focusable="False" Grid.Column="1" ItemsSource="{Binding Timetable.Week.Days}">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate><UniformGrid Rows="1"/></ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
@@ -670,7 +676,7 @@
             </Grid>
 
             <!-- The rows themselves. -->
-            <ItemsControl ItemsSource="{Binding Timetable.Week.Rows}">
+            <ItemsControl Focusable="False" ItemsSource="{Binding Timetable.Week.Rows}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate>
                   <!-- MinHeight is the ONE row-height value in this rendering, and because the
