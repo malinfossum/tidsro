@@ -58,7 +58,7 @@ Launching Tidsro opens its window — it remembers where you last placed it and 
 The **Schedule** is its own tab next to Quick timers, and a compact strip below the tab content shows whatever is counting down, whichever tab you're on. Type a time — `14:30`, or shorthand like `9`, `930`, or `1430` (24-hour) — an optional label, choose a sound, set **Repeat** (Once, or a weekday set), and click **Add** (or press **Enter**). The alarm is saved immediately. Turn on **Warn me 5 minutes before** for a quiet heads-up ahead of the alarm.
 
 <p align="center">
-  <img src="docs/screenshots/schedule.png" alt="The Schedule tab: a form for adding an alarm (time, label, sound, repeat, and a pre-alarm warning toggle), three weekday alarms below with gold on/off toggles, and a slim strip along the bottom showing a timer still counting down on the other tab (Running 00:10, Laundry done)." width="560"><br>
+  <img src="docs/screenshots/schedule.png" alt="The Schedule tab: a form for adding an alarm (time, label, sound, repeat, and a pre-alarm warning toggle), three alarms below with gold on/off toggles — 08:00 on weekdays, 10:30 on Thursday, 11:30 on weekdays — and a slim strip along the bottom showing a timer still counting down on the other tab (Running 04:58, Laundry done)." width="560"><br>
   <em>The Schedule — and the strip along the bottom keeping a running timer in view.</em>
 </p>
 
@@ -70,7 +70,7 @@ The **Schedule** is its own tab next to Quick timers, and a compact strip below 
 - When an alarm fires, the same quiet bottom-right card appears, with **Snooze +5** (re-arms it 5 minutes later in the Schedule) and **Dismiss**.
 
 <p align="center">
-  <img src="docs/screenshots/alarm-dialog.png" alt="The Edit alarm dialog: an 08:00 alarm labelled School start, with a sound picker on Piano jingle, repeat set to Weekdays, the 5-minute pre-alarm warning switched on with a gold toggle, and Save and Cancel buttons." width="344"><br>
+  <img src="docs/screenshots/alarm-dialog.png" alt="The Edit alarm dialog: an 08:00 alarm labelled Morning walk, with a sound picker on Piano jingle, repeat set to Weekdays, the 5-minute pre-alarm warning switched on with a gold toggle, and Save and Cancel buttons." width="344"><br>
   <em>Editing an alarm — per-alarm sound, repeat, and the optional 5-minute warning.</em>
 </p>
 
@@ -79,7 +79,7 @@ The **Schedule** is its own tab next to Quick timers, and a compact strip below 
 The **Week** tab lays your repeating alarms out as a timetable — a day-by-day agenda on a narrow window, becoming a grid once there is room for one. It lists only the times you have something on, so a free afternoon costs no space, and each row states its own time: an alarm at 12:15 says 12:15 rather than the half hour it falls in. Saturday and Sunday get columns only when something falls on them, or when today is one of them; otherwise the week stays five columns wide and says so beneath. Today is marked in both views. The tab is read-only — alarms are added and edited on the Schedule.
 
 <p align="center">
-  <img src="docs/screenshots/week.png" alt="The Week tab: five columns from Monday to Friday with Thursday marked as today by a gold dot and gold heading, seven rows of repeating alarms from 08:00 School start down to 15:30 Wind down with their times in a left-hand gutter, and a muted line beneath reading Weekend - nothing scheduled." width="560"><br>
+  <img src="docs/screenshots/week.png" alt="The Week tab: five columns from Monday to Friday with Thursday marked as today by a gold dot and gold heading, seven rows of repeating alarms from 07:30 Morning walk down to 17:30 Wrap up with their times in a left-hand gutter, a 12:00 row where the Tuesday and Thursday cells print their own 12:15, and a muted line beneath reading Weekend - nothing scheduled." width="560"><br>
   <em>The Week tab — only the times you use, and no columns spent on a free weekend.</em>
 </p>
 
