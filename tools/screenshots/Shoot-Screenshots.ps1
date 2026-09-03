@@ -301,7 +301,11 @@ function Stop-Shoot {
 # ---------------------------------------------------------------------------- the shots
 
 function Get-WeekShot {
-    Write-Fixture -Plan $WeekPlan -Tab 2 -Width 900 -Height 575
+    # Wide enough for the fixture's two-lane Tuesday: the grid asks for a readable 90px per lane
+    # (TimetableLayout.RequiredGridWidth) and draws the agenda below that, which at the old 900
+    # is what this shot would now capture. 1100 clears the 1044 flip point with room to spare, so
+    # a font change that widens the gutter cannot silently turn the README shot into the agenda.
+    Write-Fixture -Plan $WeekPlan -Tab 2 -Width 1100 -Height 575
     $proc, $root = Start-Shoot
     try {
         Save-WindowImage -Handle $proc.MainWindowHandle -Out (Join-Path $OutDir 'week.png') -IncludeChrome
