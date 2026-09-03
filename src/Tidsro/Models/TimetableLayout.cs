@@ -28,6 +28,24 @@ public sealed record TimetableEntry(
     /// off-boundary entries print their own time.</summary>
     public bool IsOnSlotBoundary => Minute % TimetableLayout.SlotMinutes == 0;
 
+    /// <summary>Whether the cell prints this entry's own start time beside its label. Stamped by
+    /// <see cref="TimetableLayout"/> once the row it lands in is known, because the decision is the
+    /// ROW's (see <see cref="TimetableRow.ShowsCellTimes"/>) and the entry is what the template
+    /// binds to. It is not walked up the visual tree: the cell sits inside the lane strip, so an
+    /// ancestor walk lands on a lane, which is what silently dropped every cell time in v2.4.0.</summary>
+    public bool ShowsTime { get; init; }
+
+    /// <summary>Whether the printed time goes ABOVE the label rather than beside it. A lane in a
+    /// shared cluster is about <see cref="TimetableLayout.MinimumLaneWidth"/> wide, and a time and a
+    /// label cannot both fit across that — side by side, the label trims to an ellipsis and the cell
+    /// stops naming the alarm, which is the one thing it exists to do. Stacking spends a line of
+    /// height, which the band has, instead of width, which it does not.</summary>
+    public bool StacksTime => ShowsTime && LaneCount > 1;
+
+    /// <summary>Whether the printed time sits beside the label on one line. A day drawing a single
+    /// lane has the whole column, so the pair fits and a second line would only add height.</summary>
+    public bool InlinesTime => ShowsTime && LaneCount == 1;
+
     /// <summary>The label as it is drawn and announced. The add form permits an alarm with no label,
     /// so the raw <see cref="Label"/> can be null or blank — which would draw an empty box and
     /// announce with a leading comma (", Monday, 09:00"). "No label" is the same stand-in the
@@ -386,10 +404,41 @@ public static class TimetableLayout
 
                 cells.Add(new TimetableCell(days[i].Day, days[i].Name, lanes, overflow));
             }
-            rows.Add(new TimetableRow(slot, cells));
+            rows.Add(StampCellTimes(new TimetableRow(slot, cells)));
         }
 
         return rows;
+    }
+
+    /// <summary>Hands every entry in a mixed row the row's answer about printing its own time, so
+    /// the cell template binds to its own DataContext instead of hunting for the row above it.
+    ///
+    /// <para>Only the ROWS are stamped. <see cref="TimetableDay.Entries"/> keeps the unstamped
+    /// segments, which is correct: the agenda prints <see cref="TimetableEntry.RangeText"/> on every
+    /// line and has no gutter to defer to, so the question this answers does not arise there.</para></summary>
+    private static TimetableRow StampCellTimes(TimetableRow row)
+    {
+        if (!row.ShowsCellTimes) return row;
+
+        // A continuation is a block passing through the band, not something starting in it - printing
+        // its start time here would name a minute nothing begins at.
+        static bool Starts(TimetableEntry e) => e.Role is not (SegmentRole.Middle or SegmentRole.End);
+
+        var cells = row.Cells
+            .Select(cell => cell with
+            {
+                Lanes = cell.Lanes
+                    .Select(lane => lane with
+                    {
+                        Entries = lane.Entries
+                            .Select(e => e.IsOnSlotBoundary || !Starts(e) ? e : e with { ShowsTime = true })
+                            .ToList(),
+                    })
+                    .ToList(),
+            })
+            .ToList();
+
+        return row with { Cells = cells };
     }
 
     private readonly record struct Placed(
