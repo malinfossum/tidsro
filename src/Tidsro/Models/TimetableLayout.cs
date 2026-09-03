@@ -1,4 +1,4 @@
-namespace Tidsro.Models;
+﻿namespace Tidsro.Models;
 
 /// <summary>Which piece of a block a row is drawing. The wide grid draws one independent element per
 /// row, so there is no shared vertical grid for a <c>Grid.RowSpan</c> to span; a block is one segment
@@ -8,7 +8,7 @@ public enum SegmentRole { Instant, Start, Middle, End, Whole }
 /// <summary>One alarm placed in the week. Layout data only — no pixels, no view concerns.</summary>
 public sealed record TimetableEntry(
     Guid Id, string? Label, string DayName, int Hour, int Minute, SoundChoice Sound, bool IsEnabled,
-    int SlotIndex, int? EndMinute, SegmentRole Role, int LaneIndex)
+    int SlotIndex, int? EndMinute, SegmentRole Role, int LaneIndex, int LaneCount)
 {
     public string TimeText => $"{Hour:D2}:{Minute:D2}";
 
@@ -90,6 +90,28 @@ public sealed record TimetableDay(
     public bool IsFreeToday => IsToday && Entries.Count == 0;
 }
 
+/// <summary>One lane of one cell: what this band holds in one column of the day. Usually one entry,
+/// occasionally two (09:00 and 09:15 share a band without overlapping), often none.</summary>
+public sealed record TimetableLane(IReadOnlyList<TimetableEntry> Entries, bool IsToday)
+{
+    /// <summary>The block whose bar this band draws, if any. A continuation band has one of these and
+    /// nothing in <see cref="Announced"/>: the bar is painted by the lane's own Border, which has no
+    /// automation peer, so a three-hour block is drawn as one unbroken bar and announced once.</summary>
+    public TimetableEntry? Bar => Entries.FirstOrDefault(e => e.IsBlock);
+
+    /// <summary>What this band draws content for, and therefore what a screen reader reaches. A
+    /// block's middle and end segments are excluded: they are the same alarm passing through, and
+    /// announcing them would read a three-row block out three times over.</summary>
+    public IReadOnlyList<TimetableEntry> Announced =>
+        Entries.Where(e => e.Role is not (SegmentRole.Middle or SegmentRole.End)).ToList();
+
+    /// <summary>A lane is a layout device, not information — nothing should announce "lane 2 of 2".
+    /// This exists for the same reason <see cref="TimetableRow.ToString"/> does: a WPF item container
+    /// that ends up with an automation peer names itself from ToString(), and the fallback must say
+    /// nothing rather than read out a collection's type name.</summary>
+    public override string ToString() => string.Empty;
+}
+
 /// <summary>One day's share of one slot: the entries that fall in this half hour on this weekday.
 /// Usually empty, occasionally one, rarely two.
 ///
@@ -100,12 +122,12 @@ public sealed record TimetableDay(
 /// alarms can share a half-hour band without overlapping in time (09:00 and 09:15 want one lane and
 /// two lines), which is the phase-1 behaviour lanes must not break.</para></summary>
 public sealed record TimetableCell(
-    Weekdays Day, string DayName, IReadOnlyList<IReadOnlyList<TimetableEntry>> Lanes, int OverflowCount)
+    Weekdays Day, string DayName, IReadOnlyList<TimetableLane> Lanes, int OverflowCount)
 {
     /// <summary>What this band actually holds, in lane order and start order within a lane. Walked
     /// rather than stored, like <see cref="TimetableRow.GutterLabel"/>: a cached copy would be
     /// carried stale by the record's own <c>with</c>.</summary>
-    public IReadOnlyList<TimetableEntry> Entries => Lanes.SelectMany(lane => lane).ToList();
+    public IReadOnlyList<TimetableEntry> Entries => Lanes.SelectMany(lane => lane.Entries).ToList();
 
     public bool HasOverflow => OverflowCount > 0;
 
@@ -249,7 +271,7 @@ public static class TimetableLayout
 
                     entries.Add(new TimetableEntry(
                         u.Id, u.Label, name, u.Minutes / 60, u.Minutes % 60, u.Sound, u.IsEnabled,
-                        s, u.EndMinute, role, u.LaneIndex));
+                        s, u.EndMinute, role, u.LaneIndex, u.LaneCount));
                 }
             }
             days.Add(new TimetableDay(flag, name, flag == today, entries, laneCount));
@@ -303,15 +325,31 @@ public static class TimetableLayout
             {
                 // The lane array is the day's width, not this band's occupancy, so a bar keeps the
                 // same width down its whole run. Anything past the cap is counted, never drawn.
-                var lanes = new List<TimetableEntry>[days[i].LaneCount];
-                for (var l = 0; l < lanes.Length; l++) lanes[l] = new List<TimetableEntry>();
+                // The band's own width: the widest cluster reaching into it, not the day's widest.
+                var width = 1;
+                foreach (var entry in bySlot[i][slot.Index])
+                    if (entry.LaneCount > width) width = entry.LaneCount;
+
+                var buckets = new List<TimetableEntry>[Math.Min(width, MaxLanes)];
+                for (var l = 0; l < buckets.Length; l++) buckets[l] = new List<TimetableEntry>();
 
                 var overflow = 0;
+                var hasContent = false;
                 foreach (var entry in bySlot[i][slot.Index])
                 {
-                    if (entry.LaneIndex < lanes.Length) lanes[entry.LaneIndex].Add(entry);
+                    hasContent = true;
+                    if (entry.LaneIndex < buckets.Length) buckets[entry.LaneIndex].Add(entry);
                     else overflow++;
                 }
+
+                // An empty cell gets NO lanes, not a row of empty ones. The view collapses an items
+                // control with nothing in it, and that is what keeps an empty cell — most of them —
+                // out of the automation tree entirely. Handing it empty lanes would put every one of
+                // them back as a nameless list.
+                var lanes = hasContent
+                    ? buckets.Select(b => new TimetableLane(b, days[i].IsToday)).ToArray()
+                    : Array.Empty<TimetableLane>();
+
                 cells.Add(new TimetableCell(days[i].Day, days[i].Name, lanes, overflow));
             }
             rows.Add(new TimetableRow(slot, cells));
@@ -322,7 +360,7 @@ public static class TimetableLayout
 
     private readonly record struct Placed(
         Guid Id, string? Label, int Minutes, SoundChoice Sound, bool IsEnabled, Weekdays Days,
-        int? EndMinute, int LaneIndex = 0);
+        int? EndMinute, int LaneIndex = 0, int LaneCount = 1);
 
     /// <summary>How many lanes a day column will draw side by side. Lanes are the one axis this view
     /// leaves unbounded — rows stop at 48 because the span clamps to a day, but a cluster is as wide
@@ -354,20 +392,45 @@ public static class TimetableLayout
     private static int AssignLanes(List<Placed> dayPlaced)
     {
         var laneFreeFrom = new List<int>();
+        var clusterStart = 0;      // index of the first member of the cluster being built
+        var clusterEnd = int.MinValue;
+        var dayMax = 1;
+
+        // Close off a run of mutually overlapping entries by giving every member the SAME width, so a
+        // block's bar keeps one width for its whole length. The width is the cluster's, never the
+        // day's: one overlap at 11:00 must not narrow an unrelated 07:30 alarm's label to an ellipsis
+        // in the same column, which is exactly what a per-day width did (seen on 2026-09-03).
+        void CloseCluster(int endExclusive)
+        {
+            var width = Math.Min(Math.Max(laneFreeFrom.Count, 1), MaxLanes);
+            for (var j = clusterStart; j < endExclusive; j++)
+                dayPlaced[j] = dayPlaced[j] with { LaneCount = width };
+            if (width > dayMax) dayMax = width;
+            laneFreeFrom.Clear();
+        }
 
         for (var i = 0; i < dayPlaced.Count; i++)
         {
             var p = dayPlaced[i];
             var end = p.EndMinute ?? p.Minutes + 1;   // an instant occupies a moment, not a span
 
+            // A new cluster begins the moment an entry starts at or after everything before it ended.
+            if (p.Minutes >= clusterEnd && laneFreeFrom.Count > 0)
+            {
+                CloseCluster(i);
+                clusterStart = i;
+            }
+
             var lane = laneFreeFrom.FindIndex(free => free <= p.Minutes);
             if (lane < 0) { lane = laneFreeFrom.Count; laneFreeFrom.Add(end); }
             else laneFreeFrom[lane] = end;
 
             dayPlaced[i] = p with { LaneIndex = lane };
+            if (end > clusterEnd) clusterEnd = end;
         }
 
-        return Math.Min(Math.Max(laneFreeFrom.Count, 1), MaxLanes);
+        if (laneFreeFrom.Count > 0) CloseCluster(dayPlaced.Count);
+        return dayMax;
     }
 
     private static List<Placed> Collect(IEnumerable<TimerItem>? alarms)

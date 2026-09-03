@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Re-shoots the README screenshots against a fictional fixture schedule.
 
@@ -169,7 +169,11 @@ function Select-Element { param($El) $El.GetCurrentPattern([System.Windows.Autom
 $WeekPlan = @(
     @{ Hour = 7;  Minute = 30; Days = 'MonTueWedThuFri'; Label = 'Morning walk';    Sound = 1; Warn = $false }
     @{ Hour = 9;  Minute = 0;  Days = 'MonTueWedThuFri'; Label = 'Stand-up';        Sound = 1; Warn = $true  }
-    @{ Hour = 10; Minute = 15; Days = 'TueThu';          Label = 'Focus block';     Sound = 0; Warn = $false }
+    # Blocks (schema 5). End is minutes from midnight; null/absent is an instant.
+    @{ Hour = 10; Minute = 0;  Days = 'MonWedFri';       Label = 'Lecture';         Sound = 1; Warn = $true;  End = 690 }
+    @{ Hour = 10; Minute = 15; Days = 'TueThu';          Label = 'Focus block';     Sound = 0; Warn = $false; End = 720 }
+    # Overlaps the Focus block, so the grid draws the two side by side in their own lanes.
+    @{ Hour = 11; Minute = 0;  Days = 'Tue';             Label = 'Lab';             Sound = 0; Warn = $false; End = 750 }
     @{ Hour = 12; Minute = 0;  Days = 'MonWedFri';       Label = 'Lunch';           Sound = 2; Warn = $false }
     @{ Hour = 12; Minute = 15; Days = 'TueThu';          Label = 'Lunch';           Sound = 2; Warn = $false }
     @{ Hour = 14; Minute = 0;  Days = 'MonTueWedThuFri'; Label = 'Stretch';         Sound = 0; Warn = $false }
@@ -225,10 +229,11 @@ function Write-Fixture {
             NextFireAt = Get-NextFireAt $a.Hour $a.Minute $days
             WarnBefore = $a.Warn
             Enabled    = $true
+            EndMinute  = $(if ($a.ContainsKey('End')) { $a.End } else { $null })
         }
     }
     $data = [ordered]@{
-        SchemaVersion = 4
+        SchemaVersion = 5
         Settings      = [ordered]@{
             SchemaVersion   = 1
             LaunchAtStartup = $false     # never let a scratch build claim HKCU\...\Run

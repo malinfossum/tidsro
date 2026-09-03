@@ -692,8 +692,8 @@ public class TimetableLayoutTests
 
         Assert.Equal(2, week.Days[0].LaneCount);
         Assert.Equal(2, cell.Lanes.Count);
-        Assert.Equal("Lecture", Assert.Single(cell.Lanes[0]).Label);
-        Assert.Equal("Lab", Assert.Single(cell.Lanes[1]).Label);
+        Assert.Equal("Lecture", Assert.Single(cell.Lanes[0].Entries).Label);
+        Assert.Equal("Lab", Assert.Single(cell.Lanes[1].Entries).Label);
     }
 
     [Fact]
@@ -704,8 +704,8 @@ public class TimetableLayoutTests
         var first = week.Rows.First(r => r.Slot.Label == "09:00").Cells[0];
 
         Assert.Equal(2, first.Lanes.Count);       // the day's lane count, not this band's occupancy
-        Assert.Single(first.Lanes[0]);
-        Assert.Empty(first.Lanes[1]);             // the Lab has not started yet
+        Assert.Single(first.Lanes[0].Entries);
+        Assert.Empty(first.Lanes[1].Entries);     // the Lab has not started yet
     }
 
     [Fact]
@@ -716,8 +716,8 @@ public class TimetableLayoutTests
         var cell = week.Rows.First(r => r.Slot.Label == "10:00").Cells[0];
 
         Assert.Equal(2, cell.Entries.Count);
-        Assert.Equal("Lecture", Assert.Single(cell.Lanes[0]).Label);
-        Assert.Equal("Stretch", Assert.Single(cell.Lanes[1]).Label);
+        Assert.Equal("Lecture", Assert.Single(cell.Lanes[0].Entries).Label);
+        Assert.Equal("Stretch", Assert.Single(cell.Lanes[1].Entries).Label);
     }
 
     [Fact]
@@ -728,8 +728,8 @@ public class TimetableLayoutTests
             At(5, 8, 0));
         var cell = week.Rows.First(r => r.Slot.Label == "09:30").Cells[0];
 
-        Assert.Equal("Earlier", Assert.Single(cell.Lanes[0]).Label);
-        Assert.Equal(0, Assert.Single(cell.Lanes[0]).LaneIndex);
+        Assert.Equal("Earlier", Assert.Single(cell.Lanes[0].Entries).Label);
+        Assert.Equal(0, Assert.Single(cell.Lanes[0].Entries).LaneIndex);
     }
 
     [Fact]
@@ -793,6 +793,60 @@ public class TimetableLayoutTests
 
         Assert.Equal(SegmentRole.Middle, middle.Role);
         Assert.True(TimetableLayout.IsCurrent(middle, isToday: true, 600));
+    }
+
+    [Fact]
+    public void An_overlap_narrows_only_the_bands_it_reaches()
+    {
+        // One overlap at 11:00 must not halve an unrelated 07:30 alarm's width in the same column.
+        var week = TimetableLayout.Build(new[]
+        {
+            Recurring(7, 30, Weekdays.Tue, "Morning walk"),
+            Block(11, 0, 720, Weekdays.Tue, "Focus block"),
+            Block(11, 30, 750, Weekdays.Tue, "Lab"),
+        }, At(6, 7, 0));
+
+        var early = week.Rows.First(r => r.Slot.Label == "07:30").Cells[1];
+        var overlapped = week.Rows.First(r => r.Slot.Label == "11:30").Cells[1];
+
+        Assert.Single(early.Lanes);            // full width, untouched by the later clash
+        Assert.Equal(2, overlapped.Lanes.Count);
+    }
+
+    [Fact]
+    public void A_block_keeps_one_width_for_its_whole_run()
+    {
+        var week = TimetableLayout.Build(new[]
+        {
+            Block(11, 0, 720, Weekdays.Tue, "Focus block"),
+            Block(11, 30, 750, Weekdays.Tue, "Lab"),
+        }, At(6, 7, 0));
+
+        // Every band the cluster reaches is two lanes wide, including the one before the Lab starts.
+        var widths = week.Rows.Select(r => r.Cells[1].Lanes.Count).Where(n => n > 0).Distinct().ToArray();
+        Assert.Equal(new[] { 2 }, widths);
+    }
+
+    [Fact]
+    public void An_empty_cell_has_no_lanes_at_all()
+    {
+        // Not a row of empty lanes: the view collapses an items control with nothing in it, and that
+        // is what keeps most cells out of the automation tree.
+        var week = TimetableLayout.Build(
+            new[] { Block(9, 0, 630, Weekdays.Mon), Block(9, 30, 660, Weekdays.Mon, "Lab") }, At(5, 8, 0));
+        var tuesday = week.Rows[0].Cells[1];
+
+        Assert.Empty(tuesday.Lanes);
+        Assert.Empty(tuesday.Entries);
+    }
+
+    [Fact]
+    public void A_lane_announces_nothing_of_its_own()
+    {
+        var week = TimetableLayout.Build(new[] { Block(9, 0, 630, Weekdays.Mon) }, At(5, 8, 0));
+
+        // If a container peer ever falls back to ToString(), it must not read out a collection type.
+        Assert.Equal("", week.Rows[0].Cells[0].Lanes[0].ToString());
     }
 
     [Fact]
