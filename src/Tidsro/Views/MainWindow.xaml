@@ -657,8 +657,17 @@
                the exception and always draws, because a week view that silently omits the day you
                are standing in is worse than one empty heading. ShowInAgenda decides that in the
                model, where it is tested, rather than in a converter here. -->
-          <ItemsControl Focusable="False" ItemsSource="{Binding Timetable.Week.Days}"
-                        Visibility="{Binding ActualWidth, ElementName=Panels, Converter={StaticResource WidthToVisible}, ConverterParameter=Narrow}">
+          <ItemsControl Focusable="False" ItemsSource="{Binding Timetable.Week.Days}">
+            <ItemsControl.Visibility>
+              <!-- The grid's width is not a constant: a day with overlapping blocks divides its
+                   column into lanes, and a lane too narrow to hold a label is worse than no grid.
+                   RequiredGridWidth decides, in the model, from the week's own widest day. -->
+              <MultiBinding Converter="{StaticResource WidthToVisible}" ConverterParameter="Narrow">
+                <Binding Path="ActualWidth" ElementName="Panels"/>
+                <Binding Path="Timetable.Week.MaxLaneCount"/>
+                <Binding Path="Timetable.Week.GridColumnCount"/>
+              </MultiBinding>
+            </ItemsControl.Visibility>
             <ItemsControl.ItemContainerStyle>
               <!-- Both setters belong on the container. The name because a Border at the root of a
                    DataTemplate gets no automation peer; the visibility because collapsing an inner
@@ -772,8 +781,15 @@
 
                No arithmetic here: TimetableLayout.Build already decided which row each alarm is
                in, and this draws the rows it was handed. -->
-          <StackPanel Grid.IsSharedSizeScope="True"
-                      Visibility="{Binding ActualWidth, ElementName=Panels, Converter={StaticResource WidthToVisible}, ConverterParameter=Wide}">
+          <StackPanel Grid.IsSharedSizeScope="True">
+            <StackPanel.Visibility>
+              <!-- The other half of the same decision — see the agenda's binding above. -->
+              <MultiBinding Converter="{StaticResource WidthToVisible}" ConverterParameter="Wide">
+                <Binding Path="ActualWidth" ElementName="Panels"/>
+                <Binding Path="Timetable.Week.MaxLaneCount"/>
+                <Binding Path="Timetable.Week.GridColumnCount"/>
+              </MultiBinding>
+            </StackPanel.Visibility>
 
             <!-- Day headers. The same two-column shape as a row, with the gutter column in the same
                  shared-size group, so the headers sit over the columns they name however wide the

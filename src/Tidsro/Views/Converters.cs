@@ -96,15 +96,27 @@ public sealed class WidthToMeasureConverter : IValueConverter
 /// The Week tab draws an agenda when narrow and a seven-column grid when wide; both panels exist,
 /// and this collapses the one that does not fit. Same mechanism as IndexToVisibleConverter, which
 /// already swaps the tab panels, and it reads the same ActualWidth WidthToMeasureConverter does.
-/// A width WPF has not measured yet arrives as NaN — that falls back to Narrow, which is the
-/// rendering that works at any size.</summary>
-public sealed class WidthToVisibleConverter : IValueConverter
+///
+/// <para>The width the grid asks for is not a constant: a day whose blocks overlap divides its
+/// column into lanes, and a lane that has shrunk to a bar with no label is worse than no grid at
+/// all. So the threshold is <see cref="TimetableLayout.RequiredGridWidth"/> of the week's own
+/// widest day, and a window too narrow for those lanes shows the agenda — which lists every alarm
+/// and reads at any size.</para>
+///
+/// <para>A multi-value converter for the same reason LaneBarStateConverter is one: the answer needs
+/// the width and the shape of the week, and only the width changes while the window is open. It
+/// carries no rule of its own. Anything the bindings have not resolved yet — an unmeasured
+/// ActualWidth arrives as NaN, an unready MultiBinding source as UnsetValue — falls back to Narrow,
+/// which is the rendering that works at any size.</para></summary>
+public sealed class WidthToVisibleConverter : IMultiValueConverter
 {
-    public const double Threshold = 760;
-
-    public object Convert(object? v, Type t, object? p, CultureInfo c)
+    public object Convert(object[] values, Type t, object? p, CultureInfo c)
     {
-        var wide = v is double available && !double.IsNaN(available) && available >= Threshold;
+        var available = values is [double w, ..] ? w : double.NaN;
+        var lanes = values is [_, int l, ..] ? l : 1;
+        var columns = values is [_, _, int n, ..] ? n : 0;
+
+        var wide = !double.IsNaN(available) && available >= TimetableLayout.RequiredGridWidth(lanes, columns);
         return p switch
         {
             "Wide" => wide ? Visibility.Visible : Visibility.Collapsed,
@@ -113,7 +125,7 @@ public sealed class WidthToVisibleConverter : IValueConverter
         };
     }
 
-    public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
+    public object[] ConvertBack(object v, Type[] t, object? p, CultureInfo c) => throw new NotSupportedException();
 }
 
 /// <summary>What a lane's bar should look like: "None" for a band holding only instants, "Block" for

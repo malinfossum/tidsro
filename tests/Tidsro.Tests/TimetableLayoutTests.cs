@@ -874,4 +874,75 @@ public class TimetableLayoutTests
         // The grid caps; the agenda is a list and hides nothing.
         Assert.Equal(50, week.Days[0].Entries.Count);
     }
+
+    // ---- Readable lane width -------------------------------------------------------------
+
+    [Fact]
+    public void A_week_of_instants_asks_for_no_more_than_the_base_width()
+    {
+        var week = TimetableLayout.Build(new[] { Recurring(9, 0, Weekdays.Mon) }, At(5, 8, 0));
+
+        Assert.Equal(1, week.MaxLaneCount);
+        Assert.Equal(
+            TimetableLayout.MinimumGridWidth,
+            TimetableLayout.RequiredGridWidth(week.MaxLaneCount, week.GridColumnCount));
+    }
+
+    [Fact]
+    public void An_empty_week_asks_for_no_more_than_the_base_width()
+    {
+        var week = TimetableLayout.Build(Array.Empty<TimerItem>(), At(5, 8, 0));
+
+        Assert.Equal(1, week.MaxLaneCount);
+    }
+
+    [Fact]
+    public void MaxLaneCount_is_the_widest_day_the_grid_draws()
+    {
+        var week = TimetableLayout.Build(
+            new[]
+            {
+                Block(9, 0, 630, Weekdays.Mon),
+                Block(9, 30, 660, Weekdays.Mon, "Lab"),
+                Block(14, 0, 900, Weekdays.Tue, "Seminar"),
+            },
+            At(5, 8, 0));
+
+        Assert.Equal(2, week.MaxLaneCount);
+        Assert.Equal(5, week.GridColumnCount);
+    }
+
+    [Fact]
+    public void At_the_width_it_asks_for_a_lane_is_exactly_readable()
+    {
+        // Every column is the same width, so the widest day sets what all of them need.
+        foreach (var (lanes, columns) in new[] { (2, 5), (2, 7), (3, 5), (3, 7) })
+        {
+            var columnsGet = TimetableLayout.RequiredGridWidth(lanes, columns) - TimetableLayout.GridChromeWidth;
+
+            Assert.Equal(TimetableLayout.MinimumLaneWidth, columnsGet / (columns * lanes));
+        }
+    }
+
+    [Fact]
+    public void A_week_without_an_overlap_flips_exactly_where_it_always_did()
+    {
+        foreach (var columns in new[] { 5, 7 })
+            Assert.Equal(TimetableLayout.MinimumGridWidth, TimetableLayout.RequiredGridWidth(1, columns));
+    }
+
+    [Fact]
+    public void The_width_asked_for_stops_at_the_lane_cap()
+    {
+        // A hand-edited file cannot ask for a wider window than the grid would ever draw.
+        Assert.Equal(
+            TimetableLayout.RequiredGridWidth(TimetableLayout.MaxLanes, 5),
+            TimetableLayout.RequiredGridWidth(50, 5));
+    }
+
+    [Fact]
+    public void A_grid_with_no_columns_still_asks_for_the_base_width()
+    {
+        Assert.Equal(TimetableLayout.MinimumGridWidth, TimetableLayout.RequiredGridWidth(1, 0));
+    }
 }

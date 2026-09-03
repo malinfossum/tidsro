@@ -199,6 +199,25 @@ public sealed record TimetableWeek(
     /// <see cref="Days"/> minus the weekend or nothing at all, so there is no third state to keep
     /// in step.</summary>
     public bool HidesWeekend => GridDays.Count < Days.Count;
+
+    /// <summary>How many columns the wide grid draws. Five on a week with a free weekend, seven
+    /// otherwise — the number a lane's readable width has to be bought in, since every column is the
+    /// same width.</summary>
+    public int GridColumnCount => GridDays.Count;
+
+    /// <summary>The most lanes any drawn column divides itself into, and therefore what decides
+    /// whether the grid still reads. Taken from the days the grid actually draws: a lane count on a
+    /// weekend column that was dropped would ask the window for width nothing spends.</summary>
+    public int MaxLaneCount
+    {
+        get
+        {
+            var most = 1;
+            foreach (var day in GridDays)
+                if (day.LaneCount > most) most = day.LaneCount;
+            return most;
+        }
+    }
 }
 
 /// <summary>
@@ -383,6 +402,40 @@ public static class TimetableLayout
     /// Three keeps a lane readable and keeps a hostile file from becoming a grid with thousands of
     /// columns in every cell. What does not fit is counted, and the agenda still lists all of it.</summary>
     public const int MaxLanes = 3;
+
+    /// <summary>The width the wide grid needs before it is worth drawing at all, with one lane per
+    /// column. Below it the agenda draws instead.</summary>
+    public const double MinimumGridWidth = 760;
+
+    /// <summary>What one lane needs to still show a label rather than an ellipsis. Phase 1 already
+    /// had to keep a time out of a hundred-pixel column for the same reason; splitting that column
+    /// three ways leaves about 33px, which is a bar with no words on it — unreadable first for low
+    /// vision and then for everyone.</summary>
+    public const double MinimumLaneWidth = 90;
+
+    /// <summary>What the grid spends on itself before any column gets a pixel: the time gutter and
+    /// the scroll bar. Measured off the shipped rendering rather than guessed — at a 900px window
+    /// the panel is 822 wide (the window's 32px padding each side), the gutter takes 46 and the
+    /// scroll bar 16, leaving 760 for five columns. The gutter is Auto-width but every label it can
+    /// hold is "HH:MM", so it does not move.</summary>
+    public const double GridChromeWidth = 64;
+
+    /// <summary>How wide the panel has to be before the grid is worth drawing at this many lanes.
+    /// Every column is the same width, so the widest day sets what all of them need: the columns
+    /// share what is left after the chrome, and each has to fit its lanes at
+    /// <see cref="MinimumLaneWidth"/> apiece. Below that the agenda takes over — it lists every
+    /// alarm and reads at any size, which is why it is the right thing to fall back to.
+    ///
+    /// <para>The lane count is clamped to <see cref="MaxLanes"/> because that is all the grid ever
+    /// draws: a hand-edited file with fifty overlapping alarms must not be able to ask for a window
+    /// no monitor has. Never below <see cref="MinimumGridWidth"/>, so a week without a single
+    /// overlap flips exactly where it always did. Pure, and here rather than in the converter for
+    /// the reason all the layout arithmetic is here — this is where tests reach it.</para></summary>
+    public static double RequiredGridWidth(int laneCount, int columnCount) =>
+        Math.Max(
+            MinimumGridWidth,
+            GridChromeWidth
+            + Math.Max(columnCount, 0) * Math.Clamp(laneCount, 1, MaxLanes) * MinimumLaneWidth);
 
     /// <summary>Whether this entry is happening now. Start inclusive, end exclusive, so a block that
     /// ends at 10:30 stops being current the moment 10:30 arrives and the next one can take over
