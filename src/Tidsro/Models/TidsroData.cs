@@ -3,7 +3,7 @@ namespace Tidsro.Models;
 /// <summary>Root persistence document: app settings plus the saved alarms. Current version is <see cref="CurrentSchema"/>.</summary>
 public sealed class TidsroData
 {
-    public const int CurrentSchema = 4;
+    public const int CurrentSchema = 5;
     private const int MaxLabel = 200;
 
     public int SchemaVersion { get; set; } = CurrentSchema;
@@ -52,6 +52,13 @@ public sealed class TidsroData
             if (!Enum.IsDefined(r.Sound)) continue;            // unknown enum
             if (r.NextFireAt == default || !IsRepresentable(r.NextFireAt)) continue;
             if (!recSeen.Add(r.Id)) continue;                  // duplicate id -> keep the first only
+
+            // A bad end nulls the end; it never drops the alarm. Nothing about an unusable end
+            // justifies losing an alarm out of the schedule — the same posture as
+            // TimetableLayout.Build, which skips what it cannot place and renders the rest.
+            var end = r.EndMinute;
+            if (end is { } e && (e < 0 || e > 1439 || e <= r.Hour * 60 + r.Minute)) end = null;
+
             recurring.Add(new RecurringAlarmRecord
             {
                 Id = r.Id,
@@ -63,6 +70,7 @@ public sealed class TidsroData
                 NextFireAt = r.NextFireAt,
                 WarnBefore = r.WarnBefore,
                 Enabled = r.Enabled,
+                EndMinute = end,
             });
         }
 

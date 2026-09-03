@@ -406,6 +406,7 @@ public partial class App : Application
         Sound = a.Sound,
         WarnBefore = a.WarnBefore,
         Enabled = a.IsEnabled,
+        EndMinute = a.EndMinute,
         NextFireAt = a.EndsAt?.LocalDateTime ?? default,   // the next occurrence — the durable dedup marker
     };
 
@@ -430,7 +431,7 @@ public partial class App : Application
                 // Restore the persisted next occurrence so a quick relaunch doesn't re-fire within grace;
                 // the first tick reconciles any occurrence missed while the app was closed.
                 var next = LocalToOffset(r.NextFireAt);
-                _scheduler.ArmRecurringAlarm(r.Hour, r.Minute, r.Days, r.Label, r.Sound, r.Id, next, r.WarnBefore, r.Enabled);
+                _scheduler.ArmRecurringAlarm(r.Hour, r.Minute, r.Days, r.Label, r.Sound, r.Id, next, r.WarnBefore, r.Enabled, r.EndMinute);
             }
             catch { /* a residual bad record must never stop launch (spec §4) */ }
         }

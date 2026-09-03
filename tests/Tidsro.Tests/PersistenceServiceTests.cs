@@ -256,4 +256,61 @@ public class PersistenceServiceTests : IDisposable
 
         Assert.False(File.Exists(_path + ".corrupt"));   // a good save retires the recovery copy
     }
+
+    private static RecurringAlarmRecord Block(int hour, int minute, int? endMinute) => new()
+    {
+        Id = Guid.NewGuid(),
+        Hour = hour,
+        Minute = minute,
+        Days = Weekdays.Mon,
+        Label = "Lecture",
+        Sound = SoundChoice.Bell,
+        NextFireAt = new DateTime(2026, 6, 19, hour, minute, 0, DateTimeKind.Local),
+        EndMinute = endMinute,
+    };
+
+    [Fact]
+    public void Save_then_Load_round_trips_an_end_minute()
+    {
+        var svc = new PersistenceService(_path);
+        svc.Save(new TidsroData { Settings = new AppSettings(), RecurringAlarms = { Block(9, 0, 630) } });
+
+        Assert.Equal(630, Assert.Single(svc.Load().RecurringAlarms).EndMinute);
+    }
+
+    [Fact]
+    public void Load_a_v4_file_leaves_every_end_null_and_loses_no_alarm()
+    {
+        File.WriteAllText(_path,
+            "{\"SchemaVersion\":4,\"Settings\":{\"DefaultSound\":0},\"Alarms\":[],\"RecurringAlarms\":[" +
+            "{\"Id\":\"" + Guid.NewGuid() + "\",\"Hour\":9,\"Minute\":0,\"Days\":1,\"Label\":\"Class\"," +
+            "\"Sound\":0,\"NextFireAt\":\"2026-06-19T09:00:00\",\"WarnBefore\":false,\"Enabled\":true}]}");
+
+        var data = new PersistenceService(_path).Load();
+
+        Assert.Null(Assert.Single(data.RecurringAlarms).EndMinute);   // missing key -> an instant
+    }
+
+    [Theory]
+    [InlineData(-1)]     // below range
+    [InlineData(1440)]   // above range
+    [InlineData(540)]    // equal to the 09:00 start
+    [InlineData(480)]    // before the start
+    public void A_bad_end_is_nulled_and_the_alarm_survives(int end)
+    {
+        // Nothing about an unusable end justifies dropping an alarm out of the schedule.
+        var data = new TidsroData
+        {
+            Settings = new AppSettings(),
+            RecurringAlarms = { Block(9, 0, end) },
+        }.Sanitized();
+
+        Assert.Null(Assert.Single(data.RecurringAlarms).EndMinute);
+    }
+
+    [Fact]
+    public void Sanitized_stamps_the_current_schema()
+    {
+        Assert.Equal(5, new TidsroData { Settings = new AppSettings() }.Sanitized().SchemaVersion);
+    }
 }

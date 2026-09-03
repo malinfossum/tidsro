@@ -12,4 +12,8 @@ public sealed class RecurringAlarmRecord
     public DateTime NextFireAt { get; set; } // local; the next occurrence — the durable dedup marker
     public bool WarnBefore { get; set; }
     public bool Enabled { get; set; } = true;
+
+    /// <summary>Minutes from midnight when this block ends, or null for an instant. The whole of
+    /// schema 5: null is the legacy meaning, so a v4 file needs no migration step.</summary>
+    public int? EndMinute { get; set; }
 }

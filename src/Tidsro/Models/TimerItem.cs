@@ -10,6 +10,10 @@ public sealed class TimerItem
     // Recurring runtime (Slice 3): the weekday set this alarm repeats on. Null for countdowns and one-shots.
     public Weekdays? RecurringDays { get; set; }
 
+    // Timetable block (schema 5): minutes from midnight when this ends, or null for an instant.
+    // Display only — the scheduler never reads it, and it is the Week tab that draws the difference.
+    public int? EndMinute { get; set; }
+
     // Countdown runtime (Slice 1)
     public TimeSpan OriginalDuration { get; set; }
     public TimeSpan? Duration { get; set; }

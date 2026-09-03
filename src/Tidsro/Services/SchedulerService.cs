@@ -66,8 +66,11 @@ public sealed class SchedulerService
     }
 
     /// <summary>Arm a recurring alarm. Pass <paramref name="nextFireAt"/> to restore a persisted alarm's next occurrence.</summary>
+    // endMinute is carried, never read: it is a timetable block's end, and this scheduler has exactly one
+    // fire point per alarm. Nothing below branches on it, and nothing in Tick does either.
     public TimerItem ArmRecurringAlarm(int hour, int minute, Weekdays days, string? label, SoundChoice sound,
-        Guid? id = null, DateTimeOffset? nextFireAt = null, bool warnBefore = false, bool enabled = true)
+        Guid? id = null, DateTimeOffset? nextFireAt = null, bool warnBefore = false, bool enabled = true,
+        int? endMinute = null)
     {
         var ends = nextFireAt ?? RecurrenceRules.NextOccurrence(_clock.Now, hour, minute, days);
         var item = new TimerItem
@@ -82,6 +85,7 @@ public sealed class SchedulerService
             WarnBefore = warnBefore,
             WarningSent = warnBefore && _clock.Now >= ends - WarningLead,
             IsEnabled = enabled,
+            EndMinute = endMinute,
         };
         _alarms.Add(item);
         return item;
