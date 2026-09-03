@@ -2,6 +2,15 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
+## [2.4.1] — 2026-09-03
+
+### Fixed
+- **Overlapping blocks keep their labels** — when two blocks share a day, the Week grid splits that
+  column so neither hides the other, and in a window only just wide enough the two halves were left
+  about seventy pixels each: *Focus block* came out as *Focus blo...*. The grid now asks for enough
+  width to keep every label readable and shows the day-by-day agenda when the window cannot give it,
+  which lists the same alarms in full at any size. A week with no overlapping blocks is unchanged.
+
 ## [2.4.0] — 2026-09-03
 
 ### Added
@@ -113,6 +122,7 @@ Clock-time alarms — a "Your day" agenda with one-shot fire-at-HH:MM alarms, op
 ## [1.0.0] — 2026-06-16
 First release — countdown timers with presets or custom durations, pause/resume, reset, and per-timer sounds.
 
+[2.4.1]: https://github.com/malinfossum/tidsro/releases/tag/v2.4.1
 [2.4.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.4.0
 [2.3.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.3.0
 [2.2.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.2.0
