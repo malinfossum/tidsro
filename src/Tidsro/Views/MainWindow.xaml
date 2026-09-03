@@ -504,7 +504,7 @@
                         </Style>
                       </StackPanel.Style>
                       <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding TimeText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource TextLg}" Foreground="{StaticResource Text}"/>
+                        <TextBlock Text="{Binding RangeText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource TextLg}" Foreground="{StaticResource Text}"/>
                         <TextBlock Text="{Binding CadenceText}" Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}" VerticalAlignment="Center" Margin="8,0,0,0"/>
                       </StackPanel>
                       <TextBlock Text="{Binding DisplayLabel}" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"/>
@@ -629,7 +629,7 @@
                               <ColumnDefinition Width="Auto"/>
                               <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{Binding TimeText}" FontFamily="{StaticResource FontMono}"
+                            <TextBlock Text="{Binding RangeText}" FontFamily="{StaticResource FontMono}"
                                        Margin="0,0,10,0" VerticalAlignment="Top"/>
                             <!-- The "off" mark. Segoe Fluent Icons Cancel (E711), the same icon
                                  family the sound tags use. Dimming alone never encodes state. -->
