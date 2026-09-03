@@ -59,9 +59,9 @@
                  week drew five identical cards to say "every weekday", each stamped with a time the
                  gutter had already given. A Grid, not a horizontal StackPanel, so the label column
                  is constrained and TextTrimming has a width to trim against. -->
-            <Grid Margin="2,1,6,1" ToolTip="{Binding DisplayLabel}">
-              <Grid.Style>
-                <Style TargetType="Grid">
+            <StackPanel Margin="2,1,6,1" ToolTip="{Binding DisplayLabel}">
+              <StackPanel.Style>
+                <Style TargetType="StackPanel">
                   <Style.Triggers>
                     <DataTrigger Binding="{Binding IsEnabled}" Value="False">
                       <!-- TextMuted, never TextFaint: a disabled entry still has to clear 4.5:1.
@@ -71,48 +71,47 @@
                     </DataTrigger>
                   </Style.Triggers>
                 </Style>
-              </Grid.Style>
-              <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-              </Grid.ColumnDefinitions>
-              <!-- Only when the gutter cannot speak for it, which is now a row-level question: a
-                   row whose entries all start at 12:15 says 12:15 in its gutter, so the cells stay
-                   bare. Only a row holding more than one start time (ShowsCellTimes) makes its
-                   off-boundary entries name themselves - and there the time and the label share a
-                   column barely a hundred pixels wide, which is why this is the exception and not
-                   the rule. A MultiDataTrigger rather than a converter: both halves are plain
-                   bools, and the row is the cell ItemsControl's own DataContext. -->
+              </StackPanel.Style>
+              <!-- The stacked time, for a lane that shares its cluster. Spends a line of height,
+                   which the band has, rather than width, which a ninety-pixel lane has not: inline,
+                   the label trimmed to "Focu..." and the cell stopped naming the alarm. Only one of
+                   this and the inline copy below is ever visible - see TimetableEntry.StacksTime. -->
               <TextBlock Text="{Binding TimeText}" FontFamily="{StaticResource FontMono}"
                          FontSize="{StaticResource TextXs}" Foreground="{StaticResource TextFaint}"
-                         Margin="0,0,6,0">
-                <TextBlock.Style>
-                  <Style TargetType="TextBlock">
-                    <Setter Property="Visibility" Value="Collapsed"/>
-                    <Style.Triggers>
-                      <MultiDataTrigger>
-                        <MultiDataTrigger.Conditions>
-                          <Condition Binding="{Binding IsOnSlotBoundary}" Value="False"/>
-                          <Condition Binding="{Binding DataContext.ShowsCellTimes, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Value="True"/>
-                        </MultiDataTrigger.Conditions>
-                        <Setter Property="Visibility" Value="Visible"/>
-                      </MultiDataTrigger>
-                    </Style.Triggers>
-                  </Style>
-                </TextBlock.Style>
-              </TextBlock>
-              <!-- The "off" mark. Segoe Fluent Icons Cancel (E711), the same icon family the sound
-                   tags already use. Dimming alone never encodes state (spec 4), so an off entry
-                   carries a shape as well as a colour. -->
-              <TextBlock Grid.Column="1" Text="&#xE711;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                         FontSize="{StaticResource TextXs}" Margin="0,0,4,0"
-                         Visibility="{Binding IsEnabled, Converter={StaticResource BoolToCollapsed}}"/>
-              <!-- DisplayLabel, not Label: an unlabelled alarm is allowed, and it would otherwise
-                   draw a blank cell. -->
-              <TextBlock Grid.Column="2" Text="{Binding DisplayLabel}" FontSize="{StaticResource TextXs}"
-                         TextTrimming="CharacterEllipsis"/>
-            </Grid>
+                         Visibility="{Binding StacksTime, Converter={StaticResource BoolToVisible}}"/>
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="Auto"/>
+                  <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <!-- Only when the gutter cannot speak for it, which is a row-level question: a row
+                     whose entries all start at 12:15 says 12:15 in its gutter, so the cells stay bare.
+                     Only a row holding more than one start time makes its off-boundary entries name
+                     themselves - and there the time and the label share a column barely a hundred
+                     pixels wide, which is why this is the exception and not the rule.
+
+                     The entry carries the answer (TimetableLayout stamps ShowsTime once the row is
+                     known); this must NOT go back to reading the row off an ancestor. It did, and when
+                     lanes landed in v2.4.0 the cell moved inside the lane strip, so the walk found a
+                     TimetableLane, the condition was never true and every cell time silently vanished
+                     - a 12:15 alarm read as 12:00, with the model right and the suite green. -->
+                <TextBlock Text="{Binding TimeText}" FontFamily="{StaticResource FontMono}"
+                           FontSize="{StaticResource TextXs}" Foreground="{StaticResource TextFaint}"
+                           Margin="0,0,6,0"
+                           Visibility="{Binding InlinesTime, Converter={StaticResource BoolToVisible}}"/>
+                <!-- The "off" mark. Segoe Fluent Icons Cancel (E711), the same icon family the sound
+                     tags already use. Dimming alone never encodes state (spec 4), so an off entry
+                     carries a shape as well as a colour. -->
+                <TextBlock Grid.Column="1" Text="&#xE711;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                           FontSize="{StaticResource TextXs}" Margin="0,0,4,0"
+                           Visibility="{Binding IsEnabled, Converter={StaticResource BoolToCollapsed}}"/>
+                <!-- DisplayLabel, not Label: an unlabelled alarm is allowed, and it would otherwise
+                     draw a blank cell. -->
+                <TextBlock Grid.Column="2" Text="{Binding DisplayLabel}" FontSize="{StaticResource TextXs}"
+                           TextTrimming="CharacterEllipsis"/>
+              </Grid>
+            </StackPanel>
           </DataTemplate>
         </Setter.Value>
       </Setter>

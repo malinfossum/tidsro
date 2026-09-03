@@ -511,6 +511,119 @@ public class TimetableLayoutTests
         Assert.Equal("12:15", week.Rows.Single().ToString());
     }
 
+    // ── Which entries print their own time ────────────────────────
+    // The row decides, but the ENTRY has to carry the answer: the cell it is drawn in sits inside the
+    // lane strip, so the template cannot reach the row by walking its ancestors. It tried, and from
+    // v2.4.0 the walk landed on a lane instead - which has no such property, so the condition was
+    // never true and a 12:15 alarm read as 12:00 in the grid.
+
+    [Fact]
+    public void An_entry_that_starts_off_the_band_prints_its_own_time_in_a_mixed_row()
+    {
+        var week = TimetableLayout.Build(
+            new[] { Recurring(12, 0, Weekdays.Mon), Recurring(12, 15, Weekdays.Tue) }, At(1, 9, 0));
+
+        var row = week.Rows.Single();
+        var onTheBand = row.Cells.Single(c => c.Day == Weekdays.Mon).Entries.Single();
+        var offTheBand = row.Cells.Single(c => c.Day == Weekdays.Tue).Entries.Single();
+
+        Assert.True(offTheBand.ShowsTime);
+        Assert.False(onTheBand.ShowsTime);
+    }
+
+    [Fact]
+    public void No_entry_prints_its_time_when_the_gutter_already_states_it()
+    {
+        var week = TimetableLayout.Build(
+            new[] { Recurring(12, 15, Weekdays.Mon), Recurring(12, 15, Weekdays.Tue) }, At(1, 9, 0));
+
+        Assert.All(
+            week.Rows.Single().Cells.SelectMany(c => c.Entries),
+            e => Assert.False(e.ShowsTime));
+    }
+
+    [Fact]
+    public void A_block_passing_through_a_mixed_row_prints_no_time_there()
+    {
+        // The block starts at 10:15 and runs to 12:00, so it only passes through the 11:00 band -
+        // and a time printed there would name a minute nothing starts at.
+        var week = TimetableLayout.Build(
+            new[]
+            {
+                Block(10, 15, 720, Weekdays.Mon),
+                Recurring(11, 0, Weekdays.Tue),
+                Recurring(11, 15, Weekdays.Wed),
+            },
+            At(1, 9, 0));
+
+        var row = week.Rows.Single(r => r.Slot.Label == "11:00");
+        var passing = row.Cells.Single(c => c.Day == Weekdays.Mon).Entries.Single();
+
+        Assert.Equal(SegmentRole.Middle, passing.Role);
+        Assert.True(row.ShowsCellTimes);
+        Assert.False(passing.ShowsTime);
+    }
+
+    // ── Where the time sits when it is printed ────────────────────
+    // A lane in a multi-lane cluster is about ninety pixels wide, and a time plus a label does not
+    // fit that side by side - the label trims to an ellipsis and the cell stops naming the alarm.
+    // There the time goes above the label instead. A day drawing one lane has the whole column and
+    // keeps the pair on one line.
+
+    [Fact]
+    public void An_entry_sharing_its_cluster_stacks_the_time_above_the_label()
+    {
+        var week = TimetableLayout.Build(
+            new[]
+            {
+                Recurring(10, 0, Weekdays.Mon),
+                Block(10, 15, 720, Weekdays.Tue, "Focus block"),
+                Block(11, 0, 750, Weekdays.Tue, "Lab"),
+            },
+            At(1, 9, 0));
+
+        var row = week.Rows.Single(r => r.Slot.Label == "10:00");
+        var narrow = row.Cells.Single(c => c.Day == Weekdays.Tue).Entries.Single();
+
+        Assert.Equal(2, narrow.LaneCount);
+        Assert.True(narrow.StacksTime);
+        Assert.False(narrow.InlinesTime);
+    }
+
+    [Fact]
+    public void An_entry_with_the_column_to_itself_keeps_the_time_on_one_line()
+    {
+        var week = TimetableLayout.Build(
+            new[] { Recurring(12, 0, Weekdays.Mon), Recurring(12, 15, Weekdays.Tue) }, At(1, 9, 0));
+
+        var alone = week.Rows.Single().Cells.Single(c => c.Day == Weekdays.Tue).Entries.Single();
+
+        Assert.Equal(1, alone.LaneCount);
+        Assert.True(alone.InlinesTime);
+        Assert.False(alone.StacksTime);
+    }
+
+    [Fact]
+    public void An_entry_the_gutter_speaks_for_is_drawn_neither_way()
+    {
+        var week = TimetableLayout.Build(
+            new[]
+            {
+                Block(10, 15, 720, Weekdays.Tue, "Focus block"),
+                Block(11, 0, 750, Weekdays.Tue, "Lab"),
+            },
+            At(1, 9, 0));
+
+        // The band is 10:00 but nothing else starts in it, so the gutter states 10:15 itself.
+        var row = week.Rows.Single(r => r.Slot.Label == "10:00");
+        var entry = row.Cells.Single(c => c.Day == Weekdays.Tue).Entries.Single();
+
+        Assert.Equal("10:15", row.GutterLabel);
+        Assert.False(entry.ShowsTime);
+        Assert.False(entry.StacksTime);
+        Assert.False(entry.InlinesTime);
+    }
+
     // ── An alarm with no label ─────────────────────────────────────────────
 
     [Fact]
