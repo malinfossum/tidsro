@@ -119,4 +119,43 @@ public class TimetableViewModelTests
 
         Assert.Equal(1, raised);
     }
+
+    [Fact]
+    public void NowMinuteOfDay_starts_on_the_clock()
+    {
+        var (vm, _, _) = Build();
+        Assert.Equal(8 * 60, vm.NowMinuteOfDay);
+    }
+
+    [Fact]
+    public void A_tick_inside_the_same_minute_raises_nothing()
+    {
+        var (vm, _, clock) = Build();
+        var raised = 0;
+        vm.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(vm.NowMinuteOfDay)) raised++; };
+
+        // Four ticks a second, all inside 08:00 -- the projection cost this gate exists to avoid.
+        for (var i = 0; i < 100; i++) { clock.Advance(TimeSpan.FromMilliseconds(250)); vm.RefreshForTick(); }
+        Assert.Equal(0, raised);
+
+        clock.Advance(TimeSpan.FromMinutes(1));
+        vm.RefreshForTick();
+        Assert.Equal(1, raised);
+        Assert.Equal(8 * 60 + 1, vm.NowMinuteOfDay);
+    }
+
+    [Fact]
+    public void Crossing_midnight_reprojects_before_the_minute_is_read()
+    {
+        var (vm, scheduler, clock) = Build();
+        scheduler.ArmRecurringAlarm(9, 0, Weekdays.Mon, "Class", SoundChoice.None);
+        vm.Rebuild();
+        var before = vm.Week;
+
+        clock.Advance(TimeSpan.FromHours(16));   // 2026-01-01 08:00 -> 2026-01-02 00:00
+        vm.RefreshForTick();
+
+        Assert.NotSame(before, vm.Week);         // the date moved, so the week was rebuilt
+        Assert.Equal(0, vm.NowMinuteOfDay);
+    }
 }

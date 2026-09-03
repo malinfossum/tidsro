@@ -331,6 +331,21 @@ public static class TimetableLayout
     /// columns in every cell. What does not fit is counted, and the agenda still lists all of it.</summary>
     public const int MaxLanes = 3;
 
+    /// <summary>Whether this entry is happening now. Start inclusive, end exclusive, so a block that
+    /// ends at 10:30 stops being current the moment 10:30 arrives and the next one can take over
+    /// cleanly. An instant has no duration and is never current; a disabled block is never lit.
+    ///
+    /// <para>Every segment of a block answers the same way, which is what makes a three-row bar light
+    /// as one thing rather than a third of one. Pure, so the view can ask it per entry from a
+    /// converter without putting the rule anywhere a test cannot reach.</para></summary>
+    public static bool IsCurrent(TimetableEntry entry, bool isToday, int nowMinuteOfDay)
+    {
+        if (!isToday || !entry.IsEnabled || entry.EndMinute is not { } end) return false;
+
+        var start = entry.Hour * 60 + entry.Minute;
+        return nowMinuteOfDay >= start && nowMinuteOfDay < end;
+    }
+
     /// <summary>Give each entry the lowest lane free at its start, walking in start order — so lane
     /// order is time order, which is also the order a screen reader announces them in. Returns how
     /// many lanes the grid will draw, which is the number used or <see cref="MaxLanes"/>, whichever

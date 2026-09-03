@@ -748,6 +748,53 @@ public class TimetableLayoutTests
         Assert.Equal("+47 more", cell.OverflowText);
     }
 
+    // ---- The current block ---------------------------------------------------------------
+
+    private static TimetableEntry OnlyEntry(TimerItem item) =>
+        TimetableLayout.Build(new[] { item }, At(5, 8, 0)).Rows[0].Cells[0].Entries[0];
+
+    [Theory]
+    [InlineData(540, true)]    // 09:00, the start minute, counts as current
+    [InlineData(600, true)]    // 10:00, inside
+    [InlineData(630, false)]   // 10:30, the end minute, does not
+    [InlineData(539, false)]   // a minute before
+    public void IsCurrent_is_start_inclusive_and_end_exclusive(int now, bool expected)
+    {
+        var entry = OnlyEntry(Block(9, 0, 630, Weekdays.Mon));
+        Assert.Equal(expected, TimetableLayout.IsCurrent(entry, isToday: true, now));
+    }
+
+    [Fact]
+    public void Nothing_is_current_on_another_day()
+    {
+        var entry = OnlyEntry(Block(9, 0, 630, Weekdays.Mon));
+        Assert.False(TimetableLayout.IsCurrent(entry, isToday: false, 600));
+    }
+
+    [Fact]
+    public void An_instant_is_never_current()
+    {
+        var entry = OnlyEntry(Recurring(9, 0, Weekdays.Mon));
+        Assert.False(TimetableLayout.IsCurrent(entry, isToday: true, 540));
+    }
+
+    [Fact]
+    public void A_disabled_block_is_never_lit()
+    {
+        var entry = OnlyEntry(Block(9, 0, 630, Weekdays.Mon, enabled: false));
+        Assert.False(TimetableLayout.IsCurrent(entry, isToday: true, 600));
+    }
+
+    [Fact]
+    public void A_continuation_segment_is_current_too_so_the_whole_bar_lights()
+    {
+        var week = TimetableLayout.Build(new[] { Block(9, 0, 630, Weekdays.Mon) }, At(5, 8, 0));
+        var middle = week.Rows[1].Cells[0].Entries.Single();
+
+        Assert.Equal(SegmentRole.Middle, middle.Role);
+        Assert.True(TimetableLayout.IsCurrent(middle, isToday: true, 600));
+    }
+
     [Fact]
     public void The_agenda_still_lists_every_entry_the_grid_summarised()
     {
