@@ -58,7 +58,11 @@ public sealed record TimetableSlot(int Index, int Hour, int Minute)
     public string Label => $"{Hour:D2}:{Minute:D2}";
 }
 
-/// <summary>One weekday column, Monday first.</summary>
+/// <summary>One weekday column, Monday first.
+///
+/// <para><see cref="Entries"/> holds one entry per ALARM, not per band: a block that covers three
+/// half hours is one thing on your Tuesday, and it is this list the agenda draws and the column's
+/// accessible name counts. The wide grid's per-band segments live on the rows instead.</para></summary>
 public sealed record TimetableDay(
     Weekdays Day, string Name, bool IsToday, IReadOnlyList<TimetableEntry> Entries, int LaneCount = 1)
 {
@@ -238,6 +242,7 @@ public static class TimetableLayout
         var today = DayFlag(now.DayOfWeek);
 
         var days = new List<TimetableDay>(Week.Length);
+        var daySegments = new List<List<TimetableEntry>>(Week.Length);
         foreach (var (flag, name) in Week)
         {
             var dayPlaced = usable
@@ -251,7 +256,7 @@ public static class TimetableLayout
             // A block emits one entry per band it covers, so the row-major grid can draw it as a
             // continuous bar without a row span it has no shared grid for. Written as a loop rather
             // than a LINQ projection because the role depends on where the band sits in the run.
-            var entries = new List<TimetableEntry>();
+            var segments = new List<TimetableEntry>();
             foreach (var u in dayPlaced)
             {
                 var first = (FloorToSlot(u.Minutes) - startMinutes) / SlotMinutes;
@@ -269,16 +274,25 @@ public static class TimetableLayout
                         s == last ? SegmentRole.End :
                         SegmentRole.Middle;
 
-                    entries.Add(new TimetableEntry(
+                    segments.Add(new TimetableEntry(
                         u.Id, u.Label, name, u.Minutes / 60, u.Minutes % 60, u.Sound, u.IsEnabled,
                         s, u.EndMinute, role, u.LaneIndex, u.LaneCount));
                 }
             }
-            days.Add(new TimetableDay(flag, name, flag == today, entries, laneCount));
+            // The day lists each alarm once; the grid's rows get every segment.
+            daySegments.Add(segments);
+            days.Add(new TimetableDay(flag, name, flag == today,
+                segments.Where(e => e.Role is not (SegmentRole.Middle or SegmentRole.End)).ToList(),
+                laneCount));
         }
 
         var gridDays = ResolveGridDays(days);
-        return new TimetableWeek(IsEmpty: false, slots, days, gridDays, BuildRows(slots, gridDays));
+
+        // The rows are built from the SEGMENTS of the days the grid draws, not from the days' own
+        // one-per-alarm lists: a block has to appear in every band it covers to be drawn as a bar.
+        var gridSegments = gridDays.Select(d => daySegments[days.IndexOf(d)]).ToList();
+        return new TimetableWeek(
+            IsEmpty: false, slots, days, gridDays, BuildRows(slots, gridDays, gridSegments));
     }
 
     /// <summary>Which weekdays the grid gives a column to. Saturday and Sunday cost two sevenths of
@@ -307,11 +321,12 @@ public static class TimetableLayout
     /// the week reads as the list of times it has something on, evenly spaced. The vertical scale is
     /// deliberately not proportional: 07:00 and 15:00 sit next to each other when nothing falls
     /// between them, exactly as a printed timetable lists its periods.</para></summary>
-    private static List<TimetableRow> BuildRows(List<TimetableSlot> slots, List<TimetableDay> days)
+    private static List<TimetableRow> BuildRows(
+        List<TimetableSlot> slots, List<TimetableDay> days, List<List<TimetableEntry>> segments)
     {
         // One pass per day, not one scan per cell: 48 slots x 7 days would otherwise re-walk the
         // day's entries 48 times for a week that usually has a handful.
-        var bySlot = days.Select(d => d.Entries.ToLookup(e => e.SlotIndex)).ToList();
+        var bySlot = segments.Select(day => day.ToLookup(e => e.SlotIndex)).ToList();
 
         var rows = new List<TimetableRow>();
         foreach (var slot in slots)

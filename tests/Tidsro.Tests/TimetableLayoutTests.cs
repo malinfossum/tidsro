@@ -796,6 +796,20 @@ public class TimetableLayoutTests
     }
 
     [Fact]
+    public void A_day_counts_a_block_once_however_many_bands_it_covers()
+    {
+        // The agenda draws this list and the column's accessible name counts it, so a three-band
+        // block must be one thing on Monday -- not three alarms, and not three agenda rows.
+        var week = TimetableLayout.Build(
+            new[] { Block(9, 0, 630, Weekdays.Mon), Recurring(14, 0, Weekdays.Mon, "Stretch") }, At(5, 8, 0));
+        var monday = week.Days[0];
+
+        Assert.Equal(2, monday.Entries.Count);
+        Assert.Equal("Monday, today, 2 alarms", monday.AccessibleName);   // Jan 5 2026 is a Monday
+        Assert.Equal(3, week.Rows.Count(r => r.Cells[0].Entries.Any(e => e.Label == "Lecture")));
+    }
+
+    [Fact]
     public void An_overlap_narrows_only_the_bands_it_reaches()
     {
         // One overlap at 11:00 must not halve an unrelated 07:30 alarm's width in the same column.
