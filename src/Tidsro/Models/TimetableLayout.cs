@@ -1,10 +1,25 @@
 namespace Tidsro.Models;
 
+/// <summary>Which piece of a block a row is drawing. The wide grid draws one independent element per
+/// row, so there is no shared vertical grid for a <c>Grid.RowSpan</c> to span; a block is one segment
+/// per row it covers, and this says which. <see cref="Instant"/> is an alarm with no end at all.</summary>
+public enum SegmentRole { Instant, Start, Middle, End, Whole }
+
 /// <summary>One alarm placed in the week. Layout data only — no pixels, no view concerns.</summary>
 public sealed record TimetableEntry(
-    Guid Id, string? Label, string DayName, int Hour, int Minute, SoundChoice Sound, bool IsEnabled, int SlotIndex)
+    Guid Id, string? Label, string DayName, int Hour, int Minute, SoundChoice Sound, bool IsEnabled,
+    int SlotIndex, int? EndMinute, SegmentRole Role)
 {
     public string TimeText => $"{Hour:D2}:{Minute:D2}";
+
+    /// <summary>Whether this alarm has an end at all. An instant is drawn as a point in its band; a
+    /// block is drawn at its length, as one segment per row it covers.</summary>
+    public bool IsBlock => EndMinute is not null;
+
+    /// <summary>"09:00" for an instant, "09:00–10:30" for a block. What the agenda prints.</summary>
+    public string RangeText => EndMinute is { } end
+        ? $"{TimeText}–{end / 60:D2}:{end % 60:D2}"
+        : TimeText;
 
     /// <summary>Whether this entry starts exactly when its slot does. It decides whether the cell
     /// prints a time, but only in a row that holds more than one start — see
@@ -22,9 +37,18 @@ public sealed record TimetableEntry(
     /// <summary>What a screen reader reads for this row. Carries the weekday, because the grid
     /// rendering is reached by widening the window and its column headers are easy to navigate past;
     /// and carries the off state, which is otherwise encoded only by dimming.</summary>
-    public string AccessibleName => IsEnabled
-        ? $"{DisplayLabel}, {DayName}, {TimeText}"
-        : $"{DisplayLabel}, {DayName}, {TimeText}, off";
+    public string AccessibleName
+    {
+        get
+        {
+            // Spoken words, not a dash: a screen reader reads "09:00–10:30" unreliably, and a block's
+            // length is the whole point of the field.
+            var time = EndMinute is { } end ? $"{TimeText} to {end / 60:D2}:{end % 60:D2}" : TimeText;
+            return IsEnabled
+                ? $"{DisplayLabel}, {DayName}, {time}"
+                : $"{DisplayLabel}, {DayName}, {time}, off";
+        }
+    }
 }
 
 /// <summary>One row of the vertical axis: a 30-minute band starting at Hour:Minute.</summary>
@@ -85,6 +109,9 @@ public sealed record TimetableRow(TimetableSlot Slot, IReadOnlyList<TimetableCel
             foreach (var cell in Cells)
                 foreach (var entry in cell.Entries)
                 {
+                    // Starts only. A continuation is a block passing through this band, not something
+                    // beginning here, so naming the row after it would claim a time nothing starts at.
+                    if (entry.Role is SegmentRole.Middle or SegmentRole.End) continue;
                     if (shared is null) shared = entry.TimeText;
                     else if (shared != entry.TimeText) return null;
                 }
@@ -170,15 +197,36 @@ public static class TimetableLayout
         var days = new List<TimetableDay>(Week.Length);
         foreach (var (flag, name) in Week)
         {
-            var entries = usable
+            // A block emits one entry per band it covers, so the row-major grid can draw it as a
+            // continuous bar without a row span it has no shared grid for. Written as a loop rather
+            // than a LINQ projection because the role depends on where the band sits in the run.
+            var entries = new List<TimetableEntry>();
+            foreach (var u in usable
                 .Where(u => (u.Days & flag) != 0)
                 .OrderBy(u => u.Minutes)
                 .ThenBy(u => u.Label, StringComparer.Ordinal)
-                .ThenBy(u => u.Id)
-                .Select(u => new TimetableEntry(
-                    u.Id, u.Label, name, u.Minutes / 60, u.Minutes % 60, u.Sound, u.IsEnabled,
-                    (FloorToSlot(u.Minutes) - startMinutes) / SlotMinutes))
-                .ToList();
+                .ThenBy(u => u.Id))
+            {
+                var first = (FloorToSlot(u.Minutes) - startMinutes) / SlotMinutes;
+                var last = u.EndMinute is { } e
+                    ? (CeilToSlot(e) - SlotMinutes - startMinutes) / SlotMinutes
+                    : first;
+                if (last < first) last = first;
+
+                for (var s = first; s <= last; s++)
+                {
+                    var role =
+                        u.EndMinute is null ? SegmentRole.Instant :
+                        first == last ? SegmentRole.Whole :
+                        s == first ? SegmentRole.Start :
+                        s == last ? SegmentRole.End :
+                        SegmentRole.Middle;
+
+                    entries.Add(new TimetableEntry(
+                        u.Id, u.Label, name, u.Minutes / 60, u.Minutes % 60, u.Sound, u.IsEnabled,
+                        s, u.EndMinute, role));
+                }
+            }
             days.Add(new TimetableDay(flag, name, flag == today, entries));
         }
 
@@ -235,7 +283,8 @@ public static class TimetableLayout
     }
 
     private readonly record struct Placed(
-        Guid Id, string? Label, int Minutes, SoundChoice Sound, bool IsEnabled, Weekdays Days);
+        Guid Id, string? Label, int Minutes, SoundChoice Sound, bool IsEnabled, Weekdays Days,
+        int? EndMinute);
 
     private static List<Placed> Collect(IEnumerable<TimerItem>? alarms)
     {
@@ -250,7 +299,14 @@ public static class TimetableLayout
             if (days == Weekdays.None) continue;
             if (a.EndsAt is not { } next) continue;               // no occurrence -> nothing to place
 
-            usable.Add(new Placed(a.Id, a.Label, next.Hour * 60 + next.Minute, a.Sound, a.IsEnabled, days));
+            // Build is total. The start comes from EndsAt and the end from EndMinute — two different
+            // sources, and Sanitized compares the end against Hour/Minute, not against EndsAt. An end
+            // that does not sit after the start is drawn as an instant rather than reaching the
+            // covered-slot walk as a negative span.
+            var start = next.Hour * 60 + next.Minute;
+            var end = a.EndMinute is { } e && e > start && e <= DayMinutes ? e : (int?)null;
+
+            usable.Add(new Placed(a.Id, a.Label, start, a.Sound, a.IsEnabled, days, end));
         }
 
         return usable;
@@ -261,7 +317,8 @@ public static class TimetableLayout
     private static (int StartMinutes, int SlotCount) ResolveSpan(List<Placed> usable)
     {
         var start = FloorToSlot(usable.Min(u => u.Minutes)) - PadMinutes;
-        var end = CeilToSlot(usable.Max(u => u.Minutes)) + PadMinutes;
+        // A block's end is what the span has to reach, not its start.
+        var end = CeilToSlot(usable.Max(u => u.EndMinute ?? u.Minutes)) + PadMinutes;
 
         var deficitSlots = (MinimumSpanMinutes - (end - start) + SlotMinutes - 1) / SlotMinutes;
         if (deficitSlots > 0)

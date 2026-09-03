@@ -579,4 +579,96 @@ public class TimetableLayoutTests
         Assert.Equal("07:00", week.Rows[0].ToString());
         Assert.Equal("15:00", week.Rows[^1].ToString());
     }
+
+    // ---- Blocks (phase 2) ----------------------------------------------------------------
+
+    private static TimerItem Block(int hour, int minute, int endMinute, Weekdays days,
+        string? label = "Lecture", bool enabled = true) => new()
+    {
+        Label = label,
+        TriggerType = TriggerType.Recurring,
+        RecurringDays = days,
+        EndsAt = At(1, hour, minute),
+        IsEnabled = enabled,
+        EndMinute = endMinute,
+    };
+
+    [Fact]
+    public void A_block_gives_a_row_to_every_slot_it_covers()
+    {
+        // 09:00-10:30 covers the 09:00, 09:30 and 10:00 bands.
+        var week = TimetableLayout.Build(new[] { Block(9, 0, 630, Weekdays.Mon) }, At(5, 8, 0));
+
+        Assert.Equal(3, week.Rows.Count);
+        Assert.Equal("09:00", week.Rows[0].GutterLabel);
+        Assert.Equal("09:30", week.Rows[1].GutterLabel);   // a continuation names the band, not a start
+        Assert.Equal("10:00", week.Rows[2].GutterLabel);
+    }
+
+    [Fact]
+    public void Empty_time_between_two_blocks_stays_collapsed()
+    {
+        var week = TimetableLayout.Build(
+            new[] { Block(9, 0, 570, Weekdays.Mon), Block(15, 0, 930, Weekdays.Mon) }, At(5, 8, 0));
+
+        Assert.Equal(2, week.Rows.Count);   // 09:00 and 15:00, nothing between them
+    }
+
+    [Fact]
+    public void A_block_over_three_rows_is_start_middle_end()
+    {
+        var week = TimetableLayout.Build(new[] { Block(9, 0, 630, Weekdays.Mon) }, At(5, 8, 0));
+        var roles = week.Rows.Select(r => r.Cells[0].Entries.Single().Role).ToArray();
+
+        Assert.Equal(new[] { SegmentRole.Start, SegmentRole.Middle, SegmentRole.End }, roles);
+    }
+
+    [Fact]
+    public void A_block_inside_one_band_is_whole()
+    {
+        var week = TimetableLayout.Build(new[] { Block(9, 0, 550, Weekdays.Mon) }, At(5, 8, 0));
+
+        Assert.Equal(SegmentRole.Whole, week.Rows.Single().Cells[0].Entries.Single().Role);
+    }
+
+    [Fact]
+    public void An_alarm_with_no_end_is_an_instant()
+    {
+        var week = TimetableLayout.Build(new[] { Recurring(9, 0, Weekdays.Mon) }, At(5, 8, 0));
+        var entry = week.Rows.Single().Cells[0].Entries.Single();
+
+        Assert.Equal(SegmentRole.Instant, entry.Role);
+        Assert.False(entry.IsBlock);
+        Assert.Equal("09:00", entry.RangeText);
+    }
+
+    [Fact]
+    public void A_block_states_its_range()
+    {
+        var week = TimetableLayout.Build(new[] { Block(9, 0, 630, Weekdays.Mon) }, At(5, 8, 0));
+        var entry = week.Rows[0].Cells[0].Entries.Single();
+
+        Assert.Equal("09:00–10:30", entry.RangeText);
+        Assert.Equal("Lecture, Monday, 09:00 to 10:30", entry.AccessibleName);
+    }
+
+    [Fact]
+    public void An_end_at_or_before_the_start_is_drawn_as_an_instant()
+    {
+        // Build is total. EndsAt gives the start and EndMinute the end -- two different sources, and
+        // Sanitized compares EndMinute against Hour/Minute, not against EndsAt. A negative span must
+        // never reach the covered-slot walk.
+        var week = TimetableLayout.Build(new[] { Block(9, 0, 540, Weekdays.Mon) }, At(5, 8, 0));
+
+        Assert.Equal(SegmentRole.Instant, week.Rows.Single().Cells[0].Entries.Single().Role);
+    }
+
+    [Fact]
+    public void The_span_pads_from_the_latest_end_not_the_latest_start()
+    {
+        var week = TimetableLayout.Build(new[] { Block(9, 0, 1080, Weekdays.Mon) }, At(5, 8, 0));
+
+        // 18:00 end + an hour of padding = 19:00, so the last half-hour band starts at 18:30.
+        Assert.Equal("18:30", week.Slots[^1].Label);
+    }
 }
