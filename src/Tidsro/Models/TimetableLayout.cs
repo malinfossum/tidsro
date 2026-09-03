@@ -8,7 +8,7 @@ public enum SegmentRole { Instant, Start, Middle, End, Whole }
 /// <summary>One alarm placed in the week. Layout data only — no pixels, no view concerns.</summary>
 public sealed record TimetableEntry(
     Guid Id, string? Label, string DayName, int Hour, int Minute, SoundChoice Sound, bool IsEnabled,
-    int SlotIndex, int? EndMinute, SegmentRole Role)
+    int SlotIndex, int? EndMinute, SegmentRole Role, int LaneIndex)
 {
     public string TimeText => $"{Hour:D2}:{Minute:D2}";
 
@@ -59,7 +59,8 @@ public sealed record TimetableSlot(int Index, int Hour, int Minute)
 }
 
 /// <summary>One weekday column, Monday first.</summary>
-public sealed record TimetableDay(Weekdays Day, string Name, bool IsToday, IReadOnlyList<TimetableEntry> Entries)
+public sealed record TimetableDay(
+    Weekdays Day, string Name, bool IsToday, IReadOnlyList<TimetableEntry> Entries, int LaneCount = 1)
 {
     /// <summary>Names the column for a screen reader. Without it the wide grid is navigable but
     /// structureless — the rendering is chosen by window width, which is a poor proxy for eyesight,
@@ -90,8 +91,28 @@ public sealed record TimetableDay(Weekdays Day, string Name, bool IsToday, IRead
 }
 
 /// <summary>One day's share of one slot: the entries that fall in this half hour on this weekday.
-/// Usually empty, occasionally one, rarely two.</summary>
-public sealed record TimetableCell(Weekdays Day, string DayName, IReadOnlyList<TimetableEntry> Entries);
+/// Usually empty, occasionally one, rarely two.
+///
+/// <para><see cref="Lanes"/> is as long as the day's lane count, and each lane holds what this band
+/// has in it — usually nothing or one thing. The fixed length is what keeps a block's bar the same
+/// width all the way down its run: were the cell to draw only what it holds, a bar would widen in
+/// every band its neighbour happens not to occupy. A lane can hold more than one entry, because two
+/// alarms can share a half-hour band without overlapping in time (09:00 and 09:15 want one lane and
+/// two lines), which is the phase-1 behaviour lanes must not break.</para></summary>
+public sealed record TimetableCell(
+    Weekdays Day, string DayName, IReadOnlyList<IReadOnlyList<TimetableEntry>> Lanes, int OverflowCount)
+{
+    /// <summary>What this band actually holds, in lane order and start order within a lane. Walked
+    /// rather than stored, like <see cref="TimetableRow.GutterLabel"/>: a cached copy would be
+    /// carried stale by the record's own <c>with</c>.</summary>
+    public IReadOnlyList<TimetableEntry> Entries => Lanes.SelectMany(lane => lane).ToList();
+
+    public bool HasOverflow => OverflowCount > 0;
+
+    /// <summary>What the grid prints in place of the entries it had no lane for. The agenda lists
+    /// every one of them, so this summarises rather than hides.</summary>
+    public string OverflowText => $"+{OverflowCount} more";
+}
 
 /// <summary>One horizontal band of the wide grid: a slot that has something on it, and one cell per
 /// column beside it, Monday first — five of them on a week with a free weekend, seven otherwise.
@@ -197,15 +218,19 @@ public static class TimetableLayout
         var days = new List<TimetableDay>(Week.Length);
         foreach (var (flag, name) in Week)
         {
+            var dayPlaced = usable
+                .Where(u => (u.Days & flag) != 0)
+                .OrderBy(u => u.Minutes)
+                .ThenBy(u => u.Label, StringComparer.Ordinal)
+                .ThenBy(u => u.Id)
+                .ToList();
+            var laneCount = AssignLanes(dayPlaced);
+
             // A block emits one entry per band it covers, so the row-major grid can draw it as a
             // continuous bar without a row span it has no shared grid for. Written as a loop rather
             // than a LINQ projection because the role depends on where the band sits in the run.
             var entries = new List<TimetableEntry>();
-            foreach (var u in usable
-                .Where(u => (u.Days & flag) != 0)
-                .OrderBy(u => u.Minutes)
-                .ThenBy(u => u.Label, StringComparer.Ordinal)
-                .ThenBy(u => u.Id))
+            foreach (var u in dayPlaced)
             {
                 var first = (FloorToSlot(u.Minutes) - startMinutes) / SlotMinutes;
                 var last = u.EndMinute is { } e
@@ -224,10 +249,10 @@ public static class TimetableLayout
 
                     entries.Add(new TimetableEntry(
                         u.Id, u.Label, name, u.Minutes / 60, u.Minutes % 60, u.Sound, u.IsEnabled,
-                        s, u.EndMinute, role));
+                        s, u.EndMinute, role, u.LaneIndex));
                 }
             }
-            days.Add(new TimetableDay(flag, name, flag == today, entries));
+            days.Add(new TimetableDay(flag, name, flag == today, entries, laneCount));
         }
 
         var gridDays = ResolveGridDays(days);
@@ -275,7 +300,20 @@ public static class TimetableLayout
 
             var cells = new List<TimetableCell>(days.Count);
             for (var i = 0; i < days.Count; i++)
-                cells.Add(new TimetableCell(days[i].Day, days[i].Name, bySlot[i][slot.Index].ToList()));
+            {
+                // The lane array is the day's width, not this band's occupancy, so a bar keeps the
+                // same width down its whole run. Anything past the cap is counted, never drawn.
+                var lanes = new List<TimetableEntry>[days[i].LaneCount];
+                for (var l = 0; l < lanes.Length; l++) lanes[l] = new List<TimetableEntry>();
+
+                var overflow = 0;
+                foreach (var entry in bySlot[i][slot.Index])
+                {
+                    if (entry.LaneIndex < lanes.Length) lanes[entry.LaneIndex].Add(entry);
+                    else overflow++;
+                }
+                cells.Add(new TimetableCell(days[i].Day, days[i].Name, lanes, overflow));
+            }
             rows.Add(new TimetableRow(slot, cells));
         }
 
@@ -284,7 +322,38 @@ public static class TimetableLayout
 
     private readonly record struct Placed(
         Guid Id, string? Label, int Minutes, SoundChoice Sound, bool IsEnabled, Weekdays Days,
-        int? EndMinute);
+        int? EndMinute, int LaneIndex = 0);
+
+    /// <summary>How many lanes a day column will draw side by side. Lanes are the one axis this view
+    /// leaves unbounded — rows stop at 48 because the span clamps to a day, but a cluster is as wide
+    /// as the number of alarms overlapping, and an import is capped at 8 MB rather than at a count.
+    /// Three keeps a lane readable and keeps a hostile file from becoming a grid with thousands of
+    /// columns in every cell. What does not fit is counted, and the agenda still lists all of it.</summary>
+    public const int MaxLanes = 3;
+
+    /// <summary>Give each entry the lowest lane free at its start, walking in start order — so lane
+    /// order is time order, which is also the order a screen reader announces them in. Returns how
+    /// many lanes the grid will draw, which is the number used or <see cref="MaxLanes"/>, whichever
+    /// is smaller. Entries past the cap keep their real lane index: the grid filters them out and
+    /// counts them, and the agenda shows them.</summary>
+    private static int AssignLanes(List<Placed> dayPlaced)
+    {
+        var laneFreeFrom = new List<int>();
+
+        for (var i = 0; i < dayPlaced.Count; i++)
+        {
+            var p = dayPlaced[i];
+            var end = p.EndMinute ?? p.Minutes + 1;   // an instant occupies a moment, not a span
+
+            var lane = laneFreeFrom.FindIndex(free => free <= p.Minutes);
+            if (lane < 0) { lane = laneFreeFrom.Count; laneFreeFrom.Add(end); }
+            else laneFreeFrom[lane] = end;
+
+            dayPlaced[i] = p with { LaneIndex = lane };
+        }
+
+        return Math.Min(Math.Max(laneFreeFrom.Count, 1), MaxLanes);
+    }
 
     private static List<Placed> Collect(IEnumerable<TimerItem>? alarms)
     {

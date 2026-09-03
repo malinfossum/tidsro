@@ -671,4 +671,92 @@ public class TimetableLayoutTests
         // 18:00 end + an hour of padding = 19:00, so the last half-hour band starts at 18:30.
         Assert.Equal("18:30", week.Slots[^1].Label);
     }
+
+    // ---- Lanes ---------------------------------------------------------------------------
+
+    [Fact]
+    public void A_day_with_no_overlap_has_one_lane()
+    {
+        var week = TimetableLayout.Build(
+            new[] { Block(9, 0, 570, Weekdays.Mon), Block(11, 0, 690, Weekdays.Mon) }, At(5, 8, 0));
+
+        Assert.Equal(1, week.Days[0].LaneCount);
+    }
+
+    [Fact]
+    public void Two_overlapping_blocks_take_a_lane_each()
+    {
+        var week = TimetableLayout.Build(
+            new[] { Block(9, 0, 630, Weekdays.Mon), Block(9, 30, 660, Weekdays.Mon, "Lab") }, At(5, 8, 0));
+        var cell = week.Rows.First(r => r.Slot.Label == "09:30").Cells[0];
+
+        Assert.Equal(2, week.Days[0].LaneCount);
+        Assert.Equal(2, cell.Lanes.Count);
+        Assert.Equal("Lecture", Assert.Single(cell.Lanes[0]).Label);
+        Assert.Equal("Lab", Assert.Single(cell.Lanes[1]).Label);
+    }
+
+    [Fact]
+    public void A_lane_a_block_does_not_reach_is_left_empty_so_the_bar_keeps_its_width()
+    {
+        var week = TimetableLayout.Build(
+            new[] { Block(9, 0, 630, Weekdays.Mon), Block(9, 30, 660, Weekdays.Mon, "Lab") }, At(5, 8, 0));
+        var first = week.Rows.First(r => r.Slot.Label == "09:00").Cells[0];
+
+        Assert.Equal(2, first.Lanes.Count);       // the day's lane count, not this band's occupancy
+        Assert.Single(first.Lanes[0]);
+        Assert.Empty(first.Lanes[1]);             // the Lab has not started yet
+    }
+
+    [Fact]
+    public void An_instant_inside_a_block_takes_its_own_lane()
+    {
+        var week = TimetableLayout.Build(
+            new[] { Block(9, 0, 660, Weekdays.Mon), Recurring(10, 0, Weekdays.Mon, "Stretch") }, At(5, 8, 0));
+        var cell = week.Rows.First(r => r.Slot.Label == "10:00").Cells[0];
+
+        Assert.Equal(2, cell.Entries.Count);
+        Assert.Equal("Lecture", Assert.Single(cell.Lanes[0]).Label);
+        Assert.Equal("Stretch", Assert.Single(cell.Lanes[1]).Label);
+    }
+
+    [Fact]
+    public void Lane_order_is_start_order()
+    {
+        var week = TimetableLayout.Build(
+            new[] { Block(9, 30, 660, Weekdays.Mon, "Later"), Block(9, 0, 630, Weekdays.Mon, "Earlier") },
+            At(5, 8, 0));
+        var cell = week.Rows.First(r => r.Slot.Label == "09:30").Cells[0];
+
+        Assert.Equal("Earlier", Assert.Single(cell.Lanes[0]).Label);
+        Assert.Equal(0, Assert.Single(cell.Lanes[0]).LaneIndex);
+    }
+
+    [Fact]
+    public void A_fifty_way_overlap_caps_the_grid_at_three_lanes_and_counts_the_rest()
+    {
+        var many = Enumerable.Range(0, 50)
+            .Select(i => Block(9, 0, 630, Weekdays.Mon, $"Class {i:D2}")).ToArray();
+
+        var week = TimetableLayout.Build(many, At(5, 8, 0));
+        var cell = week.Rows.First().Cells[0];
+
+        Assert.Equal(TimetableLayout.MaxLanes, cell.Lanes.Count);
+        Assert.Equal(3, cell.Entries.Count);
+        Assert.True(cell.HasOverflow);
+        Assert.Equal(47, cell.OverflowCount);
+        Assert.Equal("+47 more", cell.OverflowText);
+    }
+
+    [Fact]
+    public void The_agenda_still_lists_every_entry_the_grid_summarised()
+    {
+        var many = Enumerable.Range(0, 50)
+            .Select(i => Block(9, 0, 570, Weekdays.Mon, $"Class {i:D2}")).ToArray();
+
+        var week = TimetableLayout.Build(many, At(5, 8, 0));
+
+        // The grid caps; the agenda is a list and hides nothing.
+        Assert.Equal(50, week.Days[0].Entries.Count);
+    }
 }
