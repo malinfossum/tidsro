@@ -17,6 +17,19 @@ public sealed class AlarmItemViewModel
     }
 
     public string TimeText => Item.EndsAt is { } e ? e.ToString("HH\\:mm") : "--:--";
+
+    /// <summary>What the row prints: "09:00" for an instant, "09:00–10:30" for a timetable block, so
+    /// the Schedule tab and the Week tab agree about what an alarm is. The command labels keep
+    /// <see cref="TimeText"/> — "Edit alarm at 09:00" names the alarm, not its length.</summary>
+    public string RangeText => Item.EndMinute is { } end
+        ? $"{TimeText}–{end / 60:D2}:{end % 60:D2}"
+        : TimeText;
+
+    // Spoken rather than dashed: a screen reader reads an en dash unreliably, and a block's length
+    // is exactly what the field is for.
+    private string SpokenTime => Item.EndMinute is { } end
+        ? $"{TimeText} to {end / 60:D2}:{end % 60:D2}"
+        : TimeText;
     public string DisplayLabel => string.IsNullOrWhiteSpace(Item.Label) ? "No label" : Item.Label!;
     public bool HasSound => Item.Sound != SoundChoice.None;
     public string SoundText => HasSound ? "chime" : "silent";
@@ -34,7 +47,7 @@ public sealed class AlarmItemViewModel
 
     // Sound state and the cadence/next cues are carried as text, never colour alone (spec §7).
     public string AccessibleName =>
-        $"Alarm at {TimeText}{CadencePhrase}, {DisplayLabel}, {SoundText}{(WarnBefore ? ", warns 5 minutes before" : "")}{(IsNext ? ", next" : "")}{(IsEnabled ? "" : ", off")}";
+        $"Alarm at {SpokenTime}{CadencePhrase}, {DisplayLabel}, {SoundText}{(WarnBefore ? ", warns 5 minutes before" : "")}{(IsNext ? ", next" : "")}{(IsEnabled ? "" : ", off")}";
 
     private string CadencePhrase => Item.RecurringDays is { } d
         ? $" {RecurrenceRules.CadenceLabel(d).ToLowerInvariant()}"

@@ -115,3 +115,22 @@ public sealed class WidthToVisibleConverter : IValueConverter
 
     public object ConvertBack(object? v, Type t, object? p, CultureInfo c) => throw new NotSupportedException();
 }
+
+/// <summary>What a lane's bar should look like: "None" for a band holding only instants, "Block" for
+/// one a timetable block passes through, "Now" for the block that is happening as you look at it.
+///
+/// <para>A multi-value converter because the answer needs three things — the block, whether its
+/// column is today, and the current minute — and only the last of those changes while the window is
+/// open. It carries no rule of its own: the decision is
+/// <see cref="TimetableLayout.IsCurrent(TimetableEntry, bool, int)"/>, which lives in the model where
+/// tests reach it. The brushes stay in XAML, keyed off the string this returns.</para></summary>
+public sealed class LaneBarStateConverter : IMultiValueConverter
+{
+    public object Convert(object[] values, Type t, object? p, CultureInfo c)
+    {
+        if (values is not [TimetableEntry bar, bool isToday, int nowMinuteOfDay]) return "None";
+        return TimetableLayout.IsCurrent(bar, isToday, nowMinuteOfDay) ? "Now" : "Block";
+    }
+
+    public object[] ConvertBack(object v, Type[] t, object? p, CultureInfo c) => throw new NotSupportedException();
+}

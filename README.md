@@ -1,4 +1,4 @@
-<p align="center">
+﻿<p align="center">
   <img src="docs/brand/tidsro-lockup.png" alt="Tidsro" width="480">
 </p>
 
@@ -20,7 +20,7 @@ Anyone who works or studies at a computer and wants to hold their focus through 
 
 ## Status
 
-**Shipped, with versioned [releases](https://github.com/malinfossum/tidsro/releases/latest).** Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms** — fire once at an HH:MM time, or repeat on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms can be **switched off without deleting** (kept and parked at the bottom until switched back on), edited in a dialog, and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**, and your alarms and settings can be **exported to a file and imported back**. A **Week** tab lays the repeating alarms out as a timetable.
+**Shipped, with versioned [releases](https://github.com/malinfossum/tidsro/releases/latest).** Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms** — fire once at an HH:MM time, or repeat on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms can be **switched off without deleting** (kept and parked at the bottom until switched back on), edited in a dialog, and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**, and your alarms and settings can be **exported to a file and imported back**. A **Week** tab lays the repeating alarms out as a timetable, where an alarm given an optional **end time** is drawn as a block at its real length.
 
 See the [changelog](CHANGELOG.md) for what's new in each release.
 
@@ -76,11 +76,11 @@ The **Schedule** is its own tab next to Quick timers, and a compact strip below 
 
 - Open **Settings** (bottom-left of the main window) to toggle launch-at-startup and choose a default sound. Changes apply when you click **Save**; **Cancel**, **Esc**, or closing the window discards them.
 
-The **Week** tab lays your repeating alarms out as a timetable — a day-by-day agenda on a narrow window, becoming a grid once there is room for one. It lists only the times you have something on, so a free afternoon costs no space, and each row states its own time: an alarm at 12:15 says 12:15 rather than the half hour it falls in. Saturday and Sunday get columns only when something falls on them, or when today is one of them; otherwise the week stays five columns wide and says so beneath. Today is marked in both views. The tab is read-only — alarms are added and edited on the Schedule.
+The **Week** tab lays your repeating alarms out as a timetable — a day-by-day agenda on a narrow window, becoming a grid once there is room for one. It lists only the times you have something on, so a free afternoon costs no space, and each row states its own time: an alarm at 12:15 says 12:15 rather than the half hour it falls in. Saturday and Sunday get columns only when something falls on them, or when today is one of them; otherwise the week stays five columns wide and says so beneath. Today is marked in both views. An alarm given an optional **end time** becomes a block, drawn down every half hour it covers rather than as a single point, so a two-hour lecture looks like one. Two blocks that overlap share the column side by side, an alarm falling inside a block keeps its own place beside it, and whichever block is happening now is marked. An end time changes nothing about when Tidsro chimes: it still sounds at the start only. The tab is read-only — alarms are added and edited on the Schedule.
 
 <p align="center">
-  <img src="docs/screenshots/week.png" alt="The Week tab: five columns from Monday to Friday with Thursday marked as today by a gold dot and gold heading, seven rows of repeating alarms from 07:30 Morning walk down to 17:30 Wrap up with their times in a left-hand gutter, a 12:00 row where the Tuesday and Thursday cells print their own 12:15, and a muted line beneath reading Weekend - nothing scheduled." width="560"><br>
-  <em>The Week tab — only the times you use, and no columns spent on a free weekend.</em>
+  <img src="docs/screenshots/week.png" alt="The Week tab: five columns from Monday to Friday with Thursday marked as today by a gold dot and gold heading, rows of repeating alarms from 07:30 Morning walk downwards with their times in a left-hand gutter. A Lecture block on Monday, Wednesday and Friday and a Focus block on Tuesday and Thursday each run as a vertical stripe down the rows they cover; on Tuesday a Lab sits beside the Focus block in its own lane, and Thursday's block is marked in gold as the one happening now." width="560"><br>
+  <em>The Week tab — blocks drawn at their length, and no columns spent on a free weekend.</em>
 </p>
 
 ### Backup and restore

@@ -113,4 +113,43 @@ public class AlarmItemViewModelTests
         Assert.DoesNotContain("off", vm.AccessibleName);
         Assert.Equal("Alarm at 14:00", vm.ToggleLabel);
     }
+
+    private static TimerItem Block(int hour, int minute, int? endMinute, Weekdays days) => new()
+    {
+        TriggerType = TriggerType.Recurring,
+        Label = "Lecture",
+        Sound = SoundChoice.None,
+        RecurringDays = days,
+        EndsAt = new DateTimeOffset(2026, 6, 17, hour, minute, 0, TimeSpan.Zero),
+        EndMinute = endMinute,
+        State = TimerState.Running,
+    };
+
+    [Fact]
+    public void A_recurring_row_with_an_end_reads_as_a_range()
+    {
+        var vm = new AlarmItemViewModel(
+            Block(9, 0, 630, Weekdays.Mon | Weekdays.Wed), isTomorrow: false, isNext: false);
+
+        Assert.Equal("09:00–10:30", vm.RangeText);
+        Assert.Equal("Mon Wed", vm.CadenceText);
+    }
+
+    [Fact]
+    public void An_alarm_with_no_end_still_reads_as_one_time()
+    {
+        var vm = new AlarmItemViewModel(Block(9, 0, null, Weekdays.Mon), isTomorrow: false, isNext: false);
+
+        Assert.Equal("09:00", vm.RangeText);
+    }
+
+    [Fact]
+    public void A_block_speaks_its_end_but_the_command_labels_stay_on_the_start()
+    {
+        var vm = new AlarmItemViewModel(Block(9, 0, 630, Weekdays.Mon), isTomorrow: false, isNext: false);
+
+        Assert.Contains("Alarm at 09:00 to 10:30", vm.AccessibleName);
+        Assert.Equal("Edit alarm at 09:00", vm.EditLabel);     // a command names the alarm, not its length
+        Assert.Equal("Delete alarm at 09:00", vm.DeleteLabel);
+    }
 }

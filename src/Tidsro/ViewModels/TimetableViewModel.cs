@@ -21,9 +21,16 @@ public sealed partial class TimetableViewModel : ObservableObject
     {
         _scheduler = scheduler;
         Rebuild();
+        NowMinuteOfDay = MinuteOfDay(_scheduler.Now);
     }
 
     [ObservableProperty] private TimetableWeek _week = null!;
+
+    /// <summary>Minutes since midnight, as the highlight reads it. Changes once a minute, never on
+    /// the 250 ms tick: each change re-runs the current-block converter for every entry on screen, so
+    /// assigning it per tick would cost 345,000 passes a day instead of 1,440 — the same cost
+    /// <see cref="RefreshForTick"/>'s date gate exists to avoid, one layer down.</summary>
+    [ObservableProperty] private int _nowMinuteOfDay;
 
     /// <summary>Re-project unconditionally. Called when the alarm set changes.</summary>
     public void Rebuild()
@@ -48,6 +55,16 @@ public sealed partial class TimetableViewModel : ObservableObject
     /// </summary>
     public void RefreshForTick()
     {
-        if (DateOnly.FromDateTime(_scheduler.Now.Date) != _builtFor) Rebuild();
+        var now = _scheduler.Now;
+
+        // The date check runs FIRST. At 00:00 the date and the minute change on the same tick, and
+        // reading the minute against a week still built for yesterday would light a block in
+        // yesterday's column for one tick.
+        if (DateOnly.FromDateTime(now.Date) != _builtFor) Rebuild();
+
+        var minute = MinuteOfDay(now);
+        if (minute != NowMinuteOfDay) NowMinuteOfDay = minute;
     }
+
+    private static int MinuteOfDay(DateTimeOffset now) => now.Hour * 60 + now.Minute;
 }

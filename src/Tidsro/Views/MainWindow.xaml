@@ -117,6 +117,92 @@
         </Setter.Value>
       </Setter>
     </Style>
+    <!-- The lane strip inside one cell: one column per lane the day draws, left to right, so a
+         block's bar keeps the same width down its whole run instead of widening wherever its
+         neighbour happens to be absent. A UniformGrid skips a collapsed child and closes the gap,
+         so each lane sits in its own Border - the same no-automation-peer trick the day columns use.
+
+         This control is the one automation cost of lanes: an occupied cell now carries a nameless
+         list peer around its named entries. An EMPTY cell carries none, because Build hands it no
+         lanes at all and HasItems=False collapses this whole subtree - which is what keeps the 105
+         empty lists removed on 2026-08-27 from coming back. Accepted deliberately (2026-09-03) as
+         the price of drawing overlapping blocks side by side. -->
+    <Style x:Key="TimetableLanes" TargetType="ItemsControl">
+      <Style.Triggers>
+        <Trigger Property="HasItems" Value="False">
+          <Setter Property="Visibility" Value="Collapsed"/>
+        </Trigger>
+      </Style.Triggers>
+      <Setter Property="Focusable" Value="False"/>
+      <Setter Property="VerticalAlignment" Value="Center"/>
+      <Setter Property="ItemsPanel">
+        <Setter.Value>
+          <ItemsPanelTemplate><UniformGrid Rows="1"/></ItemsPanelTemplate>
+        </Setter.Value>
+      </Setter>
+      <Setter Property="ItemTemplate">
+        <Setter.Value>
+          <DataTemplate>
+            <!-- This Border is the block's bar AND the thing that holds the lane's column open when
+                 the band is empty. It has no automation peer, which is what lets a continuation band
+                 draw an unbroken bar while announcing nothing: Announced excludes a block's middle
+                 and end segments, so the ItemsControl inside has no items there and collapses out of
+                 the tree. A three-hour block is therefore one bar and one announcement, not three.
+
+                 The bar never animates when it becomes current, in keeping with the app's
+                 reduced-motion posture, and the colour is never the only signal: the entry's
+                 accessible name carries the range, and the row's gutter carries the time. -->
+            <Border Margin="1,0" MinHeight="18" Padding="0">
+              <Border.Style>
+                <Style TargetType="Border">
+                  <!-- A left stripe, not a fill. A filled bar would put the label on brass and blow
+                       the text contrast the palette was chosen for; a stripe reads as one continuous
+                       edge down the block's run and leaves the text on the surface it was designed
+                       against. Transparent by default so an instant draws no bar at all. -->
+                  <Setter Property="BorderThickness" Value="3,0,0,0"/>
+                  <Setter Property="BorderBrush" Value="Transparent"/>
+                  <Style.Triggers>
+                    <DataTrigger Value="Block">
+                      <DataTrigger.Binding>
+                        <MultiBinding Converter="{StaticResource LaneBarState}">
+                          <Binding Path="Bar"/>
+                          <Binding Path="IsToday"/>
+                          <Binding Path="DataContext.Timetable.NowMinuteOfDay"
+                                   RelativeSource="{RelativeSource AncestorType=Window}"/>
+                        </MultiBinding>
+                      </DataTrigger.Binding>
+                      <!-- BorderControl, the warm graphite that already clears 3:1 against these
+                           surfaces - a filled bar is a non-text element and has to. -->
+                      <Setter Property="BorderBrush" Value="{StaticResource BorderControl}"/>
+                    </DataTrigger>
+                    <DataTrigger Value="Now">
+                      <DataTrigger.Binding>
+                        <MultiBinding Converter="{StaticResource LaneBarState}">
+                          <Binding Path="Bar"/>
+                          <Binding Path="IsToday"/>
+                          <Binding Path="DataContext.Timetable.NowMinuteOfDay"
+                                   RelativeSource="{RelativeSource AncestorType=Window}"/>
+                        </MultiBinding>
+                      </DataTrigger.Binding>
+                      <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Border.Style>
+              <ItemsControl Style="{StaticResource TimetableCell}" ItemsSource="{Binding Announced}"/>
+            </Border>
+          </DataTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- What the grid could not give a lane to. TextMuted, not TextFaint: it is the only sign those
+         entries exist in this rendering, and the agenda below still lists every one of them. -->
+    <Style x:Key="TimetableOverflow" TargetType="TextBlock">
+      <Setter Property="FontSize" Value="{StaticResource TextXs}"/>
+      <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
+      <Setter Property="Margin" Value="2,2,6,1"/>
+    </Style>
   </Window.Resources>
 
   <Grid Margin="{StaticResource WindowPadding}">
@@ -397,6 +483,22 @@
                 <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding AddAlarmCommand}"/></TextBox.InputBindings>
               </TextBox>
             </Grid>
+
+            <!-- The optional end of a timetable block. Appears only once the alarm repeats: an end
+                 is a block's length, and the Week tab draws recurring alarms alone. Empty means an
+                 instant, which is what every alarm was before schema 5. -->
+            <Grid Margin="0,10,0,0"
+                  Visibility="{Binding ShowAlarmEndInput, Converter={StaticResource BoolToVisible}}">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="Ends" VerticalAlignment="Center" Margin="0,0,10,0"
+                         Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"/>
+              <TextBox Grid.Column="1" Width="90" HorizontalAlignment="Left"
+                       Text="{Binding AlarmEndInput, UpdateSourceTrigger=PropertyChanged}"
+                       AutomationProperties.Name="End time, optional"
+                       ToolTip="Optional. 24-hour time, e.g. 10:30" Tag="10:30">
+                <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding AddAlarmCommand}"/></TextBox.InputBindings>
+              </TextBox>
+            </Grid>
             <Grid Margin="0,12,0,0">
               <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
               <TextBlock Grid.Column="0" Text="Sound" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>
@@ -504,7 +606,7 @@
                         </Style>
                       </StackPanel.Style>
                       <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding TimeText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource TextLg}" Foreground="{StaticResource Text}"/>
+                        <TextBlock Text="{Binding RangeText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource TextLg}" Foreground="{StaticResource Text}"/>
                         <TextBlock Text="{Binding CadenceText}" Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}" VerticalAlignment="Center" Margin="8,0,0,0"/>
                       </StackPanel>
                       <TextBlock Text="{Binding DisplayLabel}" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"/>
@@ -629,7 +731,7 @@
                               <ColumnDefinition Width="Auto"/>
                               <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="{Binding TimeText}" FontFamily="{StaticResource FontMono}"
+                            <TextBlock Text="{Binding RangeText}" FontFamily="{StaticResource FontMono}"
                                        Margin="0,0,10,0" VerticalAlignment="Top"/>
                             <!-- The "off" mark. Segoe Fluent Icons Cancel (E711), the same icon
                                  family the sound tags use. Dimming alone never encodes state. -->
@@ -781,20 +883,16 @@
                          survive on its own: it skips a collapsed child and closes the gap. That is
                          also exactly how the weekend is dropped, deliberately, below. -->
                     <UniformGrid Grid.Column="1" Rows="1">
-                      <Border><ItemsControl Style="{StaticResource TimetableCell}" ItemsSource="{Binding Cells[0].Entries}"/></Border>
-                      <Border><ItemsControl Style="{StaticResource TimetableCell}" ItemsSource="{Binding Cells[1].Entries}"/></Border>
-                      <Border><ItemsControl Style="{StaticResource TimetableCell}" ItemsSource="{Binding Cells[2].Entries}"/></Border>
-                      <Border><ItemsControl Style="{StaticResource TimetableCell}" ItemsSource="{Binding Cells[3].Entries}"/></Border>
-                      <Border><ItemsControl Style="{StaticResource TimetableCell}" ItemsSource="{Binding Cells[4].Entries}"/></Border>
+                      <Border><StackPanel><ItemsControl Style="{StaticResource TimetableLanes}" ItemsSource="{Binding Cells[0].Lanes}"/><TextBlock Style="{StaticResource TimetableOverflow}" Text="{Binding Cells[0].OverflowText}" Visibility="{Binding Cells[0].HasOverflow, Converter={StaticResource BoolToVisible}}"/></StackPanel></Border>
+                      <Border><StackPanel><ItemsControl Style="{StaticResource TimetableLanes}" ItemsSource="{Binding Cells[1].Lanes}"/><TextBlock Style="{StaticResource TimetableOverflow}" Text="{Binding Cells[1].OverflowText}" Visibility="{Binding Cells[1].HasOverflow, Converter={StaticResource BoolToVisible}}"/></StackPanel></Border>
+                      <Border><StackPanel><ItemsControl Style="{StaticResource TimetableLanes}" ItemsSource="{Binding Cells[2].Lanes}"/><TextBlock Style="{StaticResource TimetableOverflow}" Text="{Binding Cells[2].OverflowText}" Visibility="{Binding Cells[2].HasOverflow, Converter={StaticResource BoolToVisible}}"/></StackPanel></Border>
+                      <Border><StackPanel><ItemsControl Style="{StaticResource TimetableLanes}" ItemsSource="{Binding Cells[3].Lanes}"/><TextBlock Style="{StaticResource TimetableOverflow}" Text="{Binding Cells[3].OverflowText}" Visibility="{Binding Cells[3].HasOverflow, Converter={StaticResource BoolToVisible}}"/></StackPanel></Border>
+                      <Border><StackPanel><ItemsControl Style="{StaticResource TimetableLanes}" ItemsSource="{Binding Cells[4].Lanes}"/><TextBlock Style="{StaticResource TimetableOverflow}" Text="{Binding Cells[4].OverflowText}" Visibility="{Binding Cells[4].HasOverflow, Converter={StaticResource BoolToVisible}}"/></StackPanel></Border>
                       <!-- Saturday and Sunday, dropped as a pair on a week with a free weekend. The
                            week decides it once (HidesWeekend) and every row reads the same answer,
                            so no row can end up a column wider than its neighbours. -->
-                      <Border Visibility="{Binding DataContext.Timetable.Week.HidesWeekend, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToCollapsed}}">
-                        <ItemsControl Style="{StaticResource TimetableCell}" ItemsSource="{Binding Cells[5].Entries}"/>
-                      </Border>
-                      <Border Visibility="{Binding DataContext.Timetable.Week.HidesWeekend, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToCollapsed}}">
-                        <ItemsControl Style="{StaticResource TimetableCell}" ItemsSource="{Binding Cells[6].Entries}"/>
-                      </Border>
+                      <Border Visibility="{Binding DataContext.Timetable.Week.HidesWeekend, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToCollapsed}}"><StackPanel><ItemsControl Style="{StaticResource TimetableLanes}" ItemsSource="{Binding Cells[5].Lanes}"/><TextBlock Style="{StaticResource TimetableOverflow}" Text="{Binding Cells[5].OverflowText}" Visibility="{Binding Cells[5].HasOverflow, Converter={StaticResource BoolToVisible}}"/></StackPanel></Border>
+                      <Border Visibility="{Binding DataContext.Timetable.Week.HidesWeekend, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToCollapsed}}"><StackPanel><ItemsControl Style="{StaticResource TimetableLanes}" ItemsSource="{Binding Cells[6].Lanes}"/><TextBlock Style="{StaticResource TimetableOverflow}" Text="{Binding Cells[6].OverflowText}" Visibility="{Binding Cells[6].HasOverflow, Converter={StaticResource BoolToVisible}}"/></StackPanel></Border>
                     </UniformGrid>
                   </Grid>
                   </Border>

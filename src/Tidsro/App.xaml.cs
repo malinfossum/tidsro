@@ -261,6 +261,7 @@ public partial class App : Application
     {
         Func<AlarmItemViewModel, EditAlarmWindow> editFactory = row => new EditAlarmWindow(
             new EditAlarmViewModel(row.Item.Id, row.Item.EndsAt?.ToString("HH\\:mm") ?? "",
+                row.Item.EndMinute is { } e ? $"{e / 60:D2}:{e % 60:D2}" : "",
                 row.Item.Label ?? "", row.Item.Sound, row.Item.RecurringDays ?? Weekdays.None, row.Item.WarnBefore,
                 _mainVm.SoundOptions, _mainVm.ApplyAlarmEdit, _sound));
         _main ??= new MainWindow(_mainVm, () => new SettingsWindow(confirm =>
@@ -406,6 +407,7 @@ public partial class App : Application
         Sound = a.Sound,
         WarnBefore = a.WarnBefore,
         Enabled = a.IsEnabled,
+        EndMinute = a.EndMinute,
         NextFireAt = a.EndsAt?.LocalDateTime ?? default,   // the next occurrence — the durable dedup marker
     };
 
@@ -430,7 +432,7 @@ public partial class App : Application
                 // Restore the persisted next occurrence so a quick relaunch doesn't re-fire within grace;
                 // the first tick reconciles any occurrence missed while the app was closed.
                 var next = LocalToOffset(r.NextFireAt);
-                _scheduler.ArmRecurringAlarm(r.Hour, r.Minute, r.Days, r.Label, r.Sound, r.Id, next, r.WarnBefore, r.Enabled);
+                _scheduler.ArmRecurringAlarm(r.Hour, r.Minute, r.Days, r.Label, r.Sound, r.Id, next, r.WarnBefore, r.Enabled, r.EndMinute);
             }
             catch { /* a residual bad record must never stop launch (spec §4) */ }
         }

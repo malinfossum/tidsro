@@ -20,7 +20,7 @@ public class TidsroDataTests
         var data = new TidsroData { Settings = null, Alarms = { Good() } };
         var clean = data.Sanitized();
         Assert.NotNull(clean.Settings);                 // null settings -> defaults
-        Assert.Equal(4, clean.SchemaVersion);
+        Assert.Equal(TidsroData.CurrentSchema, clean.SchemaVersion);
         Assert.Single(clean.Alarms);
     }
 
