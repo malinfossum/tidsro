@@ -16,6 +16,20 @@
         <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding SaveCommand}"/></TextBox.InputBindings>
       </TextBox>
     </Grid>
+    <!-- The end of a timetable block, and optional: empty means an instant, which is what every
+         alarm was before schema 5. Only offered once the alarm repeats - an end is a block's length,
+         and the Week tab draws recurring alarms alone. AutomationProperties.Name rather than a
+         LabeledBy: the field carries its own label everywhere else in this dialog. -->
+    <Grid Margin="0,12,0,0" Visibility="{Binding ShowEndInput, Converter={StaticResource BoolToVisible}}">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+      <TextBlock Grid.Column="0" Text="Ends" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>
+      <TextBox Grid.Column="1" Width="90" HorizontalAlignment="Left"
+               Text="{Binding EndInput, UpdateSourceTrigger=PropertyChanged}"
+               AutomationProperties.Name="End time, optional"
+               ToolTip="Optional. 24-hour time, e.g. 10:30" Tag="10:30">
+        <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding SaveCommand}"/></TextBox.InputBindings>
+      </TextBox>
+    </Grid>
     <Grid Margin="0,12,0,0">
       <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
       <TextBlock Grid.Column="0" Text="Sound" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>

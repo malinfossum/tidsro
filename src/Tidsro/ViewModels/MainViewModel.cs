@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -30,6 +30,7 @@ public partial class MainViewModel : ObservableObject
     public TimetableViewModel Timetable { get; }
 
     [ObservableProperty] private string _alarmTimeInput = "";
+    [ObservableProperty] private string _alarmEndInput = "";
     [ObservableProperty] private string _alarmLabel = "";
     [ObservableProperty] private string? _alarmError;
     [ObservableProperty] private SoundChoice _alarmSound;
@@ -38,13 +39,22 @@ public partial class MainViewModel : ObservableObject
         { RepeatOption.Once, RepeatOption.Daily, RepeatOption.Weekdays, RepeatOption.Weekends, RepeatOption.Custom };
 
     [ObservableProperty] private RepeatOption _alarmRepeat = RepeatOption.Once;
+
+    /// <summary>Whether the add form offers an end time. Only a repeating alarm can have one: an end
+    /// is a timetable block's length, and the Week tab draws recurring alarms alone.</summary>
+    public bool ShowAlarmEndInput => AlarmRepeat != RepeatOption.Once;
     [ObservableProperty] private bool _alarmWarnBefore;
     [ObservableProperty] private int _selectedTabIndex;
 
     public IReadOnlyList<DayToggleViewModel> AlarmDayToggles { get; } = DayToggleViewModel.Week();
 
     public bool ShowCustomDays => AlarmRepeat == RepeatOption.Custom;
-    partial void OnAlarmRepeatChanged(RepeatOption value) => OnPropertyChanged(nameof(ShowCustomDays));
+
+    partial void OnAlarmRepeatChanged(RepeatOption value)
+    {
+        OnPropertyChanged(nameof(ShowCustomDays));
+        OnPropertyChanged(nameof(ShowAlarmEndInput));
+    }
 
     // Both derived flags depend on the selected tab, and CommunityToolkit only raises
     // SelectedTabIndex itself.
@@ -296,6 +306,20 @@ public partial class MainViewModel : ObservableObject
 
         var label = string.IsNullOrWhiteSpace(AlarmLabel) ? null : CapitalizeFirst(AlarmLabel.Trim());
         var days = ResolveDays();
+
+        int? endMinute = null;
+        if (days != Weekdays.None && !string.IsNullOrWhiteSpace(AlarmEndInput))
+        {
+            // Same parser as the start, and the same rule as the Edit dialog: reported here, because
+            // here there is a person to tell.
+            if (!ClockTimeRules.TryParse(AlarmEndInput, out var eh, out var em, out var endError))
+            { AlarmError = endError; return; }
+
+            endMinute = eh * 60 + em;
+            if (endMinute <= hour * 60 + minute)
+            { AlarmError = "The end must be after the start."; return; }
+        }
+
         if (days == Weekdays.None)
         {
             var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
@@ -304,7 +328,8 @@ public partial class MainViewModel : ObservableObject
         }
         else
         {
-            _scheduler.ArmRecurringAlarm(hour, minute, days, label, AlarmSound, warnBefore: AlarmWarnBefore);
+            _scheduler.ArmRecurringAlarm(hour, minute, days, label, AlarmSound, warnBefore: AlarmWarnBefore,
+                endMinute: endMinute);
             Announce($"Alarm added for {hour:00}:{minute:00}, {RecurrenceRules.CadenceLabel(days)}");
         }
 
@@ -328,7 +353,8 @@ public partial class MainViewModel : ObservableObject
 
     // Called by the Edit-alarm dialog on Save. Replaces the alarm in place (same Id), normalizing the
     // label like the add path. Mirrors the former in-place edit branch.
-    public void ApplyAlarmEdit(Guid id, int hour, int minute, Weekdays days, string? label, SoundChoice sound, bool warnBefore)
+    public void ApplyAlarmEdit(Guid id, int hour, int minute, Weekdays days, string? label, SoundChoice sound,
+        bool warnBefore, int? endMinute = null)
     {
         var existing = _scheduler.Alarms.FirstOrDefault(a => a.Id == id);
         if (existing is not null) _scheduler.RemoveAlarm(existing);
@@ -341,7 +367,8 @@ public partial class MainViewModel : ObservableObject
         }
         else
         {
-            _scheduler.ArmRecurringAlarm(hour, minute, days, clean, sound, id, warnBefore: warnBefore);
+            _scheduler.ArmRecurringAlarm(hour, minute, days, clean, sound, id, warnBefore: warnBefore,
+                endMinute: endMinute);
             Announce($"Alarm updated for {hour:00}:{minute:00}, {RecurrenceRules.CadenceLabel(days)}");
         }
         RebuildAgenda();
@@ -503,6 +530,7 @@ public partial class MainViewModel : ObservableObject
     private void ClearEditor()
     {
         AlarmTimeInput = "";
+        AlarmEndInput = "";
         AlarmLabel = "";
         AlarmError = null;
         AlarmRepeat = RepeatOption.Once;

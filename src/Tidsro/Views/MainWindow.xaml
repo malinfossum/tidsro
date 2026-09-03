@@ -397,6 +397,22 @@
                 <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding AddAlarmCommand}"/></TextBox.InputBindings>
               </TextBox>
             </Grid>
+
+            <!-- The optional end of a timetable block. Appears only once the alarm repeats: an end
+                 is a block's length, and the Week tab draws recurring alarms alone. Empty means an
+                 instant, which is what every alarm was before schema 5. -->
+            <Grid Margin="0,10,0,0"
+                  Visibility="{Binding ShowAlarmEndInput, Converter={StaticResource BoolToVisible}}">
+              <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" Text="Ends" VerticalAlignment="Center" Margin="0,0,10,0"
+                         Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"/>
+              <TextBox Grid.Column="1" Width="90" HorizontalAlignment="Left"
+                       Text="{Binding AlarmEndInput, UpdateSourceTrigger=PropertyChanged}"
+                       AutomationProperties.Name="End time, optional"
+                       ToolTip="Optional. 24-hour time, e.g. 10:30" Tag="10:30">
+                <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding AddAlarmCommand}"/></TextBox.InputBindings>
+              </TextBox>
+            </Grid>
             <Grid Margin="0,12,0,0">
               <Grid.ColumnDefinitions><ColumnDefinition Width="52"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
               <TextBlock Grid.Column="0" Text="Sound" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}"/>

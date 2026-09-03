@@ -9,14 +9,15 @@ public class EditAlarmViewModelTests
     private static readonly SoundChoice[] Options =
         { SoundChoice.None, SoundChoice.SoftChime, SoundChoice.Marimba, SoundChoice.Bell };
 
-    private static EditAlarmViewModel New(string timeInput, out List<(Guid id, int h, int m, Weekdays days, string? label, SoundChoice sound, bool warnBefore)> applied,
-        out FakeSoundService sound, Guid? id = null, Weekdays days = Weekdays.None, bool warnBefore = false)
+    private static EditAlarmViewModel New(string timeInput, out List<(Guid id, int h, int m, Weekdays days, string? label, SoundChoice sound, bool warnBefore, int? endMinute)> applied,
+        out FakeSoundService sound, Guid? id = null, Weekdays days = Weekdays.None, bool warnBefore = false,
+        string endInput = "")
     {
-        var captured = new List<(Guid, int, int, Weekdays, string?, SoundChoice, bool)>();
+        var captured = new List<(Guid, int, int, Weekdays, string?, SoundChoice, bool, int?)>();
         applied = captured;
         sound = new FakeSoundService();
-        return new EditAlarmViewModel(id ?? Guid.NewGuid(), timeInput, "Tea", SoundChoice.Bell, days, warnBefore,
-            Options, (i, h, m, d, l, s, w) => captured.Add((i, h, m, d, l, s, w)), sound);
+        return new EditAlarmViewModel(id ?? Guid.NewGuid(), timeInput, endInput, "Tea", SoundChoice.Bell, days, warnBefore,
+            Options, (i, h, m, d, l, s, w, e) => captured.Add((i, h, m, d, l, s, w, e)), sound);
     }
 
     [Fact]
@@ -124,5 +125,80 @@ public class EditAlarmViewModelTests
         var vm = New("11:15", out var applied, out _);   // warnBefore defaults false
         vm.SaveCommand.Execute(null);
         Assert.False(Assert.Single(applied).warnBefore);
+    }
+
+    // ---- End times (timetable blocks) ------------------------------------------------------
+
+    [Fact]
+    public void An_empty_end_saves_as_an_instant()
+    {
+        var vm = New("09:00", out var applied, out _, days: Weekdays.Mon);
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Null(Assert.Single(applied).endMinute);
+        Assert.Null(vm.Error);
+    }
+
+    [Fact]
+    public void A_good_end_is_saved_as_minutes_from_midnight()
+    {
+        var vm = New("09:00", out var applied, out _, days: Weekdays.Mon, endInput: "10:30");
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal(630, Assert.Single(applied).endMinute);
+    }
+
+    [Fact]
+    public void An_unparseable_end_keeps_the_dialog_open()
+    {
+        var vm = New("09:00", out var applied, out _, days: Weekdays.Mon, endInput: "half nine");
+        var closed = false;
+        vm.CloseRequested += (_, _) => closed = true;
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.NotNull(vm.Error);
+        Assert.Empty(applied);
+        Assert.False(closed);
+    }
+
+    [Theory]
+    [InlineData("09:00")]   // equal to the start
+    [InlineData("08:30")]   // before it
+    public void An_end_at_or_before_the_start_keeps_the_dialog_open(string end)
+    {
+        // The one place a bad end is reported rather than repaired: here there is a person to tell.
+        var vm = New("09:00", out var applied, out _, days: Weekdays.Mon, endInput: end);
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal("The end must be after the start.", vm.Error);
+        Assert.Empty(applied);
+    }
+
+    [Fact]
+    public void A_one_shot_has_no_end_to_give()
+    {
+        // End times are a timetable feature, and the Week tab draws recurring alarms only.
+        var vm = New("09:00", out var applied, out _, days: Weekdays.None, endInput: "10:30");
+
+        Assert.False(vm.ShowEndInput);
+        vm.SaveCommand.Execute(null);
+
+        Assert.Null(Assert.Single(applied).endMinute);
+        Assert.Null(vm.Error);
+    }
+
+    [Fact]
+    public void The_end_field_appears_only_once_the_alarm_repeats()
+    {
+        var vm = New("09:00", out _, out _, days: Weekdays.None);
+        Assert.False(vm.ShowEndInput);
+
+        vm.Repeat = RepeatOption.Daily;
+
+        Assert.True(vm.ShowEndInput);
     }
 }

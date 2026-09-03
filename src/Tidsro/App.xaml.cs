@@ -261,6 +261,7 @@ public partial class App : Application
     {
         Func<AlarmItemViewModel, EditAlarmWindow> editFactory = row => new EditAlarmWindow(
             new EditAlarmViewModel(row.Item.Id, row.Item.EndsAt?.ToString("HH\\:mm") ?? "",
+                row.Item.EndMinute is { } e ? $"{e / 60:D2}:{e % 60:D2}" : "",
                 row.Item.Label ?? "", row.Item.Sound, row.Item.RecurringDays ?? Weekdays.None, row.Item.WarnBefore,
                 _mainVm.SoundOptions, _mainVm.ApplyAlarmEdit, _sound));
         _main ??= new MainWindow(_mainVm, () => new SettingsWindow(confirm =>

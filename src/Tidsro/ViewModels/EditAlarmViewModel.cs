@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Tidsro.Models;
 using Tidsro.Services;
@@ -13,7 +13,7 @@ namespace Tidsro.ViewModels;
 public partial class EditAlarmViewModel : ObservableObject
 {
     private readonly Guid _id;
-    private readonly Action<Guid, int, int, Weekdays, string?, SoundChoice, bool> _apply;
+    private readonly Action<Guid, int, int, Weekdays, string?, SoundChoice, bool, int?> _apply;
     private readonly ISoundService _sound;
 
     public SoundChoice[] SoundOptions { get; }
@@ -23,6 +23,7 @@ public partial class EditAlarmViewModel : ObservableObject
     public IReadOnlyList<DayToggleViewModel> DayToggles { get; }
 
     [ObservableProperty] private string _timeInput;
+    [ObservableProperty] private string _endInput;
     [ObservableProperty] private string _label;
     [ObservableProperty] private SoundChoice _selectedSound;
     [ObservableProperty] private RepeatOption _repeat;
@@ -30,16 +31,27 @@ public partial class EditAlarmViewModel : ObservableObject
     [ObservableProperty] private bool _warnBefore;
 
     public bool ShowCustomDays => Repeat == RepeatOption.Custom;
-    partial void OnRepeatChanged(RepeatOption value) => OnPropertyChanged(nameof(ShowCustomDays));
+
+    /// <summary>Whether the dialog offers an end time. Only a repeating alarm can have one: an end
+    /// is a timetable block's length, and the Week tab draws recurring alarms alone.</summary>
+    public bool ShowEndInput => Repeat != RepeatOption.Once;
+
+    partial void OnRepeatChanged(RepeatOption value)
+    {
+        OnPropertyChanged(nameof(ShowCustomDays));
+        OnPropertyChanged(nameof(ShowEndInput));
+    }
 
     /// <summary>Raised when the dialog should close. true = saved, false = cancelled.</summary>
     public event EventHandler<bool>? CloseRequested;
 
-    public EditAlarmViewModel(Guid id, string timeInput, string label, SoundChoice sound, Weekdays days, bool warnBefore,
-        SoundChoice[] soundOptions, Action<Guid, int, int, Weekdays, string?, SoundChoice, bool> apply, ISoundService soundSvc)
+    public EditAlarmViewModel(Guid id, string timeInput, string endInput, string label, SoundChoice sound,
+        Weekdays days, bool warnBefore, SoundChoice[] soundOptions,
+        Action<Guid, int, int, Weekdays, string?, SoundChoice, bool, int?> apply, ISoundService soundSvc)
     {
         _id = id;
         _timeInput = timeInput;
+        _endInput = endInput;
         _label = label;
         _selectedSound = sound;
         _repeat = RecurrenceRules.OptionFor(days);
@@ -61,8 +73,23 @@ public partial class EditAlarmViewModel : ObservableObject
     private void Save()
     {
         if (!ClockTimeRules.TryParse(TimeInput, out var h, out var m, out var err)) { Error = err; return; }
+
+        var days = ResolveDays();
+        int? end = null;
+        if (days != Weekdays.None && !string.IsNullOrWhiteSpace(EndInput))
+        {
+            // The same parser as the start, so the two inputs accept and reject alike.
+            if (!ClockTimeRules.TryParse(EndInput, out var eh, out var em, out var endErr))
+            { Error = endErr; return; }
+
+            end = eh * 60 + em;
+            // The one place a bad end is reported rather than repaired: here there is a person to
+            // tell. Everywhere else -- a hand-edited file, an import -- it is silently dropped.
+            if (end <= h * 60 + m) { Error = "The end must be after the start."; return; }
+        }
+
         Error = null;
-        _apply(_id, h, m, ResolveDays(), Label, SelectedSound, WarnBefore);
+        _apply(_id, h, m, days, Label, SelectedSound, WarnBefore, end);
         CloseRequested?.Invoke(this, true);
     }
 
