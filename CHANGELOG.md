@@ -1,6 +1,23 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
+
+## [2.4.0] — 2026-09-03
+
+### Added
+- **Alarms can say when they end** — an optional *Ends* time on any repeating alarm turns it into a
+  block, and the Week tab draws it at its real length instead of as a single point. A lecture from
+  10:00 to 11:30 now looks like a lecture. Two blocks that overlap sit side by side rather than
+  hiding each other, and an alarm inside a block — a stretch break in the middle of a focus block —
+  keeps its own place. The block happening right now is marked. Both tabs read the same:
+  `09:00–10:30` on the Week tab and on the Schedule.
+- Nothing new makes a sound. An end is a length, not a second alarm: Tidsro still chimes only at the
+  start, exactly as before.
+
+### Changed
+- Saved data moves to schema 5. Older files load unchanged — an alarm with no end is simply an alarm
+  with no end, which is what all of them were — and a v5 backup restored into an older Tidsro keeps
+  every alarm and drops the ends.
 
 ## [2.3.0] — 2026-09-03
 
@@ -96,6 +113,7 @@ Clock-time alarms — a "Your day" agenda with one-shot fire-at-HH:MM alarms, op
 ## [1.0.0] — 2026-06-16
 First release — countdown timers with presets or custom durations, pause/resume, reset, and per-timer sounds.
 
+[2.4.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.4.0
 [2.3.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.3.0
 [2.2.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.2.0
 [2.1.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.1.0
