@@ -861,6 +861,21 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public void UndoDelete_restores_a_block_with_its_end_time()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "09:00"; vm.AlarmLabel = "Lecture";
+        vm.AlarmRepeat = RepeatOption.Weekdays;
+        vm.AlarmEndInput = "11:00";
+        vm.AddAlarmCommand.Execute(null);
+
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
+        vm.UndoDeleteCommand.Execute(null);
+
+        Assert.Equal(11 * 60, Assert.Single(vm.Alarms).Item.EndMinute);   // a block, not an instant
+    }
+
+    [Fact]
     public void AddAlarm_with_warning_on_and_recurring_days_arms_a_recurring_alarm_that_warns_before()
     {
         var vm = New(out _, out _);
@@ -1411,7 +1426,7 @@ public class MainViewModelTests
         Enabled = true,
     };
 
-    private static RecurringAlarmRecord ImportedRecurring(int hour, string? label = null) => new()
+    private static RecurringAlarmRecord ImportedRecurring(int hour, string? label = null, int? endMinute = null) => new()
     {
         Id = Guid.NewGuid(),
         Hour = hour,
@@ -1420,8 +1435,19 @@ public class MainViewModelTests
         Label = label,
         Sound = SoundChoice.None,
         NextFireAt = new DateTime(2026, 1, 5, 8, 0, 0, DateTimeKind.Local),
+        EndMinute = endMinute,
         Enabled = true,
     };
+
+    [Fact]
+    public void ReplaceAllAlarms_keeps_an_imported_end_time()
+    {
+        var vm = New(out _, out _);
+
+        vm.ReplaceAllAlarms(Array.Empty<AlarmRecord>(), new[] { ImportedRecurring(9, "Lecture", 11 * 60) });
+
+        Assert.Equal(11 * 60, Assert.Single(vm.Alarms).Item.EndMinute);   // the end came through the import
+    }
 
     [Fact]
     public void ReplaceAllAlarms_clears_the_scheduler_before_arming_the_imported_set()
