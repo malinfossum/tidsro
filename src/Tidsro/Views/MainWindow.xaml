@@ -164,7 +164,7 @@
                     <DataTrigger Value="Block">
                       <DataTrigger.Binding>
                         <MultiBinding Converter="{StaticResource LaneBarState}">
-                          <Binding Path="Bar"/>
+                          <Binding Path="Bars"/>
                           <Binding Path="IsToday"/>
                           <Binding Path="DataContext.Timetable.NowMinuteOfDay"
                                    RelativeSource="{RelativeSource AncestorType=Window}"/>
@@ -177,7 +177,7 @@
                     <DataTrigger Value="Now">
                       <DataTrigger.Binding>
                         <MultiBinding Converter="{StaticResource LaneBarState}">
-                          <Binding Path="Bar"/>
+                          <Binding Path="Bars"/>
                           <Binding Path="IsToday"/>
                           <Binding Path="DataContext.Timetable.NowMinuteOfDay"
                                    RelativeSource="{RelativeSource AncestorType=Window}"/>

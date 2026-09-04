@@ -1058,4 +1058,46 @@ public class TimetableLayoutTests
     {
         Assert.Equal(TimetableLayout.MinimumGridWidth, TimetableLayout.RequiredGridWidth(1, 0));
     }
+
+    // ---- Two blocks in one band ----------------------------------------------------------
+
+    private static TimetableCell Band(TimetableWeek week, int hour, int minute) =>
+        week.Rows.Single(r => r.Slot.Hour == hour && r.Slot.Minute == minute).Cells[0];
+
+    private static TimetableWeek BackToBack() => TimetableLayout.Build(
+        new[] { Block(7, 35, 500, Weekdays.Mon), Block(8, 20, 575, Weekdays.Mon, label: "Seminar") },
+        At(5, 8, 0));
+
+    [Fact]
+    public void A_band_holding_two_blocks_names_both_of_them()
+    {
+        // 07:35-08:20 and 08:20-09:35 never overlap, so they share one lane, and the 08:00 band
+        // holds the first block's end and the second's start.
+        Assert.Equal(new[] { "Lecture", "Seminar" }, Band(BackToBack(), 8, 0).Lanes[0].Bars.Select(b => b.Label));
+    }
+
+    [Fact]
+    public void A_band_is_current_for_whichever_of_its_blocks_is_running()
+    {
+        // At 08:20 the first block has finished and the second has begun in the same band. The band
+        // draws one bar, and it has to speak for the block that is running, not for the first one
+        // in the lane -- which is what left a block's opening band unlit in v2.4.0.
+        Assert.True(TimetableLayout.IsCurrent(Band(BackToBack(), 8, 0).Lanes[0].Bars, isToday: true, 500));
+    }
+
+    [Fact]
+    public void A_band_whose_blocks_have_all_finished_is_not_current()
+    {
+        Assert.False(TimetableLayout.IsCurrent(Band(BackToBack(), 8, 0).Lanes[0].Bars, isToday: true, 575));
+    }
+
+    [Fact]
+    public void A_band_of_instants_has_no_bars_and_is_never_current()
+    {
+        var week = TimetableLayout.Build(new[] { Recurring(9, 0, Weekdays.Mon) }, At(5, 8, 0));
+        var band = Band(week, 9, 0).Lanes[0];
+
+        Assert.Empty(band.Bars);
+        Assert.False(TimetableLayout.IsCurrent(band.Bars, isToday: true, 540));
+    }
 }

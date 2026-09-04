@@ -116,10 +116,15 @@ public sealed record TimetableDay(
 /// occasionally two (09:00 and 09:15 share a band without overlapping), often none.</summary>
 public sealed record TimetableLane(IReadOnlyList<TimetableEntry> Entries, bool IsToday)
 {
-    /// <summary>The block whose bar this band draws, if any. A continuation band has one of these and
+    /// <summary>The blocks whose bar this band draws. A continuation band has one of these and
     /// nothing in <see cref="Announced"/>: the bar is painted by the lane's own Border, which has no
-    /// automation peer, so a three-hour block is drawn as one unbroken bar and announced once.</summary>
-    public TimetableEntry? Bar => Entries.FirstOrDefault(e => e.IsBlock);
+    /// automation peer, so a three-hour block is drawn as one unbroken bar and announced once.
+    ///
+    /// <para>Usually one. Two when a block ends and the next begins inside the same half hour — they
+    /// do not overlap, so they share a lane, and the one bar the band draws has to speak for both.
+    /// Taking the first of them instead left a block's opening band unlit for up to half an hour
+    /// after it had started, which shipped in v2.4.0.</para></summary>
+    public IReadOnlyList<TimetableEntry> Bars => Entries.Where(e => e.IsBlock).ToList();
 
     /// <summary>What this band draws content for, and therefore what a screen reader reaches. A
     /// block's middle and end segments are excluded: they are the same alarm passing through, and
@@ -500,6 +505,11 @@ public static class TimetableLayout
         var start = entry.Hour * 60 + entry.Minute;
         return nowMinuteOfDay >= start && nowMinuteOfDay < end;
     }
+
+    /// <summary>Whether any of a band's blocks is happening now — what a lane's single bar answers,
+    /// since it draws for every block in the band rather than for one of them.</summary>
+    public static bool IsCurrent(IEnumerable<TimetableEntry>? entries, bool isToday, int nowMinuteOfDay) =>
+        entries is not null && entries.Any(e => IsCurrent(e, isToday, nowMinuteOfDay));
 
     /// <summary>Give each entry the lowest lane free at its start, walking in start order — so lane
     /// order is time order, which is also the order a screen reader announces them in. Returns how
