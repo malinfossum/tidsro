@@ -2,6 +2,16 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
+## [2.5.1] — 2026-09-04
+
+### Fixed
+- **A block keeps its end time when you restore a backup** — importing a backup rebuilt every block
+  as a single point, so a lecture saved as 09:00 to 11:00 came back as a moment at 09:00. The
+  exported file was right all along; the schedule built from it was not. Only blocks were affected,
+  and only through an import.
+- **Undo brings a block back as a block** — deleting an alarm with an end time and pressing undo
+  restored it without the end, and that loss reached the file on the next save.
+
 ## [2.5.0] — 2026-09-04
 
 ### Added
@@ -146,6 +156,7 @@ Clock-time alarms — a "Your day" agenda with one-shot fire-at-HH:MM alarms, op
 ## [1.0.0] — 2026-06-16
 First release — countdown timers with presets or custom durations, pause/resume, reset, and per-timer sounds.
 
+[2.5.1]: https://github.com/malinfossum/tidsro/releases/tag/v2.5.1
 [2.5.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.5.0
 [2.4.2]: https://github.com/malinfossum/tidsro/releases/tag/v2.4.2
 [2.4.1]: https://github.com/malinfossum/tidsro/releases/tag/v2.4.1
