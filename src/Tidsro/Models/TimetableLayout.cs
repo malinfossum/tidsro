@@ -491,6 +491,27 @@ public static class TimetableLayout
             GridChromeWidth
             + Math.Max(columnCount, 0) * Math.Clamp(laneCount, 1, MaxLanes) * MinimumLaneWidth);
 
+    /// <summary>How wide the window would have to be for the grid to draw, or null when there is
+    /// nothing to offer: the grid already fits, the week has no columns, a width has not been
+    /// measured yet, or the screen could not hold the result.
+    ///
+    /// <para>The grid is measured against the PANEL, so the window has to grow by the shortfall
+    /// plus whatever padding it carries around that panel — which is read off the two widths rather
+    /// than written down, since a token change would move it. The last clause is the important one:
+    /// a line offering to reveal the grid, on a screen that cannot hold the grid, would widen the
+    /// window and leave the agenda exactly where it was.</para></summary>
+    public static double? WidthToRevealGrid(
+        double panelWidth, double windowWidth, int laneCount, int columnCount, double workAreaWidth)
+    {
+        if (double.IsNaN(panelWidth) || double.IsNaN(windowWidth) || columnCount <= 0) return null;
+
+        var needed = RequiredGridWidth(laneCount, columnCount);
+        if (panelWidth >= needed) return null;
+
+        var target = windowWidth - panelWidth + needed;
+        return target <= workAreaWidth ? target : null;
+    }
+
     /// <summary>Whether this entry is happening now. Start inclusive, end exclusive, so a block that
     /// ends at 10:30 stops being current the moment 10:30 arrives and the next one can take over
     /// cleanly. An instant has no duration and is never current; a disabled block is never lit.

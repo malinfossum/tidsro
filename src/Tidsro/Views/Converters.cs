@@ -128,6 +128,34 @@ public sealed class WidthToVisibleConverter : IMultiValueConverter
     public object[] ConvertBack(object v, Type[] t, object? p, CultureInfo c) => throw new NotSupportedException();
 }
 
+/// <summary>Whether to offer the line that widens the window until the Week grid draws. Visible
+/// only while the agenda is standing in for the grid AND widening would actually reveal it — the
+/// rule is <see cref="TimetableLayout.WidthToRevealGrid"/>, in the model where tests reach it.
+///
+/// <para>The width the offer is measured against is the PRIMARY screen's work area, because a
+/// converter has no window to ask about. The click does have one, and clamps to the monitor the
+/// window is really on — so on a secondary screen narrower than the primary the offer can appear
+/// and widen less than it hoped. The agenda is a complete rendering, so the cost of being wrong
+/// that way is a window that got wider, not a tab that lost anything.</para></summary>
+public sealed class WidthToWidenHintConverter : IMultiValueConverter
+{
+    /// <summary>The usable screen width. Left NaN in the running app, where the system is asked;
+    /// set in tests, which have no screen to depend on.</summary>
+    public double WorkAreaWidth { get; set; } = double.NaN;
+
+    public object Convert(object[] values, Type t, object? p, CultureInfo c)
+    {
+        if (values is not [double panel, double window, int lanes, int columns]) return Visibility.Collapsed;
+
+        var work = double.IsNaN(WorkAreaWidth) ? SystemParameters.WorkArea.Width : WorkAreaWidth;
+        return TimetableLayout.WidthToRevealGrid(panel, window, lanes, columns, work) is null
+            ? Visibility.Collapsed
+            : Visibility.Visible;
+    }
+
+    public object[] ConvertBack(object v, Type[] t, object? p, CultureInfo c) => throw new NotSupportedException();
+}
+
 /// <summary>What a lane's bar should look like: "None" for a band holding only instants, "Block" for
 /// one a timetable block passes through, "Now" for the block that is happening as you look at it.
 ///
