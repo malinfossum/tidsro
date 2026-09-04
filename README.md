@@ -95,7 +95,13 @@ An export is an ordinary, unencrypted JSON file — your alarm labels are readab
 
 ## Roadmap
 
-- Timetable blocks with a start and an end time
+Everything on the original list has shipped. Tidsro does what I set out to build, and I add to it when something turns out to be missing in daily use.
+
+One absence is deliberate: an alarm with an end time chimes at its start only, never at its end. A second chime would mean Tidsro had to remember which occurrences have already ended — exactly the bookkeeping the scheduler is built to do without. It is a considered omission, not an oversight.
+
+## Contributing
+
+Pull requests are welcome. The suite is `dotnet test`; beyond it, `tools/rigs/` drives the real app against a throwaway copy that cannot touch your own schedule, and `tools/screenshots/` re-shoots the images above from a fictional week. Both have a README of their own, and the Week tab in particular needs one of them — it has shipped three defects that a green test run said nothing about.
 
 ## Stack
 
