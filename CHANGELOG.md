@@ -2,6 +2,21 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
+## [2.5.0] — 2026-09-04
+
+### Added
+- **The Week tab offers to make room for the grid** — on a window too narrow for the timetable the
+  tab shows the day-by-day agenda instead, and nothing said the grid was a window-width away. A
+  quiet line under the agenda now offers to widen the window, and one click does it. Only on a
+  click: a window that resized itself would override a width you chose on purpose. The line stays
+  away when widening would not help — when the window is already wide enough, or the screen itself
+  is too narrow to hold the grid.
+
+### Fixed
+- **The block marked as happening now is the one that is** — where a block ended exactly where the
+  next began, the Week grid went on marking the one that had finished and left the one that had
+  started unmarked, for up to half an hour. Each block is now judged on its own start and end.
+
 ## [2.4.2] — 2026-09-04
 
 ### Fixed
@@ -131,6 +146,7 @@ Clock-time alarms — a "Your day" agenda with one-shot fire-at-HH:MM alarms, op
 ## [1.0.0] — 2026-06-16
 First release — countdown timers with presets or custom durations, pause/resume, reset, and per-timer sounds.
 
+[2.5.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.5.0
 [2.4.2]: https://github.com/malinfossum/tidsro/releases/tag/v2.4.2
 [2.4.1]: https://github.com/malinfossum/tidsro/releases/tag/v2.4.1
 [2.4.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.4.0
