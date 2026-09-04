@@ -454,7 +454,7 @@ public partial class MainViewModel : ObservableObject
             try
             {
                 _scheduler.ArmRecurringAlarm(r.Hour, r.Minute, r.Days, r.Label, r.Sound, r.Id,
-                    LocalToOffset(r.NextFireAt), r.WarnBefore, r.Enabled);
+                    LocalToOffset(r.NextFireAt), r.WarnBefore, r.Enabled, r.EndMinute);
                 armed++;
             }
             catch { /* skip it and keep going */ }
@@ -497,7 +497,8 @@ public partial class MainViewModel : ObservableObject
         }
         else if (item.RecurringDays is { } days && item.EndsAt is { } next)
         {
-            _scheduler.ArmRecurringAlarm(next.Hour, next.Minute, days, item.Label, item.Sound, item.Id, next, item.WarnBefore, item.IsEnabled);
+            _scheduler.ArmRecurringAlarm(next.Hour, next.Minute, days, item.Label, item.Sound, item.Id, next,
+                item.WarnBefore, item.IsEnabled, item.EndMinute);
             RebuildAgenda();
             Announce("Alarm restored");
             // No persist needed: the record was never removed from disk.
