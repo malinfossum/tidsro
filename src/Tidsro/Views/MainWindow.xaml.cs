@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -174,5 +174,28 @@ public partial class MainWindow : Window
         var w = _settingsFactory();
         w.Owner = this;
         w.ShowDialog();
+    }
+
+    /// <summary>Widen the window until the Week grid fits, once, because the reader asked for it.
+    /// The window is never resized on its own — the responsive layout stays in the converters where
+    /// the redesign put it, and this is a command that runs on a click, not a breakpoint. A window
+    /// that resized itself on a tab change would keep overriding a width chosen on purpose.
+    ///
+    /// <para>Clamped to the monitor this window is actually on, which is also the one thing the
+    /// converter deciding whether to show the line could not ask about.</para></summary>
+    private void WidenForGrid_Click(object sender, RoutedEventArgs e)
+    {
+        if (WindowState != WindowState.Normal) return;   // nothing to widen while maximised
+        var week = _vm.Timetable.Week;
+        var work = ScreenHelper.WorkAreaForWindow(this);
+
+        if (TimetableLayout.WidthToRevealGrid(
+                Panels.ActualWidth, ActualWidth, week.MaxLaneCount, week.GridColumnCount, work.Width)
+            is not { } target) return;
+
+        Width = target;
+        // Growing rightwards can push the window past the edge it started near, so pull it back
+        // rather than leave the columns it just revealed off the screen.
+        if (Left + target > work.Right) Left = Math.Max(work.Left, work.Right - target);
     }
 }

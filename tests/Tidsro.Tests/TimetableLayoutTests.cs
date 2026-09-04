@@ -1100,4 +1100,55 @@ public class TimetableLayoutTests
         Assert.Empty(band.Bars);
         Assert.False(TimetableLayout.IsCurrent(band.Bars, isToday: true, 540));
     }
+
+    // ---- Widening to reveal the grid ------------------------------------------------------
+
+    private const double FiveColumns = TimetableLayout.MinimumGridWidth;   // RequiredGridWidth(1, 5)
+
+    [Fact]
+    public void Nothing_to_reveal_when_the_grid_already_draws()
+    {
+        Assert.Null(TimetableLayout.WidthToRevealGrid(
+            panelWidth: FiveColumns, windowWidth: FiveColumns + 60, laneCount: 1, columnCount: 5,
+            workAreaWidth: 1920));
+    }
+
+    [Fact]
+    public void The_window_is_offered_the_width_its_panel_is_short()
+    {
+        // The window carries 60px of padding around the panel, so it has to grow by the shortfall
+        // plus that -- the panel is what the grid is measured against, not the window.
+        Assert.Equal(FiveColumns + 60, TimetableLayout.WidthToRevealGrid(
+            panelWidth: 500, windowWidth: 560, laneCount: 1, columnCount: 5, workAreaWidth: 1920));
+    }
+
+    [Fact]
+    public void A_width_the_screen_cannot_hold_is_never_offered()
+    {
+        // Better no offer than a button that widens the window and still shows the agenda.
+        Assert.Null(TimetableLayout.WidthToRevealGrid(
+            panelWidth: 500, windowWidth: 560, laneCount: 1, columnCount: 5,
+            workAreaWidth: FiveColumns + 59));
+    }
+
+    [Fact]
+    public void Lanes_raise_the_width_the_offer_asks_for()
+    {
+        Assert.Equal(TimetableLayout.RequiredGridWidth(2, 5) + 60, TimetableLayout.WidthToRevealGrid(
+            panelWidth: 500, windowWidth: 560, laneCount: 2, columnCount: 5, workAreaWidth: 1920));
+    }
+
+    [Fact]
+    public void A_grid_with_no_columns_has_nothing_to_reveal()
+    {
+        Assert.Null(TimetableLayout.WidthToRevealGrid(
+            panelWidth: 100, windowWidth: 160, laneCount: 1, columnCount: 0, workAreaWidth: 1920));
+    }
+
+    [Fact]
+    public void An_unmeasured_width_offers_nothing()
+    {
+        Assert.Null(TimetableLayout.WidthToRevealGrid(
+            panelWidth: double.NaN, windowWidth: 560, laneCount: 1, columnCount: 5, workAreaWidth: 1920));
+    }
 }

@@ -202,6 +202,39 @@
       <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
       <Setter Property="Margin" Value="2,2,6,1"/>
     </Style>
+
+    <!-- The offer to widen the window until the grid draws. A Button because it acts, wearing the
+         same quiet line the rest of this tab uses for its asides: a chrome button on a read-only
+         panel would be the loudest thing on it. Underlined on hover AND on keyboard focus, so what
+         marks it as clickable is never colour alone. -->
+    <Style x:Key="TimetableWidenHint" TargetType="Button">
+      <Setter Property="FocusVisualStyle" Value="{StaticResource ActionFocusVisual}"/>
+      <Setter Property="HorizontalAlignment" Value="Left"/>
+      <Setter Property="Margin" Value="0,4,0,0"/>
+      <Setter Property="Padding" Value="0,4"/>
+      <Setter Property="FontSize" Value="{StaticResource TextXs}"/>
+      <Setter Property="Foreground" Value="{StaticResource TextFaint}"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border Background="Transparent" Padding="{TemplateBinding Padding}">
+              <TextBlock x:Name="line" Text="{TemplateBinding Content}"
+                         Foreground="{TemplateBinding Foreground}"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="line" Property="Foreground" Value="{StaticResource TextMuted}"/>
+                <Setter TargetName="line" Property="TextDecorations" Value="Underline"/>
+              </Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True">
+                <Setter TargetName="line" Property="TextDecorations" Value="Underline"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
   </Window.Resources>
 
   <Grid Margin="{StaticResource WindowPadding}">
@@ -636,9 +669,18 @@
            region accepts focus programmatically but never appears in the tab sequence: Tab from the
            Week header ran straight past it into the unnamed ItemsControls inside, and PageDown did
            nothing because the scroll region never had focus. -->
+      <!-- The one tab with something pinned under its scroll region, so it gets a two-row shell:
+           the timetable scrolls, and the offer to widen sits below it where it can always be seen.
+           Inside the ScrollViewer the line ended up at the foot of a week you have to scroll to the
+           end of to find, which is no offer at all. -->
+      <Grid Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisible}, ConverterParameter=2}">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="*"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
       <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="True" IsTabStop="True"
-                    AutomationProperties.Name="Week timetable"
-                    Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisible}, ConverterParameter=2}">
+                    AutomationProperties.Name="Week timetable">
         <Grid x:Name="WeekPanel" Margin="0,8,0,0">
           <TextBlock Text="No repeating alarms yet — add one on the Schedule tab."
                      Foreground="{StaticResource TextMuted}" TextWrapping="Wrap"
@@ -925,6 +967,23 @@
           </Grid>   <!-- /the IsEmpty gate around both renderings -->
         </Grid>
       </ScrollViewer>
+
+      <!-- Said only when it is true and only when it would work: WidthToRevealGrid answers no on a
+           window already wide enough, on a week with no columns to draw, and on a screen that could
+           not hold the grid anyway. The agenda is a complete rendering of the same week, so this
+           offers a second view of it - it never apologises for this one. -->
+      <Button Grid.Row="1" Style="{StaticResource TimetableWidenHint}" Click="WidenForGrid_Click"
+              Content="Widen the window to see the week as a grid">
+        <Button.Visibility>
+          <MultiBinding Converter="{StaticResource WidthToWidenHint}">
+            <Binding Path="ActualWidth" ElementName="Panels"/>
+            <Binding Path="ActualWidth" RelativeSource="{RelativeSource AncestorType=Window}"/>
+            <Binding Path="Timetable.Week.MaxLaneCount"/>
+            <Binding Path="Timetable.Week.GridColumnCount"/>
+          </MultiBinding>
+        </Button.Visibility>
+      </Button>
+      </Grid>
     </Grid>
 
     <!-- No shadow caster here on purpose: the strip is recessed chrome on PanelBg, a hair BELOW the
