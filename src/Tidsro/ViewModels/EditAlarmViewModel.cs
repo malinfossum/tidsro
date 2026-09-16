@@ -75,6 +75,10 @@ public partial class EditAlarmViewModel : ObservableObject
         if (!ClockTimeRules.TryParse(TimeInput, out var h, out var m, out var err)) { Error = err; return; }
 
         var days = ResolveDays();
+        // Custom with nothing ticked would otherwise fall through as a one-shot, silently.
+        if (Repeat == RepeatOption.Custom && days == Weekdays.None)
+        { Error = "Pick at least one day."; return; }
+
         int? end = null;
         if (days != Weekdays.None && !string.IsNullOrWhiteSpace(EndInput))
         {

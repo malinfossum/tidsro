@@ -328,6 +328,9 @@ public partial class MainViewModel : ObservableObject
 
         var label = string.IsNullOrWhiteSpace(AlarmLabel) ? null : CapitalizeFirst(AlarmLabel.Trim());
         var days = ResolveDays();
+        // Custom with nothing ticked would otherwise fall through as a one-shot, silently.
+        if (AlarmRepeat == RepeatOption.Custom && days == Weekdays.None)
+        { AlarmError = "Pick at least one day."; return; }
 
         int? endMinute = null;
         if (days != Weekdays.None && !string.IsNullOrWhiteSpace(AlarmEndInput))
