@@ -1,5 +1,4 @@
 using System.IO;
-using Tidsro.Views;
 using Tidsro.Models;
 using Tidsro.Services;
 using Tidsro.ViewModels;
@@ -410,5 +409,21 @@ public class SettingsViewModelTests
 
         vm.ExportDataCommand.Execute(null);   // must not throw
         vm.ImportDataCommand.Execute(null);
+    }
+
+    [Fact]
+    public void Import_tells_me_when_the_safety_copy_could_not_be_written_and_still_applies()
+    {
+        using var h = new Harness(ImportChoice.AlarmsOnly);
+        File.WriteAllText(Path.Combine(h.Dir, "data.json"), ValidBackup);
+        Directory.CreateDirectory(h.Transfer.SnapshotPath);   // a folder in the way: the copy cannot be written
+        h.Dialogs.OpenPath = h.WriteFile("good.json", ValidBackup);
+
+        h.Vm.ImportDataCommand.Execute(null);
+
+        Assert.Single(h.Applied);   // the import is never blocked by the snapshot
+        var (title, message) = Assert.Single(h.Messages);
+        Assert.Equal("No safety copy", title);
+        Assert.Contains("data-before-import.json", message);
     }
 }

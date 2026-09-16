@@ -58,10 +58,42 @@ public static class ClockTimeRules
         error = null; return true;
     }
 
-    /// <summary>The next time HH:MM occurs: today if it is still ahead of <paramref name="now"/>, else tomorrow.</summary>
-    public static DateTimeOffset ComputeFireAt(DateTimeOffset now, int hour, int minute)
+    /// <summary>
+    /// A start "HH:MM" plus an optional end: blank end means no end, otherwise it is parsed by the same
+    /// rules as the start and must land after it. Errors are worded for the person typing — this is
+    /// the one place a bad end is reported rather than repaired.
+    /// </summary>
+    public static bool TryParseWindow(string? startInput, string? endInput,
+        out int hour, out int minute, out int? endMinute, out string? error)
     {
-        var today = new DateTimeOffset(now.Year, now.Month, now.Day, hour, minute, 0, now.Offset);
-        return today > now ? today : today.AddDays(1);
+        endMinute = null;
+        if (!TryParse(startInput, out hour, out minute, out error)) return false;
+        if (string.IsNullOrWhiteSpace(endInput)) return true;
+
+        if (!TryParse(endInput, out var endHour, out var endMin, out error)) return false;
+
+        var end = endHour * 60 + endMin;
+        if (end <= hour * 60 + minute) { error = "The end must be after the start."; return false; }
+
+        endMinute = end;
+        return true;
+    }
+
+    /// <summary>The next time HH:MM occurs: today if it is still ahead of <paramref name="now"/>, else tomorrow.</summary>
+    public static DateTimeOffset ComputeFireAt(DateTimeOffset now, TimeZoneInfo zone, int hour, int minute)
+    {
+        var today = AtWallClock(now, zone, hour, minute);
+        return today > now ? today : AtWallClock(now.AddDays(1), zone, hour, minute);
+    }
+
+    /// <summary>
+    /// HH:MM on <paramref name="now"/>'s calendar day, with the offset <paramref name="zone"/> has at
+    /// that moment. Copying <c>now.Offset</c> instead carries yesterday's offset across a DST switch —
+    /// an alarm set on the last evening of summer time then fires an hour early.
+    /// </summary>
+    public static DateTimeOffset AtWallClock(DateTimeOffset now, TimeZoneInfo zone, int hour, int minute)
+    {
+        var local = new DateTime(now.Year, now.Month, now.Day, hour, minute, 0, DateTimeKind.Unspecified);
+        return new DateTimeOffset(local, zone.GetUtcOffset(local));
     }
 }

@@ -1666,4 +1666,18 @@ public class MainViewModelTests
         vm.AdvanceTabCommand.Execute(null);
         Assert.Equal(0, vm.SelectedTabIndex);
     }
+
+    [Fact]
+    public void AddAlarm_with_Custom_and_no_day_picked_reports_an_error_instead_of_arming_a_one_shot()
+    {
+        var vm = New(out _, out var sched);
+        vm.AlarmTimeInput = "09:00";
+        vm.AlarmRepeat = RepeatOption.Custom;
+        foreach (var t in vm.AlarmDayToggles) t.IsSelected = false;
+
+        vm.AddAlarmCommand.Execute(null);
+
+        Assert.Equal("Pick at least one day.", vm.AlarmError);
+        Assert.Empty(sched.Alarms);
+    }
 }

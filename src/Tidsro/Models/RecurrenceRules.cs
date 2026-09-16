@@ -13,22 +13,22 @@ public static class RecurrenceRules
     private const Weekdays SatSun = Weekdays.Sat | Weekdays.Sun;
 
     /// <summary>The soonest matching weekday at HH:MM strictly after <paramref name="now"/>.</summary>
-    public static DateTimeOffset NextOccurrence(DateTimeOffset now, int hour, int minute, Weekdays days)
+    public static DateTimeOffset NextOccurrence(DateTimeOffset now, TimeZoneInfo zone, int hour, int minute, Weekdays days)
     {
         for (var add = 0; add <= 7; add++)
         {
-            var candidate = AtTime(now, hour, minute).AddDays(add);
+            var candidate = ClockTimeRules.AtWallClock(now.AddDays(add), zone, hour, minute);
             if (candidate > now && Includes(days, candidate.DayOfWeek)) return candidate;
         }
         throw new ArgumentException("A recurring alarm must repeat on at least one day.", nameof(days));
     }
 
     /// <summary>The latest matching weekday at HH:MM at or before <paramref name="now"/>.</summary>
-    public static DateTimeOffset MostRecentOccurrence(DateTimeOffset now, int hour, int minute, Weekdays days)
+    public static DateTimeOffset MostRecentOccurrence(DateTimeOffset now, TimeZoneInfo zone, int hour, int minute, Weekdays days)
     {
         for (var sub = 0; sub <= 7; sub++)
         {
-            var candidate = AtTime(now, hour, minute).AddDays(-sub);
+            var candidate = ClockTimeRules.AtWallClock(now.AddDays(-sub), zone, hour, minute);
             if (candidate <= now && Includes(days, candidate.DayOfWeek)) return candidate;
         }
         throw new ArgumentException("A recurring alarm must repeat on at least one day.", nameof(days));
@@ -65,9 +65,6 @@ public static class RecurrenceRules
             if ((days & flag) != 0) parts.Add(name);
         return string.Join(" ", parts);
     }
-
-    private static DateTimeOffset AtTime(DateTimeOffset now, int hour, int minute) =>
-        new(now.Year, now.Month, now.Day, hour, minute, 0, now.Offset);
 
     private static bool Includes(Weekdays set, DayOfWeek day) => (set & DayFlag(day)) != 0;
 

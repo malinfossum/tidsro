@@ -201,4 +201,17 @@ public class EditAlarmViewModelTests
 
         Assert.True(vm.ShowEndInput);
     }
+
+    [Fact]
+    public void Save_with_Custom_and_no_day_picked_keeps_the_dialog_open()
+    {
+        var vm = New("09:00", out var applied, out _, days: Weekdays.Mon);
+        vm.Repeat = RepeatOption.Custom;
+        foreach (var t in vm.DayToggles) t.IsSelected = false;
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal("Pick at least one day.", vm.Error);
+        Assert.Empty(applied);
+    }
 }

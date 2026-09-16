@@ -61,11 +61,19 @@ public sealed class DataTransferService
     }
 
     /// <summary>Copy the state an import is about to replace. Best effort: an import must never be
-    /// blocked by a snapshot that could not be written.</summary>
-    public void SnapshotBeforeImport()
+    /// blocked by a snapshot that could not be written — but the caller is told, so nobody believes
+    /// in a safety copy that is not there. Nothing to copy counts as success.</summary>
+    public bool SnapshotBeforeImport()
     {
-        try { if (File.Exists(_dataPath)) File.Copy(_dataPath, SnapshotPath, overwrite: true); }
-        catch { /* the snapshot must never throw */ }
+        try
+        {
+            if (File.Exists(_dataPath)) File.Copy(_dataPath, SnapshotPath, overwrite: true);
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
     }
 
     private static bool LooksLikeTidsroDocument(string json)

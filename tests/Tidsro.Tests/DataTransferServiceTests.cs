@@ -149,4 +149,21 @@ public class DataTransferServiceTests : IDisposable
 
         Assert.False(File.Exists(_svc.SnapshotPath));
     }
+
+    [Fact]
+    public void SnapshotBeforeImport_reports_whether_the_copy_was_taken()
+    {
+        File.WriteAllText(_dataPath, "live");
+        Assert.True(_svc.SnapshotBeforeImport());
+
+        File.Delete(_svc.SnapshotPath);
+        Directory.CreateDirectory(_svc.SnapshotPath);   // a folder in the way: the copy cannot be written
+        Assert.False(_svc.SnapshotBeforeImport());
+    }
+
+    [Fact]
+    public void SnapshotBeforeImport_counts_nothing_to_copy_as_success()
+    {
+        Assert.True(_svc.SnapshotBeforeImport());   // first run, no data file yet
+    }
 }

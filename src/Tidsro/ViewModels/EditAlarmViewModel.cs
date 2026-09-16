@@ -72,21 +72,16 @@ public partial class EditAlarmViewModel : ObservableObject
     [RelayCommand]
     private void Save()
     {
-        if (!ClockTimeRules.TryParse(TimeInput, out var h, out var m, out var err)) { Error = err; return; }
-
         var days = ResolveDays();
-        int? end = null;
-        if (days != Weekdays.None && !string.IsNullOrWhiteSpace(EndInput))
-        {
-            // The same parser as the start, so the two inputs accept and reject alike.
-            if (!ClockTimeRules.TryParse(EndInput, out var eh, out var em, out var endErr))
-            { Error = endErr; return; }
+        // Custom with nothing ticked would otherwise fall through as a one-shot, silently.
+        if (Repeat == RepeatOption.Custom && days == Weekdays.None)
+        { Error = "Pick at least one day."; return; }
 
-            end = eh * 60 + em;
-            // The one place a bad end is reported rather than repaired: here there is a person to
-            // tell. Everywhere else -- a hand-edited file, an import -- it is silently dropped.
-            if (end <= h * 60 + m) { Error = "The end must be after the start."; return; }
-        }
+        // A one-shot has no end to give. Here a bad end is reported, because there is a person to
+        // tell; everywhere else -- a hand-edited file, an import -- it is silently dropped.
+        var endInput = days == Weekdays.None ? null : EndInput;
+        if (!ClockTimeRules.TryParseWindow(TimeInput, endInput, out var h, out var m, out var end, out var err))
+        { Error = err; return; }
 
         Error = null;
         _apply(_id, h, m, days, Label, SelectedSound, WarnBefore, end);
