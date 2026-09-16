@@ -322,28 +322,18 @@ public partial class MainViewModel : ObservableObject
     private void AddAlarm()
     {
         CommitPendingDelete();
-        if (!ClockTimeRules.TryParse(AlarmTimeInput, out var hour, out var minute, out var error))
-        { AlarmError = error; return; }
-        AlarmError = null;
-
-        var label = string.IsNullOrWhiteSpace(AlarmLabel) ? null : CapitalizeFirst(AlarmLabel.Trim());
         var days = ResolveDays();
         // Custom with nothing ticked would otherwise fall through as a one-shot, silently.
         if (AlarmRepeat == RepeatOption.Custom && days == Weekdays.None)
         { AlarmError = "Pick at least one day."; return; }
 
-        int? endMinute = null;
-        if (days != Weekdays.None && !string.IsNullOrWhiteSpace(AlarmEndInput))
-        {
-            // Same parser as the start, and the same rule as the Edit dialog: reported here, because
-            // here there is a person to tell.
-            if (!ClockTimeRules.TryParse(AlarmEndInput, out var eh, out var em, out var endError))
-            { AlarmError = endError; return; }
+        // A one-shot has no end to give: end times are a timetable feature, drawn for recurring alarms only.
+        var endInput = days == Weekdays.None ? null : AlarmEndInput;
+        if (!ClockTimeRules.TryParseWindow(AlarmTimeInput, endInput, out var hour, out var minute, out var endMinute, out var error))
+        { AlarmError = error; return; }
+        AlarmError = null;
 
-            endMinute = eh * 60 + em;
-            if (endMinute <= hour * 60 + minute)
-            { AlarmError = "The end must be after the start."; return; }
-        }
+        var label = string.IsNullOrWhiteSpace(AlarmLabel) ? null : CapitalizeFirst(AlarmLabel.Trim());
 
         if (days == Weekdays.None)
         {

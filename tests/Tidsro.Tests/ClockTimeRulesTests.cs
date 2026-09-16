@@ -92,4 +92,44 @@ public class ClockTimeRulesTests
         var fire = ClockTimeRules.ComputeFireAt(now, Oslo, 7, 0);
         Assert.Equal(new DateTimeOffset(2026, 3, 29, 7, 0, 0, TimeSpan.FromHours(2)), fire);
     }
+
+    [Fact]
+    public void TryParseWindow_with_a_blank_end_gives_a_start_and_no_end()
+    {
+        Assert.True(ClockTimeRules.TryParseWindow("09:00", "  ", out var h, out var m, out var end, out var err));
+        Assert.Equal(9, h);
+        Assert.Equal(0, m);
+        Assert.Null(end);
+        Assert.Null(err);
+    }
+
+    [Fact]
+    public void TryParseWindow_returns_the_end_as_minutes_from_midnight()
+    {
+        Assert.True(ClockTimeRules.TryParseWindow("09:00", "1030", out _, out _, out var end, out _));
+        Assert.Equal(10 * 60 + 30, end);
+    }
+
+    [Fact]
+    public void TryParseWindow_reports_a_bad_start_with_the_start_error()
+    {
+        Assert.False(ClockTimeRules.TryParseWindow("25:00", "10:00", out _, out _, out _, out var err));
+        Assert.Equal("Hour must be 0–23.", err);
+    }
+
+    [Fact]
+    public void TryParseWindow_reports_a_bad_end_with_the_same_parser_as_the_start()
+    {
+        Assert.False(ClockTimeRules.TryParseWindow("09:00", "abc", out _, out _, out _, out var err));
+        Assert.Equal("Use HH:MM, e.g. 14:30.", err);
+    }
+
+    [Theory]
+    [InlineData("09:00")]   // equal to the start
+    [InlineData("08:30")]   // before it
+    public void TryParseWindow_rejects_an_end_at_or_before_the_start(string end)
+    {
+        Assert.False(ClockTimeRules.TryParseWindow("09:00", end, out _, out _, out _, out var err));
+        Assert.Equal("The end must be after the start.", err);
+    }
 }

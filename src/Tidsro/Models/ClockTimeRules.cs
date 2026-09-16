@@ -58,6 +58,27 @@ public static class ClockTimeRules
         error = null; return true;
     }
 
+    /// <summary>
+    /// A start "HH:MM" plus an optional end: blank end means no end, otherwise it is parsed by the same
+    /// rules as the start and must land after it. Errors are worded for the person typing — this is
+    /// the one place a bad end is reported rather than repaired.
+    /// </summary>
+    public static bool TryParseWindow(string? startInput, string? endInput,
+        out int hour, out int minute, out int? endMinute, out string? error)
+    {
+        endMinute = null;
+        if (!TryParse(startInput, out hour, out minute, out error)) return false;
+        if (string.IsNullOrWhiteSpace(endInput)) return true;
+
+        if (!TryParse(endInput, out var endHour, out var endMin, out error)) return false;
+
+        var end = endHour * 60 + endMin;
+        if (end <= hour * 60 + minute) { error = "The end must be after the start."; return false; }
+
+        endMinute = end;
+        return true;
+    }
+
     /// <summary>The next time HH:MM occurs: today if it is still ahead of <paramref name="now"/>, else tomorrow.</summary>
     public static DateTimeOffset ComputeFireAt(DateTimeOffset now, TimeZoneInfo zone, int hour, int minute)
     {
