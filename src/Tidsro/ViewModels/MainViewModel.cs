@@ -344,7 +344,7 @@ public partial class MainViewModel : ObservableObject
 
         if (days == Weekdays.None)
         {
-            var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
+            var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, _scheduler.Zone, hour, minute);
             _scheduler.ArmClockAlarm(fireAt, label, AlarmSound, warnBefore: AlarmWarnBefore);
             Announce($"Alarm added for {fireAt:HH\\:mm}");
         }
@@ -383,7 +383,7 @@ public partial class MainViewModel : ObservableObject
         var clean = string.IsNullOrWhiteSpace(label) ? null : CapitalizeFirst(label.Trim());
         if (days == Weekdays.None)
         {
-            var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
+            var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, _scheduler.Zone, hour, minute);
             _scheduler.ArmClockAlarm(fireAt, clean, sound, id, warnBefore: warnBefore);
             Announce($"Alarm updated for {fireAt:HH\\:mm}");
         }

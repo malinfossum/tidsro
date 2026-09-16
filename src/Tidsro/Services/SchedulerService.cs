@@ -21,6 +21,7 @@ public sealed class SchedulerService
 
     public IReadOnlyList<TimerItem> Alarms => _alarms;
     public DateTimeOffset Now => _clock.Now;
+    public TimeZoneInfo Zone => _clock.Zone;
     public event EventHandler<TimerItem>? Expired;
 
     /// <summary>Raised once, WarningLead before an alarm with WarnBefore on, so the App can show a heads-up.</summary>
@@ -59,7 +60,7 @@ public sealed class SchedulerService
             && alarm.EndsAt is { } end
             && end <= _clock.Now)
         {
-            var next = RecurrenceRules.NextOccurrence(_clock.Now, end.Hour, end.Minute, days);
+            var next = RecurrenceRules.NextOccurrence(_clock.Now, _clock.Zone, end.Hour, end.Minute, days);
             alarm.EndsAt = next;
             alarm.WarningSent = alarm.WarnBefore && _clock.Now >= next - WarningLead;
         }
@@ -72,7 +73,7 @@ public sealed class SchedulerService
         Guid? id = null, DateTimeOffset? nextFireAt = null, bool warnBefore = false, bool enabled = true,
         int? endMinute = null)
     {
-        var ends = nextFireAt ?? RecurrenceRules.NextOccurrence(_clock.Now, hour, minute, days);
+        var ends = nextFireAt ?? RecurrenceRules.NextOccurrence(_clock.Now, _clock.Zone, hour, minute, days);
         var item = new TimerItem
         {
             Id = id ?? Guid.NewGuid(),
@@ -155,8 +156,8 @@ public sealed class SchedulerService
 
             if (alarm.TriggerType == TriggerType.Recurring && alarm.RecurringDays is { } days)
             {
-                var prev = RecurrenceRules.MostRecentOccurrence(now, end.Hour, end.Minute, days);
-                alarm.EndsAt = RecurrenceRules.NextOccurrence(now, end.Hour, end.Minute, days);  // advance first: in-session dedup
+                var prev = RecurrenceRules.MostRecentOccurrence(now, _clock.Zone, end.Hour, end.Minute, days);
+                alarm.EndsAt = RecurrenceRules.NextOccurrence(now, _clock.Zone, end.Hour, end.Minute, days);  // advance first: in-session dedup
                 alarm.WarningSent = false;         // re-arm the heads-up for the next occurrence
                 if (now - prev <= Grace)
                     Fired?.Invoke(this, OccurrenceSnapshot(alarm, prev));    // transient copy -> card can't mutate the live alarm

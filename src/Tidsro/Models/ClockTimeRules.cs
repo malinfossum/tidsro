@@ -59,9 +59,20 @@ public static class ClockTimeRules
     }
 
     /// <summary>The next time HH:MM occurs: today if it is still ahead of <paramref name="now"/>, else tomorrow.</summary>
-    public static DateTimeOffset ComputeFireAt(DateTimeOffset now, int hour, int minute)
+    public static DateTimeOffset ComputeFireAt(DateTimeOffset now, TimeZoneInfo zone, int hour, int minute)
     {
-        var today = new DateTimeOffset(now.Year, now.Month, now.Day, hour, minute, 0, now.Offset);
-        return today > now ? today : today.AddDays(1);
+        var today = AtWallClock(now, zone, hour, minute);
+        return today > now ? today : AtWallClock(now.AddDays(1), zone, hour, minute);
+    }
+
+    /// <summary>
+    /// HH:MM on <paramref name="now"/>'s calendar day, with the offset <paramref name="zone"/> has at
+    /// that moment. Copying <c>now.Offset</c> instead carries yesterday's offset across a DST switch —
+    /// an alarm set on the last evening of summer time then fires an hour early.
+    /// </summary>
+    public static DateTimeOffset AtWallClock(DateTimeOffset now, TimeZoneInfo zone, int hour, int minute)
+    {
+        var local = new DateTime(now.Year, now.Month, now.Day, hour, minute, 0, DateTimeKind.Unspecified);
+        return new DateTimeOffset(local, zone.GetUtcOffset(local));
     }
 }

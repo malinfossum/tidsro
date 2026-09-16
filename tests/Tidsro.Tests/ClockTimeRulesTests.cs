@@ -53,7 +53,7 @@ public class ClockTimeRulesTests
     public void ComputeFireAt_uses_today_when_the_time_is_still_ahead()
     {
         var now = new DateTimeOffset(2026, 1, 1, 9, 0, 0, TimeSpan.Zero);
-        var fire = ClockTimeRules.ComputeFireAt(now, 10, 30);
+        var fire = ClockTimeRules.ComputeFireAt(now, TimeZoneInfo.Utc, 10, 30);
         Assert.Equal(new DateTimeOffset(2026, 1, 1, 10, 30, 0, TimeSpan.Zero), fire);
     }
 
@@ -61,7 +61,7 @@ public class ClockTimeRulesTests
     public void ComputeFireAt_rolls_to_tomorrow_when_the_time_has_passed()
     {
         var now = new DateTimeOffset(2026, 1, 1, 9, 0, 0, TimeSpan.Zero);
-        var fire = ClockTimeRules.ComputeFireAt(now, 8, 0);
+        var fire = ClockTimeRules.ComputeFireAt(now, TimeZoneInfo.Utc, 8, 0);
         Assert.Equal(new DateTimeOffset(2026, 1, 2, 8, 0, 0, TimeSpan.Zero), fire);
     }
 
@@ -69,7 +69,27 @@ public class ClockTimeRulesTests
     public void ComputeFireAt_rolls_to_tomorrow_when_the_time_equals_now()
     {
         var now = new DateTimeOffset(2026, 1, 1, 9, 0, 0, TimeSpan.Zero);
-        var fire = ClockTimeRules.ComputeFireAt(now, 9, 0);     // "now" is ambiguous → tomorrow
+        var fire = ClockTimeRules.ComputeFireAt(now, TimeZoneInfo.Utc, 9, 0);     // "now" is ambiguous → tomorrow
         Assert.Equal(new DateTimeOffset(2026, 1, 2, 9, 0, 0, TimeSpan.Zero), fire);
+    }
+
+    // Europe/Oslo: CEST (+02:00) ends 2026-10-25 03:00, CET (+01:00) ends 2026-03-29 02:00.
+    private static readonly TimeZoneInfo Oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo");
+
+    [Fact]
+    public void ComputeFireAt_uses_the_offset_in_force_when_the_alarm_fires_after_the_autumn_switch()
+    {
+        var now = new DateTimeOffset(2026, 10, 24, 22, 0, 0, TimeSpan.FromHours(2));
+        var fire = ClockTimeRules.ComputeFireAt(now, Oslo, 7, 0);
+        // 07:00 CET, not 07:00 CEST (which is 06:00 on the wall clock after the switch).
+        Assert.Equal(new DateTimeOffset(2026, 10, 25, 7, 0, 0, TimeSpan.FromHours(1)), fire);
+    }
+
+    [Fact]
+    public void ComputeFireAt_uses_the_offset_in_force_when_the_alarm_fires_after_the_spring_switch()
+    {
+        var now = new DateTimeOffset(2026, 3, 28, 22, 0, 0, TimeSpan.FromHours(1));
+        var fire = ClockTimeRules.ComputeFireAt(now, Oslo, 7, 0);
+        Assert.Equal(new DateTimeOffset(2026, 3, 29, 7, 0, 0, TimeSpan.FromHours(2)), fire);
     }
 }
