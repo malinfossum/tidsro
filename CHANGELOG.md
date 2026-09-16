@@ -2,6 +2,24 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
+## [2.6.1] — 2026-09-16
+
+### Fixed
+- **Alarms keep their time across the clock change** — an alarm set on the last evening of summer
+  time fired an hour early the morning after the autumn switch, and an hour late after the spring
+  one. The alarm now fires at the wall-clock time you picked, whichever offset is in force that day.
+- **A custom repeat needs at least one day** — choosing **Custom** with every day unticked was
+  quietly accepted and armed as a one-off for tomorrow. Adding and editing now say
+  **Pick at least one day.** where the time errors already appear.
+- **You are told when the safety copy before an import fails** — the import dialog promises a copy
+  of your current data first; when that copy could not be written the import went ahead as if it
+  had. The import still goes ahead, but a message now says that there is no safety copy before
+  anything is replaced.
+
+### Changed
+- Start and end times are checked by one rule shared between adding and editing an alarm, so the
+  two paths cannot drift apart. No change to what is accepted.
+
 ## [2.6.0] — 2026-09-10
 
 ### Added
@@ -168,6 +186,7 @@ Clock-time alarms — a "Your day" agenda with one-shot fire-at-HH:MM alarms, op
 ## [1.0.0] — 2026-06-16
 First release — countdown timers with presets or custom durations, pause/resume, reset, and per-timer sounds.
 
+[2.6.1]: https://github.com/malinfossum/tidsro/releases/tag/v2.6.1
 [2.6.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.6.0
 [2.5.1]: https://github.com/malinfossum/tidsro/releases/tag/v2.5.1
 [2.5.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.5.0
