@@ -3,7 +3,6 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Tidsro.Models;
 using Tidsro.Services;
-using Tidsro.Views;
 
 namespace Tidsro.ViewModels;
 

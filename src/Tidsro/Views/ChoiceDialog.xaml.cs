@@ -1,11 +1,8 @@
 using System.Windows;
 using System.Windows.Automation;
+using Tidsro.Models;
 
 namespace Tidsro.Views;
-
-/// <summary>What an import should restore. Cancel is the answer in every ambiguous case — Esc, the
-/// title-bar X and Enter all land here.</summary>
-public enum ImportChoice { Cancel, AlarmsOnly, Everything }
 
 // The three-way sibling of ConfirmDialog, doubling as the app's single-OK message box. Closing with
 // the title-bar X leaves DialogResult null, which reads as Cancel.
