@@ -198,7 +198,11 @@ public partial class SettingsViewModel : ObservableObject
           + "each import replaces that copy, so restore it before importing again.");
         if (choice == ImportChoice.Cancel) return;   // no snapshot: nothing is being replaced
 
-        _data.Transfer.SnapshotBeforeImport();
+        // The question above promised a safety copy. If it could not be written, say so before
+        // replacing anything — the import still goes ahead, but not behind a promise that failed.
+        if (!_data.Transfer.SnapshotBeforeImport())
+            _data.ShowMessage("No safety copy", "Tidsro couldn't copy your current data to "
+                                              + "data-before-import.json. The import goes ahead without it.");
         _data.ApplyImport(imported, choice == ImportChoice.Everything);
 
         if (choice == ImportChoice.Everything)
