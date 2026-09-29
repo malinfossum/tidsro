@@ -4,47 +4,47 @@
 
 # Tidsro
 
-A calm, dark-mode-first desktop timer for Windows — countdown timers and clock-time alarms that nudge you with a quiet corner card instead of a flashy notification.
+A calm, dark-mode-first desktop timer for Windows: countdown timers and clock-time alarms that nudge you with a quiet corner card instead of a flashy notification.
 
-> **Tidsro** is Norwegian: *tid* (time) + *ro* (calm / peace) — roughly *"calm time."* The name is the whole idea: a timer that's visible when you need it and invisible when you don't.
+> **Tidsro** is Norwegian: *tid* (time) + *ro* (calm / peace), roughly *"calm time."* The name is the whole idea: a timer that's visible when you need it and invisible when you don't.
 
 <p align="center">
-  <img src="docs/screenshots/main-window.png" alt="Tidsro on the Quick timers tab: the running countdown shown large in its own card (29:42, done 19:52), preset buttons for 5, 30, and 60 minutes, fields for a custom duration and label with a sound picker, and two more timers stacked below — near-black surfaces with a single gold accent." width="560">
+  <img src="docs/screenshots/main-window.png" alt="Tidsro on the Quick timers tab: the running countdown shown large in its own card (29:42, done 19:52), preset buttons for 5, 30, and 60 minutes, fields for a custom duration and label with a sound picker, and two more timers stacked below. The surfaces are near-black with a single gold accent." width="560">
 </p>
 
 ## Who it's for
 
-Anyone who works or studies at a computer and wants to hold their focus through the day without reaching for a phone or juggling several apps. Set your day — or your whole week — once, then forget it: Tidsro runs quietly in the background and keeps you on track, so your phone can stay on Do Not Disturb or in another room. It's built to *hold* your attention, not grab it — no flashy notifications, nothing loud unless you ask for it. Every alarm is yours to shape: silent or with a chime, one-off or repeating.
+Anyone who works or studies at a computer and wants to hold their focus through the day without reaching for a phone or juggling several apps. Set your day (or your whole week) once, then forget it: Tidsro runs quietly in the background and keeps you on track, so your phone can stay on Do Not Disturb or in another room. It's built to *hold* your attention, not grab it. No flashy notifications, nothing loud unless you ask for it. Every alarm is yours to shape: silent or with a chime, one-off or repeating.
 
-**Why I built it.** I went looking for a focus tool while studying and couldn't find one that did both timers *and* recurring alarms while staying clean and minimal — so I built the one I wish I'd had before I started school. It turns out to be just as useful in a workday as a study day.
+**Why I built it.** I went looking for a focus tool while studying and couldn't find one that did both timers *and* recurring alarms while staying clean and minimal. So I built the one I wish I'd had before I started school. It turns out to be just as useful in a workday as a study day.
 
 ## Status
 
-**Shipped, with versioned [releases](https://github.com/malinfossum/tidsro/releases/latest).** Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms** — fire once at an HH:MM time, or repeat on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms can be **switched off without deleting** (kept and parked at the bottom until switched back on), edited in a dialog, and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**, you can bring **your own .wav** as an extra sound alongside the six built-in chimes, and your alarms and settings can be **exported to a file and imported back**. A **Week** tab lays the repeating alarms out as a timetable, where an alarm given an optional **end time** is drawn as a block at its real length.
+**Shipped, with versioned [releases](https://github.com/malinfossum/tidsro/releases/latest).** Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms**. An alarm fires once at an HH:MM time, or repeats on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms can be **switched off without deleting** (kept and parked at the bottom until switched back on), edited in a dialog, and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**, you can bring **your own .wav** as an extra sound alongside the six built-in chimes, and your alarms and settings can be **exported to a file and imported back**. A **Week** tab lays the repeating alarms out as a timetable, where an alarm given an optional **end time** is drawn as a block at its real length.
 
 See the [changelog](CHANGELOG.md) for what's new in each release.
 
 ## Install
 
-**Most people — install it:**
+**Most people should install it:**
 
 1. Open the [Releases page](https://github.com/malinfossum/tidsro/releases) and download **`Tidsro-Setup.exe`** from the latest release.
-2. Run it. Windows may warn *"Windows protected your PC"* because the app isn't code-signed yet — click **More info → Run anyway**.
+2. Run it. Windows may warn *"Windows protected your PC"* because the app isn't code-signed yet. Click **More info → Run anyway**.
 3. Click through the short wizard. Tidsro installs just for you (no admin), adds a Start Menu shortcut, and starts in the system tray.
 
 Uninstall any time from **Settings → Apps → Installed apps → Tidsro**.
 
-**Prefer not to install?** Download **`Tidsro.exe`** (the portable build) from the same release and double-click it — it runs as-is, no installation. The same SmartScreen note applies.
+**Prefer not to install?** Download **`Tidsro.exe`** (the portable build) from the same release and double-click it. It runs as-is, no installation. The same SmartScreen note applies.
 
 Both builds are self-contained: they run on any 64-bit Windows PC with no .NET required. Your timers and settings stay on your machine in `%AppData%\Tidsro`.
 
 ## Using Tidsro
 
-Launching Tidsro opens its window — it remembers where you last placed it and how big it was. Closing the window tucks Tidsro back into the system tray, where it keeps running until you choose **Quit** from the tray menu; left-click the tray icon any time to reopen it. When Tidsro is started automatically with Windows, it stays quietly in the tray.
+Launching Tidsro opens its window. It remembers where you last placed it and how big it was. Closing the window tucks Tidsro back into the system tray, where it keeps running until you choose **Quit** from the tray menu; left-click the tray icon any time to reopen it. When Tidsro is started automatically with Windows, it stays quietly in the tray.
 
-- Pick a preset (5 / 30 / 60 min) or type a custom duration: `25` (minutes), `5:00` (mm:ss), or `1:30:00` (h:mm:ss) — with an optional **label** to tell timers apart. Invalid input shows a calm inline message.
-- Choose a **sound** for the next timer from the dropdown — **▶** previews it. It starts from your default sound and applies to both presets and custom timers. **My sound** appears in the list once you have chosen your own .wav in Settings.
-- Multiple countdowns can run at once, stacked soonest-first; each shows a live mm:ss (or h:mm:ss) countdown with **pause/resume, reset** (back to the full duration), and cancel — cancelling drops a brief **Undo** bar at the bottom. Paused timers dim and drop below the active ones; resetting while paused keeps the timer stopped at the start.
+- Pick a preset (5 / 30 / 60 min) or type a custom duration: `25` (minutes), `5:00` (mm:ss), or `1:30:00` (h:mm:ss). Add an optional **label** to tell timers apart. Invalid input shows a calm inline message.
+- Choose a **sound** for the next timer from the dropdown. **▶** previews it. It starts from your default sound and applies to both presets and custom timers. **My sound** appears in the list once you have chosen your own .wav in Settings.
+- Multiple countdowns can run at once, stacked soonest-first; each shows a live mm:ss (or h:mm:ss) countdown with **pause/resume, reset** (back to the full duration), and cancel. Cancelling drops a brief **Undo** bar at the bottom. Paused timers dim and drop below the active ones; resetting while paused keeps the timer stopped at the start.
 - When a timer finishes, a calm card appears in the bottom-right corner. It does not steal focus.
   - **+5** arms a new 5-minute countdown. **Restart** re-runs the original duration. **Dismiss** closes the card.
   - Press **Ctrl+Alt+T** to bring the latest card into keyboard focus; Tab reaches the buttons; Enter activates; focus returns to your previous app on dismiss.
@@ -52,63 +52,63 @@ Launching Tidsro opens its window — it remembers where you last placed it and 
 
 <p align="center">
   <img src="docs/screenshots/completion-card.png" alt="A finished timer shown as a small dark card reading complete, Laundry done, with +5 min, Restart, and Dismiss buttons." width="320"><br>
-  <em>A finished timer surfaces as a calm corner card — it never steals focus.</em>
+  <em>A finished timer surfaces as a calm corner card. It never steals focus.</em>
 </p>
 
-The **Schedule** is its own tab next to Quick timers, and a compact strip below the tab content shows whatever is counting down, whichever tab you're on. Type a time — `14:30`, or shorthand like `9`, `930`, or `1430` (24-hour) — an optional label, choose a sound, set **Repeat** (Once, or a weekday set), and click **Add** (or press **Enter**). The alarm is saved immediately. Turn on **Warn me 5 minutes before** for a quiet heads-up ahead of the alarm.
+The **Schedule** is its own tab next to Quick timers, and a compact strip below the tab content shows whatever is counting down, whichever tab you're on. Type a time (`14:30`, or 24-hour shorthand like `9`, `930`, or `1430`), an optional label, choose a sound, set **Repeat** (Once, or a weekday set), and click **Add** (or press **Enter**). The alarm is saved immediately. Turn on **Warn me 5 minutes before** for a quiet heads-up ahead of the alarm.
 
 <p align="center">
-  <img src="docs/screenshots/schedule.png" alt="The Schedule tab: a form for adding an alarm (time, label, sound, repeat, and a pre-alarm warning toggle), three alarms below with gold on/off toggles — 08:00 on weekdays, 10:30 on Thursday, 11:30 on weekdays — and a slim strip along the bottom showing a timer still counting down on the other tab (Running 05:00, Laundry done)." width="560"><br>
-  <em>The Schedule — and the strip along the bottom keeping a running timer in view.</em>
+  <img src="docs/screenshots/schedule.png" alt="The Schedule tab: a form for adding an alarm (time, label, sound, repeat, and a pre-alarm warning toggle), three alarms below with gold on/off toggles (08:00 on weekdays, 10:30 on Thursday, 11:30 on weekdays), and a slim strip along the bottom showing a timer still counting down on the other tab (Running 05:00, Laundry done)." width="560"><br>
+  <em>The Schedule, and the strip along the bottom keeping a running timer in view.</em>
 </p>
 
 - A one-shot alarm fires once; a recurring alarm repeats on its days, and the Schedule stays sorted by what's next.
 - If Tidsro isn't running when an alarm time passes, it fires within a 5-minute grace window on next launch.
 - Each alarm row shows its time, cadence, label, and sound. Click **Edit** (pencil) to change it in a dialog; **Save** commits, **Cancel** discards.
-- **Delete** removes the alarm with a brief undo window — click **Undo** in the bar at the bottom to restore it.
-- **Switch an alarm off** with the toggle on its row to keep it without it firing or warning — handy for pausing recurring alarms over a holiday — then switch it back on when you need it. Off alarms dim and drop to the bottom of the Schedule, and stay off across restarts.
+- **Delete** removes the alarm with a brief undo window. Click **Undo** in the bar at the bottom to restore it.
+- **Switch an alarm off** with the toggle on its row to keep it without it firing or warning (handy for pausing recurring alarms over a holiday), then switch it back on when you need it. Off alarms dim and drop to the bottom of the Schedule, and stay off across restarts.
 - When an alarm fires, the same quiet bottom-right card appears, with **Snooze +5** (re-arms it 5 minutes later in the Schedule) and **Dismiss**.
 
 <p align="center">
   <img src="docs/screenshots/alarm-dialog.png" alt="The Edit alarm dialog: an 08:00 alarm labelled Morning walk, with a sound picker on Piano jingle, repeat set to Weekdays, the 5-minute pre-alarm warning switched on with a gold toggle, and Save and Cancel buttons." width="344"><br>
-  <em>Editing an alarm — per-alarm sound, repeat, and the optional 5-minute warning.</em>
+  <em>Editing an alarm: per-alarm sound, repeat, and the optional 5-minute warning.</em>
 </p>
 
 - Open **Settings** (bottom-left of the main window) to toggle launch-at-startup and choose a default sound. Changes apply when you click **Save**; **Cancel**, **Esc**, or closing the window discards them.
-- **My sound** is where you use your own audio. **Choose .wav…** picks a file, and Tidsro copies it into its own folder — so moving, renaming or deleting the original, or picking it off a memory stick, does not leave your alarms silent. It then shows up as **My sound** in every sound dropdown. One at a time: choosing another replaces it, and **Remove** clears it. Choosing and removing happen straight away rather than waiting for **Save**.
-  - It has to be a **.wav** under 5 MB that Windows can play. MP3 is not supported, and an `.mp3` renamed to `.wav` is refused rather than accepted and silent — Tidsro says so and asks you to convert it first.
+- **My sound** is where you use your own audio. **Choose .wav…** picks a file, and Tidsro copies it into its own folder. That way moving, renaming or deleting the original, or picking it off a memory stick, does not leave your alarms silent. It then shows up as **My sound** in every sound dropdown. One at a time: choosing another replaces it, and **Remove** clears it. Choosing and removing happen straight away rather than waiting for **Save**.
+  - It has to be a **.wav** under 5 MB that Windows can play. MP3 is not supported, and an `.mp3` renamed to `.wav` is refused rather than accepted and silent. Tidsro says so and asks you to convert it first.
   - A backup carries the sound's **name**, not the audio. Restore one on another machine and the slot reads *No sound chosen* until you pick the file again; alarms set to it stay quiet in the meantime rather than falling back to a chime you did not choose.
 
-The **Week** tab lays your repeating alarms out as a timetable — a day-by-day agenda on a narrow window, becoming a grid once there is room for one; when a wider window would fit the grid, the agenda offers to widen it in one click. It lists only the times you have something on, so a free afternoon costs no space, and each row states its own time: an alarm at 12:15 says 12:15 rather than the half hour it falls in. Saturday and Sunday get columns only when something falls on them, or when today is one of them; otherwise the week stays five columns wide and says so beneath. Today is marked in both views. An alarm given an optional **end time** becomes a block, drawn down every half hour it covers rather than as a single point, so a two-hour lecture looks like one. Two blocks that overlap share the column side by side, an alarm falling inside a block keeps its own place beside it, and whichever block is happening now is marked. An end time changes nothing about when Tidsro chimes: it still sounds at the start only. The tab is read-only — alarms are added and edited on the Schedule.
+The **Week** tab lays your repeating alarms out as a timetable: a day-by-day agenda on a narrow window, becoming a grid once there is room for one; when a wider window would fit the grid, the agenda offers to widen it in one click. It lists only the times you have something on, so a free afternoon costs no space, and each row states its own time: an alarm at 12:15 says 12:15 rather than the half hour it falls in. Saturday and Sunday get columns only when something falls on them, or when today is one of them; otherwise the week stays five columns wide and says so beneath. Today is marked in both views. An alarm given an optional **end time** becomes a block, drawn down every half hour it covers rather than as a single point, so a two-hour lecture looks like one. Two blocks that overlap share the column side by side, an alarm falling inside a block keeps its own place beside it, and whichever block is happening now is marked. An end time changes nothing about when Tidsro chimes: it still sounds at the start only. The tab is read-only. Alarms are added and edited on the Schedule.
 
 <p align="center">
   <img src="docs/screenshots/week.png" alt="The Week tab: five columns from Monday to Friday with Thursday marked as today by a gold dot and gold heading, rows of repeating alarms from 07:30 Morning walk downwards with their times in a left-hand gutter. A Lecture block on Monday, Wednesday and Friday and a Focus block on Tuesday and Thursday each run as a vertical stripe down the rows they cover; on Tuesday a Lab sits beside the Focus block in its own lane, and Thursday's block is marked in gold as the one happening now." width="560"><br>
-  <em>The Week tab — blocks drawn at their length, and no columns spent on a free weekend.</em>
+  <em>The Week tab: blocks drawn at their length, and no columns spent on a free weekend.</em>
 </p>
 
 ### Backup and restore
 
-**Settings → Data → Export data…** writes everything — your alarms *and* your settings — to a JSON file wherever you choose. **Import data…** reads one back, and asks first whether to restore only the alarms or everything, so a file from another machine can't move your window or change your launch-at-startup setting unless you say so.
+**Settings → Data → Export data…** writes everything (your alarms *and* your settings) to a JSON file wherever you choose. **Import data…** reads one back, and asks first whether to restore only the alarms or everything, so a file from another machine can't move your window or change your launch-at-startup setting unless you say so.
 
 Before an import replaces anything, Tidsro copies your current data to `%AppData%\Tidsro\data-before-import.json`. If an import turns out to be the wrong file, import *that* file to get back where you were.
 
-There is only ever one such copy, and **every import replaces it** — so if an import wasn't what you wanted, restore it before importing anything else. Two imports in a row and the copy describes the first import, not your original data. If you want a backup that stays put, export one.
+There is only ever one such copy, and **every import replaces it**. So if an import wasn't what you wanted, restore it before importing anything else. Two imports in a row and the copy describes the first import, not your original data. If you want a backup that stays put, export one.
 
-An export is an ordinary, unencrypted JSON file — your alarm labels are readable by anything on the machine. Windows also redirects **Documents** into OneDrive on many installs, so saving there uploads a copy; pick a local folder if you would rather it stayed on the machine.
+An export is an ordinary, unencrypted JSON file. Your alarm labels are readable by anything on the machine. Windows also redirects **Documents** into OneDrive on many installs, so saving there uploads a copy; pick a local folder if you would rather it stayed on the machine.
 
 ## Roadmap
 
 Everything on the original list has shipped. Tidsro does what I set out to build, and I add to it when something turns out to be missing in daily use.
 
-One absence is deliberate: an alarm with an end time chimes at its start only, never at its end. A second chime would mean Tidsro had to remember which occurrences have already ended — exactly the bookkeeping the scheduler is built to do without. It is a considered omission, not an oversight.
+One absence is deliberate: an alarm with an end time chimes at its start only, never at its end. A second chime would mean Tidsro had to remember which occurrences have already ended. That is exactly the bookkeeping the scheduler is built to do without. It is a considered omission, not an oversight.
 
 ## Contributing
 
-Pull requests are welcome. The suite is `dotnet test`; beyond it, `tools/rigs/` drives the real app against a throwaway copy that cannot touch your own schedule, and `tools/screenshots/` re-shoots the images above from a fictional week. Both have a README of their own, and the Week tab in particular needs one of them — it has shipped three defects that a green test run said nothing about.
+Pull requests are welcome. The suite is `dotnet test`; beyond it, `tools/rigs/` drives the real app against a throwaway copy that cannot touch your own schedule, and `tools/screenshots/` re-shoots the images above from a fictional week. Both have a README of their own, and the Week tab in particular needs one of them. It has shipped three defects that a green test run said nothing about.
 
 ## Stack
 
-C# · WPF (.NET) · MVVM. Local-first: no accounts, no network — your data stays on your machine.
+C# · WPF (.NET) · MVVM. Local-first: no accounts, no network. Your data stays on your machine.
 
 ## Building from source
 
@@ -124,11 +124,11 @@ Build the distributable downloads into `dist/` with `publish.ps1`:
 ./publish.ps1
 ```
 
-It publishes a self-contained, single-file `Tidsro.exe` (portable) and wraps it in `Tidsro-Setup.exe` (a per-user installer) with [Inno Setup](https://jrsoftware.org/isinfo.php) — install that once via `winget install --id JRSoftware.InnoSetup -e`. Attach both `.exe` files to a [GitHub Release](https://github.com/malinfossum/tidsro/releases).
+It publishes a self-contained, single-file `Tidsro.exe` (portable) and wraps it in `Tidsro-Setup.exe` (a per-user installer) with [Inno Setup](https://jrsoftware.org/isinfo.php). Install that once via `winget install --id JRSoftware.InnoSetup -e`. Attach both `.exe` files to a [GitHub Release](https://github.com/malinfossum/tidsro/releases).
 
 ## License
 
-Apache License 2.0 — see [LICENSE](LICENSE). © 2026 Malin Fossum.
+Apache License 2.0. See [LICENSE](LICENSE). © 2026 Malin Fossum.
 
 Tidsro bundles IBM Plex Sans and IBM Plex Mono, licensed under the SIL Open Font License 1.1.
 See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
