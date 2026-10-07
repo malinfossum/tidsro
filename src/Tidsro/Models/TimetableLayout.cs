@@ -1,4 +1,4 @@
-﻿namespace Tidsro.Models;
+namespace Tidsro.Models;
 
 /// <summary>Which piece of a block a row is drawing. The wide grid draws one independent element per
 /// row, so there is no shared vertical grid for a <c>Grid.RowSpan</c> to span; a block is one segment

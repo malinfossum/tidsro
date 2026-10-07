@@ -1158,8 +1158,8 @@ public class MainViewModelTests
     public void Strip_shows_the_countdown_that_finishes_soonest()
     {
         var vm = New(out _, out _);
-        vm.CustomInput = "30:00"; vm.Label = "long";  vm.StartCustomCommand.Execute(null);
-        vm.CustomInput = "5:00";  vm.Label = "short"; vm.StartCustomCommand.Execute(null);
+        vm.CustomInput = "30:00"; vm.Label = "long"; vm.StartCustomCommand.Execute(null);
+        vm.CustomInput = "5:00"; vm.Label = "short"; vm.StartCustomCommand.Execute(null);
         vm.SelectedTabIndex = 1;   // the strip is for the Schedule tab; Quick timers has the hero
 
         Assert.True(vm.ShowStrip);
@@ -1217,8 +1217,8 @@ public class MainViewModelTests
     public void Cancelling_the_shown_timer_moves_the_strip_to_the_next_one()
     {
         var vm = New(out _, out _);
-        vm.CustomInput = "30:00"; vm.Label = "long";  vm.StartCustomCommand.Execute(null);
-        vm.CustomInput = "5:00";  vm.Label = "short"; vm.StartCustomCommand.Execute(null);
+        vm.CustomInput = "30:00"; vm.Label = "long"; vm.StartCustomCommand.Execute(null);
+        vm.CustomInput = "5:00"; vm.Label = "short"; vm.StartCustomCommand.Execute(null);
 
         vm.CancelTimerCommand.Execute(vm.StripTimer);
 
@@ -1348,8 +1348,8 @@ public class MainViewModelTests
     public void Only_the_timer_the_hero_shows_drops_its_own_countdown()
     {
         var vm = New(out _, out _);
-        vm.CustomInput = "30:00"; vm.Label = "long";  vm.StartCustomCommand.Execute(null);
-        vm.CustomInput = "5:00";  vm.Label = "short"; vm.StartCustomCommand.Execute(null);
+        vm.CustomInput = "30:00"; vm.Label = "long"; vm.StartCustomCommand.Execute(null);
+        vm.CustomInput = "5:00"; vm.Label = "short"; vm.StartCustomCommand.Execute(null);
 
         Assert.Same(vm.StripTimer, vm.Running[0]);
         Assert.True(vm.Running[0].IsCountdownInHero);
@@ -1361,8 +1361,8 @@ public class MainViewModelTests
     public void Cancelling_the_heros_timer_moves_the_countdown_mark_to_the_next_one()
     {
         var vm = New(out _, out _);
-        vm.CustomInput = "30:00"; vm.Label = "long";  vm.StartCustomCommand.Execute(null);
-        vm.CustomInput = "5:00";  vm.Label = "short"; vm.StartCustomCommand.Execute(null);
+        vm.CustomInput = "30:00"; vm.Label = "long"; vm.StartCustomCommand.Execute(null);
+        vm.CustomInput = "5:00"; vm.Label = "short"; vm.StartCustomCommand.Execute(null);
 
         vm.CancelTimerCommand.Execute(vm.StripTimer);
 

@@ -48,7 +48,7 @@ public partial class PopupViewModel : ObservableObject
     public string AnnouncementText => _isWarning ? $"{Title} in 5 minutes" : $"{Title} complete";
     public event EventHandler? CloseRequested;
 
-    [RelayCommand] private void Plus5()   { if (Begin()) { _onSnooze(_item);  Close(); } }
+    [RelayCommand] private void Plus5() { if (Begin()) { _onSnooze(_item); Close(); } }
     [RelayCommand] private void Restart() { if (Begin()) { _onRestart(_item); Close(); } }
     [RelayCommand] private void Dismiss() { if (Begin()) { _onDismiss(_item); Close(); } }
 

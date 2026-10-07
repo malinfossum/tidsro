@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -218,10 +218,12 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnAlarmSoundChanged(SoundChoice value) => PreviewAlarmSoundCommand.NotifyCanExecuteChanged();
 
-    [RelayCommand] private void StartPreset(int minutes) =>
+    [RelayCommand]
+    private void StartPreset(int minutes) =>
         Add(TimeSpan.FromMinutes(minutes));
 
-    [RelayCommand] private void StartCustom()
+    [RelayCommand]
+    private void StartCustom()
     {
         if (!CountdownRules.TryParse(CustomInput, out var d, out var error))
         { CustomError = error; return; }

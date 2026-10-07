@@ -1,4 +1,4 @@
-﻿using Tidsro.Models;
+using Tidsro.Models;
 using Xunit;
 
 namespace Tidsro.Tests;
@@ -11,13 +11,13 @@ public class TimetableLayoutTests
 
     private static TimerItem Recurring(int hour, int minute, Weekdays days,
         string? label = "Class", bool enabled = true) => new()
-    {
-        Label = label,
-        TriggerType = TriggerType.Recurring,
-        RecurringDays = days,
-        EndsAt = At(1, hour, minute),
-        IsEnabled = enabled,
-    };
+        {
+            Label = label,
+            TriggerType = TriggerType.Recurring,
+            RecurringDays = days,
+            EndsAt = At(1, hour, minute),
+            IsEnabled = enabled,
+        };
 
     [Fact]
     public void Empty_input_is_flagged_empty()
@@ -697,14 +697,14 @@ public class TimetableLayoutTests
 
     private static TimerItem Block(int hour, int minute, int endMinute, Weekdays days,
         string? label = "Lecture", bool enabled = true) => new()
-    {
-        Label = label,
-        TriggerType = TriggerType.Recurring,
-        RecurringDays = days,
-        EndsAt = At(1, hour, minute),
-        IsEnabled = enabled,
-        EndMinute = endMinute,
-    };
+        {
+            Label = label,
+            TriggerType = TriggerType.Recurring,
+            RecurringDays = days,
+            EndsAt = At(1, hour, minute),
+            IsEnabled = enabled,
+            EndMinute = endMinute,
+        };
 
     [Fact]
     public void A_block_gives_a_row_to_every_slot_it_covers()

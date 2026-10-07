@@ -75,7 +75,8 @@ public partial class TimerItemViewModel : ObservableObject
         }
     }
 
-    [RelayCommand] private void PauseResume()
+    [RelayCommand]
+    private void PauseResume()
     {
         if (Item.State == TimerState.Running) _scheduler.Pause(Item);
         else if (Item.State == TimerState.Paused) _scheduler.Resume(Item);

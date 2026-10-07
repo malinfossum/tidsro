@@ -4,7 +4,7 @@ namespace Tidsro.Services;
 /// real HKCU Run key. The path-repair logic stays on the concrete StartupService.</summary>
 public interface IStartupService
 {
-    bool IsEnabled();
-    void Enable();
-    void Disable();
+    public bool IsEnabled();
+    public void Enable();
+    public void Disable();
 }
