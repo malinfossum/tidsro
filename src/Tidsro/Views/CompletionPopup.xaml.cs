@@ -59,7 +59,7 @@ public partial class CompletionPopup : Window
             Opacity = 0;
             var dur = (Duration)FindResource("DurationBase");
             BeginAnimation(OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(0, 1, dur)
-                { EasingFunction = new System.Windows.Media.Animation.CubicEase() });
+            { EasingFunction = new System.Windows.Media.Animation.CubicEase() });
             if (Root.RenderTransform is System.Windows.Media.TranslateTransform tt)
                 tt.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty,
                     new System.Windows.Media.Animation.DoubleAnimation(12, 0, dur)

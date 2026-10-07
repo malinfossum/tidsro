@@ -145,8 +145,12 @@ public class SettingsViewModelTests
     {
         var shared = new AppSettings
         {
-            LaunchAtStartup = true, DefaultSound = SoundChoice.Bell,
-            WindowLeft = 100, WindowTop = 200, WindowWidth = 900, WindowHeight = 900,
+            LaunchAtStartup = true,
+            DefaultSound = SoundChoice.Bell,
+            WindowLeft = 100,
+            WindowTop = 200,
+            WindowWidth = 900,
+            WindowHeight = 900,
         };
         var startup = new FakeStartupService { Enabled = true };
         var placementResets = 0; var saves = 0; var cleared = 0;

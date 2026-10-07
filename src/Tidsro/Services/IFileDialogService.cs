@@ -4,9 +4,9 @@ namespace Tidsro.Services;
 /// Both return null when the user cancels. Same reason <see cref="IStartupService"/> exists.</summary>
 public interface IFileDialogService
 {
-    string? AskSavePath(string suggestedFileName);
-    string? AskOpenPath();
+    public string? AskSavePath(string suggestedFileName);
+    public string? AskOpenPath();
 
     /// <summary>Pick a .wav to use as the custom alarm sound.</summary>
-    string? AskWavPath();
+    public string? AskWavPath();
 }
