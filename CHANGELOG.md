@@ -2,6 +2,15 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
+## [2.6.2] - 2026-11-19
+
+### Fixed
+- **A silent uninstall no longer waits on a question**: the uninstaller asked whether to delete
+  your alarms, settings and log even under `/SILENT` and `/VERYSILENT`, so an uninstall run by a
+  script or a package manager stopped on a prompt nobody was there to answer. A silent uninstall
+  now never asks and keeps the data in `%AppData%\Tidsro`. Uninstalling from Windows Settings
+  still asks, as before.
+
 ## [2.6.1] — 2026-09-16
 
 ### Fixed
@@ -186,6 +195,7 @@ Clock-time alarms — a "Your day" agenda with one-shot fire-at-HH:MM alarms, op
 ## [1.0.0] — 2026-06-16
 First release — countdown timers with presets or custom durations, pause/resume, reset, and per-timer sounds.
 
+[2.6.2]: https://github.com/malinfossum/tidsro/releases/tag/v2.6.2
 [2.6.1]: https://github.com/malinfossum/tidsro/releases/tag/v2.6.1
 [2.6.0]: https://github.com/malinfossum/tidsro/releases/tag/v2.6.0
 [2.5.1]: https://github.com/malinfossum/tidsro/releases/tag/v2.5.1
