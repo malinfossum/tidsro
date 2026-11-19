@@ -32,7 +32,7 @@ See the [changelog](CHANGELOG.md) for what's new in each release.
 2. Run it. Windows may warn *"Windows protected your PC"* because the app isn't code-signed yet. Click **More info → Run anyway**.
 3. Click through the short wizard. Tidsro installs just for you (no admin), adds a Start Menu shortcut, and starts in the system tray.
 
-Uninstall any time from **Settings → Apps → Installed apps → Tidsro**.
+Uninstall any time from **Settings → Apps → Installed apps → Tidsro**. The uninstaller asks whether to also delete your alarms, settings and log. A silent uninstall (a script or a package manager) never asks and keeps them in `%AppData%\Tidsro`.
 
 **Prefer not to install?** Download **`Tidsro.exe`** (the portable build) from the same release and double-click it. It runs as-is, no installation. The same SmartScreen note applies.
 

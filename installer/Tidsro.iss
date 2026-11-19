@@ -60,11 +60,12 @@ Filename: "{sys}\reg.exe"; Parameters: "delete ""HKCU\Software\Microsoft\Windows
 [Code]
 // Alarms and settings outlive an uninstall by default — a reinstall picks them back up. Offer to clear
 // them so a fresh install can start clean; "No" is the default button, since this can't be undone.
+// A silent uninstall (winget, a script) has nobody to answer, so it never asks and keeps the data.
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   DataDir: String;
 begin
-  if CurUninstallStep = usPostUninstall then
+  if (CurUninstallStep = usPostUninstall) and not UninstallSilent then
   begin
     DataDir := ExpandConstant('{userappdata}\{#AppName}');
     if DirExists(DataDir) then
