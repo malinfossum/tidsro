@@ -20,10 +20,13 @@ the rendering.
 | `Type-IntoDialog.ps1` | Types a path into that dialog and presses Enter, refusing if the foreground window is not the rig. |
 | `Verify-Import.ps1` | End to end: seed, clear, import, and assert both blocks kept their end times. This is the check that found the v2.5.1 bug. |
 | `Verify-CustomSound.ps1` | End to end: open Settings on an empty slot, have a non-audio file refused, choose a real .wav, and assert the name reaches the window and `data.json` - then remove it and assert the slot empties. |
+| `Verify-SilentUninstall.ps1` | Builds `installer/Tidsro.iss` as a throwaway installer (own AppId, name and data folder, stand-in payload) and runs its uninstaller with `/SILENT`, `/VERYSILENT` and clicked through. Asserts a silent run never asks about deleting data and keeps it, and that the clicked-through one still asks. Needs pwsh 7 and Inno Setup. |
 
 ```powershell
 ./tools/rigs/Verify-Import.ps1                 # the working tree
 ./tools/rigs/Verify-Import.ps1 -Ref v2.5.0     # fails: the release the bug shipped in
+./tools/rigs/Verify-SilentUninstall.ps1                 # the working tree's installer script
+./tools/rigs/Verify-SilentUninstall.ps1 -Ref v2.6.1     # fails: the prompt waits under /SILENT
 ```
 
 ## Traps, each of which cost real time
@@ -50,3 +53,14 @@ the rendering.
   everything*. `Verify-Import.ps1` asserts the value is unchanged.
 - **A "nothing found" result means check the rendering first.** A rig that lands in the agenda
   instead of the grid has no lane bars to find, and looks exactly like a pass.
+- **Inno Setup's second-stage uninstaller is `_unins.tmp`** (6.7; older versions used `_iu*.tmp`),
+  running from `%TEMP%`. A process filter on the old name leaves it alive holding `unins000.dat`,
+  and the next uninstall fails with "Error 32 ... Cannot uninstall".
+- **UI Automation from the process that started the uninstaller sees only the message box's title
+  bar**: no text, no buttons. A fresh process sees all of it. `Verify-SilentUninstall.ps1` reads the
+  box with plain Win32 instead (`EnumWindows` for class `#32770`, `EnumChildWindows` for the text and
+  buttons) and answers it with `WM_COMMAND` and the button's id.
+- **Git Bash rewrites `/SILENT` into a path** (`C:/Program Files/Git/SILENT`) when it is passed as an
+  argument. Keep such switches inside the script, or set `MSYS_NO_PATHCONV=1`.
+- **`[UninstallRun]` deletes the `HKCU\...\Run` value by its literal name.** A rig built from
+  `Tidsro.iss` has to repoint that line too, or uninstalling the rig removes the real autostart entry.
