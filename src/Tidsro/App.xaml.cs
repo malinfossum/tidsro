@@ -150,6 +150,11 @@ public partial class App : Application
         _mainVm.AlarmsChanged += (_, _) => SaveData();
         _mainVm.LoadStopwatches(_data.Stopwatches);
         _mainVm.LoadSavedLabels(_settings.SavedLabels);
+        _mainVm.LoadTimeLog(_data.TimeLog);
+        _mainVm.TimeLogChanged += (_, _) => SaveData();
+        _mainVm.FileDialogs = new FileDialogService();
+        _mainVm.Confirm = (title, message) => _main is null || ConfirmDialog.Ask(_main, title, message);
+        _mainVm.MessageRequested += (_, m) => ChoiceDialog.ShowMessage(DialogOwner, m.Title, m.Message);
         // Typing a stopwatch's label raises a change per keystroke: coalesce them into one write.
         _stopwatchSave = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
         _stopwatchSave.Tick += (_, _) => { _stopwatchSave.Stop(); SaveData(); };
@@ -218,6 +223,7 @@ public partial class App : Application
     private void OnTimerFired(object? sender, TimerItem item)
     {
         _sound.Play(item.Sound);
+        _mainVm.LogTimerCompleted(item);   // countdowns only; alarms are not timed work
 
         ShowCard(new PopupViewModel(item,
             onSnooze: i => { var r = _scheduler.Snooze(i, TimeSpan.FromMinutes(5)); _mainVm.RefreshAll(); SaveData(); return r; },
@@ -393,6 +399,7 @@ public partial class App : Application
             Alarms = armed.Where(a => a.TriggerType == TriggerType.ClockTime).Select(ToRecord).ToList(),
             RecurringAlarms = armed.Where(a => a.TriggerType == TriggerType.Recurring).Select(ToRecurringRecord).ToList(),
             Stopwatches = _mainVm.StopwatchRecords(),
+            TimeLog = _mainVm.TimeLogRecords(),
         };
     }
 

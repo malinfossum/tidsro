@@ -204,6 +204,24 @@ function Get-StopwatchPlan {
     )
 }
 
+# A fictional time log for the Stopwatch shot: earlier stopwatch runs and a finished timer.
+function Get-TimeLogPlan {
+    $today = (Get-Date).Date
+    $rows = @(
+        ,@('Stopwatch', 'Deep work', 8, 5, 52)
+        ,@('Timer',     'Tea',       9, 2, 5)
+        ,@('Stopwatch', 'Reading',   10, 10, 21)
+        ,@('Stopwatch', 'Stand-up',  11, 0, 14)
+    )
+    foreach ($r in $rows) {
+        $start = $today.AddHours($r[2]).AddMinutes($r[3])
+        $end = $start.AddMinutes($r[4])
+        [ordered]@{ Id = [guid]::NewGuid().ToString(); Kind = $r[0]; Label = $r[1]
+                    StartedAt = $start.ToString('yyyy-MM-ddTHH:mm:sszzz'); EndedAt = $end.ToString('yyyy-MM-ddTHH:mm:sszzz')
+                    DurationMs = [long]($r[4] * 60000) }
+    }
+}
+
 $DayFlags = @{ Mon = 1; Tue = 2; Wed = 4; Thu = 8; Fri = 16; Sat = 32; Sun = 64 }
 
 function ConvertTo-DayFlags {
@@ -231,7 +249,7 @@ function Get-NextFireAt {
 # Enums persist as INTEGERS. Writing a string enum name here makes Load throw, quarantine the file
 # and open an empty app - which looks like the fixture was ignored.
 function Write-Fixture {
-    param($Plan, [int]$Tab, [int]$Width, [int]$Height, $Stopwatches = @())
+    param($Plan, [int]$Tab, [int]$Width, [int]$Height, $Stopwatches = @(), $TimeLog = @())
     $alarms = foreach ($a in $Plan) {
         $days = ConvertTo-DayFlags $a.Days
         [ordered]@{
@@ -263,6 +281,7 @@ function Write-Fixture {
         Alarms          = @()
         RecurringAlarms = @($alarms)
         Stopwatches     = @($Stopwatches)
+        TimeLog         = @($TimeLog)
     }
     $dir = Join-Path $dataRoot 'Tidsro'
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
@@ -364,7 +383,7 @@ function Get-ScheduleAndDialogShots {
 }
 
 function Get-StopwatchShot {
-    Write-Fixture -Plan $SchedulePlan -Tab 3 -Width 629 -Height 890 -Stopwatches (Get-StopwatchPlan)
+    Write-Fixture -Plan $SchedulePlan -Tab 3 -Width 629 -Height 1180 -Stopwatches (Get-StopwatchPlan) -TimeLog @(Get-TimeLogPlan)
     $proc, $root = Start-Shoot
     try {
         Start-Sleep -Milliseconds 600

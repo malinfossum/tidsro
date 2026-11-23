@@ -21,6 +21,13 @@ public partial class StopwatchItemViewModel : ObservableObject
     /// <summary>Raised when something worth persisting changed (label, start, pause, reset).</summary>
     public event EventHandler? Changed;
 
+    /// <summary>Raised when a run ends (pause, or reset while running) with its start and end, so the
+    /// owner can write it to the time log.</summary>
+    public event EventHandler<(DateTimeOffset Start, DateTimeOffset End)>? RunEnded;
+
+    /// <summary>When the current run began, or null while stopped.</summary>
+    public DateTimeOffset? RunningSince => _startedAt;
+
     [ObservableProperty] private string _label = "";
     [ObservableProperty] private string _elapsedText = "00:00";
     [ObservableProperty] private string _fractionText = ".0";
@@ -94,9 +101,11 @@ public partial class StopwatchItemViewModel : ObservableObject
     {
         if (_startedAt is { } s)
         {
-            var run = _now() - s;
+            var now = _now();
+            var run = now - s;
             _banked += run < TimeSpan.Zero ? TimeSpan.Zero : run;
             _startedAt = null;
+            RunEnded?.Invoke(this, (s, now));
         }
         else
         {
@@ -111,7 +120,12 @@ public partial class StopwatchItemViewModel : ObservableObject
     {
         _banked = TimeSpan.Zero;
         // A running stopwatch restarts from zero and keeps going; a stopped one returns to 00:00.
-        if (_startedAt is not null) _startedAt = _now();
+        if (_startedAt is { } s)
+        {
+            var now = _now();
+            RunEnded?.Invoke(this, (s, now));
+            _startedAt = now;
+        }
         Refresh();
         Changed?.Invoke(this, EventArgs.Empty);
     }

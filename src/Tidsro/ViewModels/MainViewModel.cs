@@ -63,6 +63,35 @@ public partial class MainViewModel : ObservableObject
     private StopwatchItemViewModel? _pendingStopwatch;
     private int _pendingStopwatchIndex;
 
+    // ---- time log
+    private readonly List<TimeLogEntry> _timeLog = new();
+    private const int RecentLogRows = 25;
+
+    /// <summary>The newest log entries, newest first, for the Stopwatch tab's Time log card.</summary>
+    public ObservableCollection<TimeLogRow> RecentLog { get; } = new();
+    public bool HasTimeLog => _timeLog.Count > 0;
+    public string TimeLogSummary
+    {
+        get
+        {
+            var today = _scheduler.Now.ToLocalTime().Date;
+            var todayTotal = _timeLog.Where(e => e.StartedAt.ToLocalTime().Date == today)
+                                     .Aggregate(TimeSpan.Zero, (acc, e) => acc + e.Duration);
+            var n = _timeLog.Count;
+            return $"{n} {(n == 1 ? "entry" : "entries")} · {TimeLogCsv.FormatDuration(todayTotal)} today";
+        }
+    }
+
+    /// <summary>Raised when the time log changes, so the App persists it.</summary>
+    public event EventHandler? TimeLogChanged;
+
+    /// <summary>Where Export CSV asks for a path. Set by the App; tests pass a fake.</summary>
+    public IFileDialogService? FileDialogs { get; set; }
+    /// <summary>Yes/no confirmation (title, message). Set by the App; null means "yes".</summary>
+    public Func<string, string, bool>? Confirm { get; set; }
+    /// <summary>Raised with (title, message) when something needs a dialog, such as a failed export.</summary>
+    public event EventHandler<(string Title, string Message)>? MessageRequested;
+
     /// <summary>The Week tab's projection. Constructed once and held for the app's lifetime.</summary>
     public TimetableViewModel Timetable { get; }
 
@@ -585,6 +614,9 @@ public partial class MainViewModel : ObservableObject
             _pendingStopwatch = null;
             PendingDeleteLabel = null;
             OnPropertyChanged(nameof(HasPendingDelete));
+            // A stopwatch removed while running ends its run here, once the removal is final.
+            if (gone.RunningSince is { } since) AddLog(TimeLogEntry.StopwatchKind, gone.Label, since, _scheduler.Now);
+            gone.RunEnded -= OnStopwatchRunEnded;
             StopwatchesChanged?.Invoke(this, EventArgs.Empty);   // disk now reflects the removal
             return;
         }
@@ -670,7 +702,7 @@ public partial class MainViewModel : ObservableObject
     /// <summary>Replace the stopwatch list with persisted records (launch).</summary>
     public void LoadStopwatches(IEnumerable<StopwatchRecord> records)
     {
-        foreach (var sw in Stopwatches) sw.Changed -= OnStopwatchChanged;
+        foreach (var sw in Stopwatches) { sw.Changed -= OnStopwatchChanged; sw.RunEnded -= OnStopwatchRunEnded; }
         Stopwatches.Clear();
         foreach (var r in records)
             Attach(StopwatchItemViewModel.FromRecord(r, () => _scheduler.Now));
@@ -689,7 +721,13 @@ public partial class MainViewModel : ObservableObject
     private void Attach(StopwatchItemViewModel sw)
     {
         sw.Changed += OnStopwatchChanged;
+        sw.RunEnded += OnStopwatchRunEnded;
         Stopwatches.Add(sw);
+    }
+
+    private void OnStopwatchRunEnded(object? sender, (DateTimeOffset Start, DateTimeOffset End) run)
+    {
+        if (sender is StopwatchItemViewModel sw) AddLog(TimeLogEntry.StopwatchKind, sw.Label, run.Start, run.End);
     }
 
     private void OnStopwatchChanged(object? sender, EventArgs e)
@@ -751,6 +789,81 @@ public partial class MainViewModel : ObservableObject
         var running = Stopwatches.Where(s => s.IsRunning).ToList();
         foreach (var sw in running) sw.StartPause();
         if (running.Count > 0) Announce("All stopwatches paused");
+    }
+
+    // ───────────────────────────── Time log ─────────────────────────────
+
+    public void LoadTimeLog(IEnumerable<TimeLogEntry> entries)
+    {
+        _timeLog.Clear();
+        _timeLog.AddRange(entries.OrderBy(e => e.StartedAt));
+        RebuildRecentLog();
+    }
+
+    public List<TimeLogEntry> TimeLogRecords() => _timeLog.ToList();
+
+    /// <summary>A countdown reached zero: log it with its full duration, ending now.</summary>
+    public void LogTimerCompleted(TimerItem item)
+    {
+        if (item.TriggerType != TriggerType.Countdown) return;
+        var end = _scheduler.Now;
+        var duration = item.OriginalDuration > TimeSpan.Zero ? item.OriginalDuration : TimeSpan.Zero;
+        AddLog(TimeLogEntry.TimerKind, item.Label, end - duration, end);
+    }
+
+    private void AddLog(string kind, string? label, DateTimeOffset start, DateTimeOffset end)
+    {
+        if (end < start) end = start;
+        var duration = end - start;
+        if (duration < TimeSpan.FromSeconds(1)) return;   // a start/pause double-click is not worth a row
+        _timeLog.Add(new TimeLogEntry
+        {
+            Kind = kind,
+            Label = string.IsNullOrWhiteSpace(label) ? null : label.Trim(),
+            StartedAt = start,
+            EndedAt = end,
+            DurationMs = (long)duration.TotalMilliseconds,
+        });
+        if (_timeLog.Count > TidsroData.MaxTimeLog) _timeLog.RemoveRange(0, _timeLog.Count - TidsroData.MaxTimeLog);
+        RebuildRecentLog();
+        TimeLogChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void RebuildRecentLog()
+    {
+        RecentLog.Clear();
+        foreach (var e in Enumerable.Reverse(_timeLog).Take(RecentLogRows)) RecentLog.Add(new TimeLogRow(e));
+        OnPropertyChanged(nameof(HasTimeLog));
+        OnPropertyChanged(nameof(TimeLogSummary));
+    }
+
+    [RelayCommand]
+    private void ExportTimeLog()
+    {
+        if (_timeLog.Count == 0) { Announce("The time log is empty"); return; }
+        var path = FileDialogs?.AskCsvSavePath($"tidsro-time-log-{_scheduler.Now.ToLocalTime():yyyy-MM-dd}.csv");
+        if (path is null) return;   // cancelled
+        try
+        {
+            TimeLogCsv.Write(path, _timeLog);
+            Announce($"Exported {_timeLog.Count} log entries");
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+        {
+            MessageRequested?.Invoke(this, ("Couldn't export", $"Tidsro couldn't write the time log to that file. {ex.Message}"));
+        }
+    }
+
+    [RelayCommand]
+    private void ClearTimeLog()
+    {
+        if (_timeLog.Count == 0) return;
+        if (Confirm is { } ask && !ask("Clear the time log?",
+                $"Delete all {_timeLog.Count} logged times? Export them first if you want to keep a copy.")) return;
+        _timeLog.Clear();
+        RebuildRecentLog();
+        TimeLogChanged?.Invoke(this, EventArgs.Empty);
+        Announce("Time log cleared");
     }
 
     // ───────────────────────────── Saved labels ─────────────────────────────

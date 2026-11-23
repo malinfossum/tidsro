@@ -13,6 +13,10 @@ All notable changes to Tidsro are documented here. Dates are ISO 8601.
   appear as chips on Quick timers, Schedule and Stopwatch: one click fills the timer or alarm
   label, or starts a new stopwatch with that label. The x on a chip forgets it.
 - **Rename a running timer**: a countdown's label can now be edited in place on its row.
+- **Time log**: every stopwatch run (logged on pause, reset or removal) and every finished countdown
+  is recorded with its label, date, start, end and duration. The Stopwatch tab shows the recent
+  entries and today's total; **Export CSV…** saves the whole log for a spreadsheet, and **Clear**
+  empties it after asking. The log is saved with your data and kept to the newest 5,000 entries.
 
 ### Changed
 - The minimum window width is 420px (was 380), so the four tab headers fit on one row.

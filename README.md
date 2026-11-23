@@ -96,9 +96,19 @@ The **Stopwatch** tab runs as many count-up stopwatches as you like, side by sid
 - Stopwatches are saved. One left running keeps counting while Tidsro is closed, so it reads the real elapsed time when you come back.
 
 <p align="center">
-  <img src="docs/screenshots/stopwatch.png" alt="The Stopwatch tab: a label field with a star button and a gold Start button, saved-label chips (Laundry, Deep work, Tea, Stand-up) under the caption 'Saved labels — one click starts a stopwatch', Start all and Pause all buttons, and three stopwatches: Deep work at 47:15.3 and Tea at 03:44.3, both running with gold outlines and dots, and Reading paused at 21:26.4 with a play button." width="560"><br>
-  <em>Several labelled stopwatches at once, two running and one paused.</em>
+  <img src="docs/screenshots/stopwatch.png" alt="The Stopwatch tab: a label field with a star button and a gold Start button, saved-label chips (Laundry, Deep work, Tea, Stand-up), Start all and Pause all buttons, three stopwatches (Deep work at 47:15 and Tea at 03:44, both running with gold outlines and dots, and Reading paused at 21:26), and below them a Time log card reading '4 entries, 1:32:00 today' with Export CSV and Clear buttons and four logged entries: Stand-up 0:14:00, Reading 0:21:00, a Tea timer 0:05:00 and Deep work 0:52:00, each with its date and start and end times." width="560"><br>
+  <em>Several labelled stopwatches at once, and the time log of what has already been timed.</em>
 </p>
+
+### Time log
+
+Every stretch of timed work is written to a **Time log**, shown at the bottom of the Stopwatch tab:
+
+- A **stopwatch run** is logged when you pause it, reset it while it is running, or remove it while it is running (once the Undo window has passed). Pausing and resuming three times gives three entries, each with its own start and end.
+- A **countdown timer** is logged when it finishes, with its full duration. Cancelled timers and alarms are not logged.
+- Each entry keeps its label, date, start and end time, and duration. Runs shorter than a second are skipped.
+
+The card lists the 25 most recent entries with today's total. **Export CSV…** saves the whole log as a `.csv` file that opens in Excel or any spreadsheet. Its columns are Type, Label, Date, Start, End, Duration and Duration (seconds), in your local time. **Clear** empties the log after asking. Tidsro keeps the newest 5,000 entries, and the log is included in **Export data…** backups.
 
 ### Saved labels
 
