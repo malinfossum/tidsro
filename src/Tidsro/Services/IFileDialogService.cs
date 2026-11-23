@@ -9,4 +9,7 @@ public interface IFileDialogService
 
     /// <summary>Pick a .wav to use as the custom alarm sound.</summary>
     public string? AskWavPath();
+
+    /// <summary>Pick where to save the time log as CSV.</summary>
+    public string? AskCsvSavePath(string suggestedFileName);
 }

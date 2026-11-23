@@ -19,8 +19,8 @@ and `LogService`. That copy reads a fixture schedule from its own scratch folder
 Tidsro can stay running throughout and never has its data or its launch-at-startup registry value
 touched. Both are hashed before and after, and the run fails loudly if either moved.
 
-Shoots `week.png`, `schedule.png` and `alarm-dialog.png`. `main-window.png` and `completion-card.png`
-are still hand-shot. They need a live countdown and a fired card, which this doesn't drive yet.
+Shoots `week.png`, `schedule.png`, `main-window.png`, `stopwatch.png` and `alarm-dialog.png`.
+`completion-card.png` is still hand-shot. It needs a fired card, which this doesn't drive yet.
 
 Needs Windows PowerShell for `UIAutomationClient`; started from pwsh 7 it re-launches itself there.
 

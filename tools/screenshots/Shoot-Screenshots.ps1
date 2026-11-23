@@ -9,8 +9,8 @@
     Tidsro can stay running throughout: the throwaway copy has its own single-instance mutex and its
     own data path, so it never touches %AppData%\Tidsro or the launch-at-startup registry value.
 
-    Shoots week.png, schedule.png and alarm-dialog.png. main-window.png and completion-card.png are
-    still hand-shot - they need a live countdown and a fired card, which this doesn't drive yet.
+    Shoots week.png, schedule.png, main-window.png, stopwatch.png and alarm-dialog.png.
+    completion-card.png is still hand-shot - it needs a fired card, which this doesn't drive yet.
 
 .PARAMETER OutDir
     Where to write the PNGs. Defaults to docs/screenshots.
@@ -189,6 +189,39 @@ $SchedulePlan = @(
     @{ Hour = 11; Minute = 30; Days = 'MonTueWedThuFri'; Label = 'Lunch';           Sound = 1; Warn = $false }
 )
 
+# Fictional saved labels, shown as one-click chips on Quick timers, Schedule and Stopwatch.
+$SavedLabels = @('Laundry', 'Deep work', 'Tea', 'Stand-up')
+
+# Stopwatches for the Stopwatch shot: two running (StartedAt in the past), one paused with banked time.
+function Get-StopwatchPlan {
+    $now = Get-Date
+    @(
+        [ordered]@{ Id = [guid]::NewGuid().ToString(); Label = 'Deep work'; ElapsedMs = 0
+                    StartedAt = $now.AddMinutes(-47).AddSeconds(-12).ToString('yyyy-MM-ddTHH:mm:ss.fffzzz') }
+        [ordered]@{ Id = [guid]::NewGuid().ToString(); Label = 'Tea'; ElapsedMs = 0
+                    StartedAt = $now.AddMinutes(-3).AddSeconds(-41).ToString('yyyy-MM-ddTHH:mm:ss.fffzzz') }
+        [ordered]@{ Id = [guid]::NewGuid().ToString(); Label = 'Reading'; ElapsedMs = 1286400; StartedAt = $null }
+    )
+}
+
+# A fictional time log for the Stopwatch shot: earlier stopwatch runs and a finished timer.
+function Get-TimeLogPlan {
+    $today = (Get-Date).Date
+    $rows = @(
+        ,@('Stopwatch', 'Deep work', 8, 5, 52)
+        ,@('Timer',     'Tea',       9, 2, 5)
+        ,@('Stopwatch', 'Reading',   10, 10, 21)
+        ,@('Stopwatch', 'Stand-up',  11, 0, 14)
+    )
+    foreach ($r in $rows) {
+        $start = $today.AddHours($r[2]).AddMinutes($r[3])
+        $end = $start.AddMinutes($r[4])
+        [ordered]@{ Id = [guid]::NewGuid().ToString(); Kind = $r[0]; Label = $r[1]
+                    StartedAt = $start.ToString('yyyy-MM-ddTHH:mm:sszzz'); EndedAt = $end.ToString('yyyy-MM-ddTHH:mm:sszzz')
+                    DurationMs = [long]($r[4] * 60000) }
+    }
+}
+
 $DayFlags = @{ Mon = 1; Tue = 2; Wed = 4; Thu = 8; Fri = 16; Sat = 32; Sun = 64 }
 
 function ConvertTo-DayFlags {
@@ -216,7 +249,7 @@ function Get-NextFireAt {
 # Enums persist as INTEGERS. Writing a string enum name here makes Load throw, quarantine the file
 # and open an empty app - which looks like the fixture was ignored.
 function Write-Fixture {
-    param($Plan, [int]$Tab, [int]$Width, [int]$Height)
+    param($Plan, [int]$Tab, [int]$Width, [int]$Height, $Stopwatches = @(), $TimeLog = @())
     $alarms = foreach ($a in $Plan) {
         $days = ConvertTo-DayFlags $a.Days
         [ordered]@{
@@ -243,9 +276,12 @@ function Write-Fixture {
             WindowTop       = 90.0
             WindowWidth     = [double]$Width
             WindowHeight    = [double]$Height
+            SavedLabels     = @($SavedLabels)
         }
         Alarms          = @()
         RecurringAlarms = @($alarms)
+        Stopwatches     = @($Stopwatches)
+        TimeLog         = @($TimeLog)
     }
     $dir = Join-Path $dataRoot 'Tidsro'
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
@@ -325,6 +361,13 @@ function Get-ScheduleAndDialogShots {
         Start-Sleep -Milliseconds 600
         Save-WindowImage -Handle $proc.MainWindowHandle -Out (Join-Path $OutDir 'schedule.png')
 
+        # Back to Quick timers: the hero countdown, the saved-label chips and the running row.
+        Select-Element (Get-Element $root 'Quick timers' $CT::TabItem)
+        Start-Sleep -Milliseconds 600
+        Save-WindowImage -Handle $proc.MainWindowHandle -Out (Join-Path $OutDir 'main-window.png')
+        Select-Element (Get-Element $root 'Schedule' $CT::TabItem)
+        Start-Sleep -Milliseconds 400
+
         Invoke-Element (Get-Element $root 'Edit alarm at 08:00' $CT::Button)
         $dialog = $null
         foreach ($i in 1..25) {
@@ -339,6 +382,15 @@ function Get-ScheduleAndDialogShots {
     } finally { Stop-Shoot $proc }
 }
 
+function Get-StopwatchShot {
+    Write-Fixture -Plan $SchedulePlan -Tab 3 -Width 629 -Height 1180 -Stopwatches (Get-StopwatchPlan) -TimeLog @(Get-TimeLogPlan)
+    $proc, $root = Start-Shoot
+    try {
+        Start-Sleep -Milliseconds 600
+        Save-WindowImage -Handle $proc.MainWindowHandle -Out (Join-Path $OutDir 'stopwatch.png')
+    } finally { Stop-Shoot $proc }
+}
+
 # ---------------------------------------------------------------------------- run
 
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
@@ -350,6 +402,7 @@ Build-ShootCopy
 Write-Host 'shooting...'
 Get-WeekShot
 Get-ScheduleAndDialogShots
+Get-StopwatchShot
 
 # The rig is meant to be provably harmless to a running install - say so rather than assume it.
 $after = if (Test-Path $liveData) { (Get-FileHash $liveData).Hash } else { $null }

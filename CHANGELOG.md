@@ -2,6 +2,25 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
+## [Unreleased]
+
+### Added
+- **Stopwatch tab**: run as many count-up stopwatches as you like, side by side, each with
+  start/pause, reset and remove (with Undo). Every stopwatch has its own label, editable in place.
+  **Start all** and **Pause all** act on the whole list. Stopwatches are saved, and a running one
+  keeps counting across a restart.
+- **Saved labels**: press the star beside any label field to save what you typed. Saved labels
+  appear as chips on Quick timers, Schedule and Stopwatch: one click fills the timer or alarm
+  label, or starts a new stopwatch with that label. The x on a chip forgets it.
+- **Rename a running timer**: a countdown's label can now be edited in place on its row.
+- **Time log**: every stopwatch run (logged on pause, reset or removal) and every finished countdown
+  is recorded with its label, date, start, end and duration. The Stopwatch tab shows the recent
+  entries and today's total; **Export CSV…** saves the whole log for a spreadsheet, and **Clear**
+  empties it after asking. The log is saved with your data and kept to the newest 5,000 entries.
+
+### Changed
+- The minimum window width is 420px (was 380), so the four tab headers fit on one row.
+
 ## [2.6.2] - 2026-11-19
 
 ### Fixed

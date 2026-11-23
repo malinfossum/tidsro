@@ -1653,7 +1653,7 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public void Ctrl_tab_cycles_through_three_tabs()
+    public void Ctrl_tab_cycles_through_four_tabs()
     {
         var clock = new FakeClock { Now = new DateTimeOffset(2026, 1, 1, 8, 0, 0, TimeSpan.Zero) };
         var vm = new MainViewModel(new SchedulerService(clock), new FakeSoundService(), SoundChoice.None, () => false);
@@ -1663,6 +1663,8 @@ public class MainViewModelTests
         Assert.Equal(1, vm.SelectedTabIndex);
         vm.AdvanceTabCommand.Execute(null);
         Assert.Equal(2, vm.SelectedTabIndex);
+        vm.AdvanceTabCommand.Execute(null);
+        Assert.Equal(3, vm.SelectedTabIndex);   // Stopwatch
         vm.AdvanceTabCommand.Execute(null);
         Assert.Equal(0, vm.SelectedTabIndex);
     }

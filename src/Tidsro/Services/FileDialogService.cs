@@ -41,6 +41,19 @@ public sealed class FileDialogService : IFileDialogService
         return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
 
+    public string? AskCsvSavePath(string suggestedFileName)
+    {
+        var dialog = new SaveFileDialog
+        {
+            FileName = suggestedFileName,
+            DefaultExt = ".csv",
+            Filter = "CSV spreadsheet (*.csv)|*.csv|All files (*.*)|*.*",
+            InitialDirectory = Documents,
+            OverwritePrompt = true,
+        };
+        return dialog.ShowDialog() == true ? dialog.FileName : null;
+    }
+
     public string? AskWavPath()
     {
         var dialog = new OpenFileDialog

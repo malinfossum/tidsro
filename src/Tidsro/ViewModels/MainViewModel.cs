@@ -43,6 +43,55 @@ public partial class MainViewModel : ObservableObject
 
     public ObservableCollection<AlarmItemViewModel> Alarms { get; } = new();
 
+    /// <summary>The Stopwatch tab's stopwatches, in the order they were added.</summary>
+    public ObservableCollection<StopwatchItemViewModel> Stopwatches { get; } = new();
+
+    /// <summary>Labels saved for one-click reuse. Shared by every tab's label field.</summary>
+    public ObservableCollection<string> SavedLabels { get; } = new();
+
+    public bool HasSavedLabels => SavedLabels.Count > 0;
+    public bool IsStopwatchListEmpty => Stopwatches.Count == 0;
+    public bool AnyStopwatchRunning => Stopwatches.Any(s => s.IsRunning);
+
+    [ObservableProperty] private string _stopwatchLabel = "";
+
+    /// <summary>Raised when the stopwatch set or one stopwatch's state changes, so the App persists.</summary>
+    public event EventHandler? StopwatchesChanged;
+    /// <summary>Raised when the saved-label list changes, so the App persists it into settings.</summary>
+    public event EventHandler? SavedLabelsChanged;
+
+    private StopwatchItemViewModel? _pendingStopwatch;
+    private int _pendingStopwatchIndex;
+
+    // ---- time log
+    private readonly List<TimeLogEntry> _timeLog = new();
+    private const int RecentLogRows = 25;
+
+    /// <summary>The newest log entries, newest first, for the Stopwatch tab's Time log card.</summary>
+    public ObservableCollection<TimeLogRow> RecentLog { get; } = new();
+    public bool HasTimeLog => _timeLog.Count > 0;
+    public string TimeLogSummary
+    {
+        get
+        {
+            var today = _scheduler.Now.ToLocalTime().Date;
+            var todayTotal = _timeLog.Where(e => e.StartedAt.ToLocalTime().Date == today)
+                                     .Aggregate(TimeSpan.Zero, (acc, e) => acc + e.Duration);
+            var n = _timeLog.Count;
+            return $"{n} {(n == 1 ? "entry" : "entries")} · {TimeLogCsv.FormatDuration(todayTotal)} today";
+        }
+    }
+
+    /// <summary>Raised when the time log changes, so the App persists it.</summary>
+    public event EventHandler? TimeLogChanged;
+
+    /// <summary>Where Export CSV asks for a path. Set by the App; tests pass a fake.</summary>
+    public IFileDialogService? FileDialogs { get; set; }
+    /// <summary>Yes/no confirmation (title, message). Set by the App; null means "yes".</summary>
+    public Func<string, string, bool>? Confirm { get; set; }
+    /// <summary>Raised with (title, message) when something needs a dialog, such as a failed export.</summary>
+    public event EventHandler<(string Title, string Message)>? MessageRequested;
+
     /// <summary>The Week tab's projection. Constructed once and held for the app's lifetime.</summary>
     public TimetableViewModel Timetable { get; }
 
@@ -94,7 +143,7 @@ public partial class MainViewModel : ObservableObject
     private TimerItem? _pendingDelete;
     private TimeSpan? _pendingDeleteRemaining;   // non-null when the pending item is a cancelled countdown
     [ObservableProperty] private string? _pendingDeleteLabel;
-    public bool HasPendingDelete => _pendingDelete is not null;
+    public bool HasPendingDelete => _pendingDelete is not null || _pendingStopwatch is not null;
 
     /// <summary>Raised when the armed alarm set changes (add/edit/delete-commit) so the App persists.</summary>
     public event EventHandler? AlarmsChanged;
@@ -184,6 +233,12 @@ public partial class MainViewModel : ObservableObject
         // seconds. RebuildAgenda is the honest funnel: it runs on every path that changes what is
         // armed, including delete and undo. See RebuildAgenda.
         Timetable = new TimetableViewModel(scheduler);
+        SavedLabels.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasSavedLabels));
+        Stopwatches.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(IsStopwatchListEmpty));
+            OnPropertyChanged(nameof(AnyStopwatchRunning));
+        };
         Running.CollectionChanged += (_, e) =>
         {
             // A row removed from the collection is not the hero's, and MarkHero only walks what is
@@ -317,6 +372,14 @@ public partial class MainViewModel : ObservableObject
         if (!AgendaSignature().SetEquals(_agendaSignature)) RebuildAgenda();   // rebuilds the week too
 
         Timetable.RefreshForTick();
+        RefreshStopwatches();
+    }
+
+    /// <summary>Redraw every stopwatch's elapsed time. Cheap; the App calls it on a faster tick than
+    /// the scheduler's while any stopwatch is running, so the tenths read smoothly.</summary>
+    public void RefreshStopwatches()
+    {
+        foreach (var sw in Stopwatches) sw.Refresh();
     }
 
     // Add-only now: editing happens in the modal Edit-alarm dialog (see BeginEditAlarm / ApplyAlarmEdit).
@@ -503,6 +566,15 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void UndoDelete()
     {
+        if (_pendingStopwatch is { } sw)
+        {
+            Stopwatches.Insert(Math.Clamp(_pendingStopwatchIndex, 0, Stopwatches.Count), sw);
+            _pendingStopwatch = null;
+            PendingDeleteLabel = null;
+            OnPropertyChanged(nameof(HasPendingDelete));
+            Announce("Stopwatch restored");
+            return;
+        }
         if (_pendingDelete is not { } item) return;
         if (item.TriggerType == TriggerType.Countdown)
         {
@@ -536,6 +608,18 @@ public partial class MainViewModel : ObservableObject
     /// <summary>Finalise an outstanding delete: for alarms, it leaves disk now. Called on timeout, on quit, or before another action.</summary>
     public void CommitPendingDelete()
     {
+        if (_pendingStopwatch is { } gone)
+        {
+            gone.Changed -= OnStopwatchChanged;
+            _pendingStopwatch = null;
+            PendingDeleteLabel = null;
+            OnPropertyChanged(nameof(HasPendingDelete));
+            // A stopwatch removed while running ends its run here, once the removal is final.
+            if (gone.RunningSince is { } since) AddLog(TimeLogEntry.StopwatchKind, gone.Label, since, _scheduler.Now);
+            gone.RunEnded -= OnStopwatchRunEnded;
+            StopwatchesChanged?.Invoke(this, EventArgs.Empty);   // disk now reflects the removal
+            return;
+        }
         if (_pendingDelete is not { } item) return;
         var wasAlarm = item.TriggerType is TriggerType.ClockTime or TriggerType.Recurring;
         _pendingDelete = null;
@@ -611,5 +695,230 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(IsDayEmpty));
         Timetable.Rebuild();
         _agendaSignature = AgendaSignature();
+    }
+
+    // ───────────────────────────── Stopwatches ─────────────────────────────
+
+    /// <summary>Replace the stopwatch list with persisted records (launch).</summary>
+    public void LoadStopwatches(IEnumerable<StopwatchRecord> records)
+    {
+        foreach (var sw in Stopwatches) { sw.Changed -= OnStopwatchChanged; sw.RunEnded -= OnStopwatchRunEnded; }
+        Stopwatches.Clear();
+        foreach (var r in records)
+            Attach(StopwatchItemViewModel.FromRecord(r, () => _scheduler.Now));
+    }
+
+    /// <summary>The stopwatches as records to persist. One sitting in the undo window has not been
+    /// deleted yet, so it stays on disk until the delete commits.</summary>
+    public List<StopwatchRecord> StopwatchRecords()
+    {
+        var list = Stopwatches.Select(s => s.ToRecord()).ToList();
+        if (_pendingStopwatch is { } p)
+            list.Insert(Math.Clamp(_pendingStopwatchIndex, 0, list.Count), p.ToRecord());
+        return list;
+    }
+
+    private void Attach(StopwatchItemViewModel sw)
+    {
+        sw.Changed += OnStopwatchChanged;
+        sw.RunEnded += OnStopwatchRunEnded;
+        Stopwatches.Add(sw);
+    }
+
+    private void OnStopwatchRunEnded(object? sender, (DateTimeOffset Start, DateTimeOffset End) run)
+    {
+        if (sender is StopwatchItemViewModel sw) AddLog(TimeLogEntry.StopwatchKind, sw.Label, run.Start, run.End);
+    }
+
+    private void OnStopwatchChanged(object? sender, EventArgs e)
+    {
+        OnPropertyChanged(nameof(AnyStopwatchRunning));
+        StopwatchesChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Add a stopwatch labelled from the add field and start it at once.</summary>
+    [RelayCommand]
+    private void AddStopwatch()
+    {
+        StartNewStopwatch(StopwatchLabel);
+        StopwatchLabel = "";
+    }
+
+    /// <summary>One click on a saved label: a new stopwatch with that label, already running.</summary>
+    [RelayCommand]
+    private void StartStopwatchWithLabel(string? label) => StartNewStopwatch(label);
+
+    private void StartNewStopwatch(string? label)
+    {
+        CommitPendingDelete();
+        var clean = string.IsNullOrWhiteSpace(label) ? "" : CapitalizeFirst(label.Trim());
+        var sw = new StopwatchItemViewModel(() => _scheduler.Now, clean);
+        sw.StartPause();                       // started before Attach, so this raises no extra save
+        Attach(sw);
+        OnPropertyChanged(nameof(AnyStopwatchRunning));
+        StopwatchesChanged?.Invoke(this, EventArgs.Empty);
+        Announce(clean.Length == 0 ? "Stopwatch started" : $"Stopwatch started · {clean}");
+    }
+
+    [RelayCommand]
+    private void RemoveStopwatch(StopwatchItemViewModel? sw)
+    {
+        if (sw is null) return;
+        CommitPendingDelete();                 // only one outstanding undo at a time
+        var index = Stopwatches.IndexOf(sw);
+        if (index < 0) return;
+        Stopwatches.RemoveAt(index);
+        _pendingStopwatch = sw;
+        _pendingStopwatchIndex = index;
+        PendingDeleteLabel = $"Stopwatch removed{(sw.HasLabel ? $" · {sw.Label.Trim()}" : "")}";
+        OnPropertyChanged(nameof(HasPendingDelete));
+        Announce("Stopwatch removed");
+    }
+
+    [RelayCommand]
+    private void StartAllStopwatches()
+    {
+        var stopped = Stopwatches.Where(s => !s.IsRunning).ToList();
+        foreach (var sw in stopped) sw.StartPause();
+        if (stopped.Count > 0) Announce("All stopwatches running");
+    }
+
+    [RelayCommand]
+    private void PauseAllStopwatches()
+    {
+        var running = Stopwatches.Where(s => s.IsRunning).ToList();
+        foreach (var sw in running) sw.StartPause();
+        if (running.Count > 0) Announce("All stopwatches paused");
+    }
+
+    // ───────────────────────────── Time log ─────────────────────────────
+
+    public void LoadTimeLog(IEnumerable<TimeLogEntry> entries)
+    {
+        _timeLog.Clear();
+        _timeLog.AddRange(entries.OrderBy(e => e.StartedAt));
+        RebuildRecentLog();
+    }
+
+    public List<TimeLogEntry> TimeLogRecords() => _timeLog.ToList();
+
+    /// <summary>A countdown reached zero: log it with its full duration, ending now.</summary>
+    public void LogTimerCompleted(TimerItem item)
+    {
+        if (item.TriggerType != TriggerType.Countdown) return;
+        var end = _scheduler.Now;
+        var duration = item.OriginalDuration > TimeSpan.Zero ? item.OriginalDuration : TimeSpan.Zero;
+        AddLog(TimeLogEntry.TimerKind, item.Label, end - duration, end);
+    }
+
+    private void AddLog(string kind, string? label, DateTimeOffset start, DateTimeOffset end)
+    {
+        if (end < start) end = start;
+        var duration = end - start;
+        if (duration < TimeSpan.FromSeconds(1)) return;   // a start/pause double-click is not worth a row
+        _timeLog.Add(new TimeLogEntry
+        {
+            Kind = kind,
+            Label = string.IsNullOrWhiteSpace(label) ? null : label.Trim(),
+            StartedAt = start,
+            EndedAt = end,
+            DurationMs = (long)duration.TotalMilliseconds,
+        });
+        if (_timeLog.Count > TidsroData.MaxTimeLog) _timeLog.RemoveRange(0, _timeLog.Count - TidsroData.MaxTimeLog);
+        RebuildRecentLog();
+        TimeLogChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void RebuildRecentLog()
+    {
+        RecentLog.Clear();
+        foreach (var e in Enumerable.Reverse(_timeLog).Take(RecentLogRows)) RecentLog.Add(new TimeLogRow(e));
+        OnPropertyChanged(nameof(HasTimeLog));
+        OnPropertyChanged(nameof(TimeLogSummary));
+    }
+
+    [RelayCommand]
+    private void ExportTimeLog()
+    {
+        if (_timeLog.Count == 0) { Announce("The time log is empty"); return; }
+        var path = FileDialogs?.AskCsvSavePath($"tidsro-time-log-{_scheduler.Now.ToLocalTime():yyyy-MM-dd}.csv");
+        if (path is null) return;   // cancelled
+        try
+        {
+            TimeLogCsv.Write(path, _timeLog);
+            Announce($"Exported {_timeLog.Count} log entries");
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+        {
+            MessageRequested?.Invoke(this, ("Couldn't export", $"Tidsro couldn't write the time log to that file. {ex.Message}"));
+        }
+    }
+
+    [RelayCommand]
+    private void ClearTimeLog()
+    {
+        if (_timeLog.Count == 0) return;
+        if (Confirm is { } ask && !ask("Clear the time log?",
+                $"Delete all {_timeLog.Count} logged times? Export them first if you want to keep a copy.")) return;
+        _timeLog.Clear();
+        RebuildRecentLog();
+        TimeLogChanged?.Invoke(this, EventArgs.Empty);
+        Announce("Time log cleared");
+    }
+
+    // ───────────────────────────── Saved labels ─────────────────────────────
+
+    public void LoadSavedLabels(IEnumerable<string> labels)
+    {
+        SavedLabels.Clear();
+        foreach (var l in AppSettings.NormaliseSavedLabels(labels)) SavedLabels.Add(l);
+    }
+
+    /// <summary>Save a label for one-click reuse. Blank or already-saved text is a quiet no-op.</summary>
+    [RelayCommand]
+    private void SaveLabel(string? label)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            Announce("Type a label first, then save it");
+            return;
+        }
+        var clean = CapitalizeFirst(label.Trim());
+        if (clean.Length > AppSettings.MaxSavedLabelLength) clean = clean[..AppSettings.MaxSavedLabelLength];
+        if (SavedLabels.Any(l => string.Equals(l, clean, StringComparison.OrdinalIgnoreCase)))
+        {
+            Announce($"{clean} is already saved");
+            return;
+        }
+        if (SavedLabels.Count >= AppSettings.MaxSavedLabels)
+        {
+            Announce($"You can save up to {AppSettings.MaxSavedLabels} labels — remove one first");
+            return;
+        }
+        SavedLabels.Add(clean);
+        SavedLabelsChanged?.Invoke(this, EventArgs.Empty);
+        Announce($"Label saved · {clean}");
+    }
+
+    [RelayCommand]
+    private void RemoveSavedLabel(string? label)
+    {
+        if (label is null || !SavedLabels.Remove(label)) return;
+        SavedLabelsChanged?.Invoke(this, EventArgs.Empty);
+        Announce($"Saved label removed · {label}");
+    }
+
+    /// <summary>One click on a saved label in Quick timers: it becomes the next timer's label.</summary>
+    [RelayCommand]
+    private void UseLabelForTimer(string? label)
+    {
+        if (label is not null) Label = label;
+    }
+
+    /// <summary>One click on a saved label in Schedule: it becomes the new alarm's label.</summary>
+    [RelayCommand]
+    private void UseLabelForAlarm(string? label)
+    {
+        if (label is not null) AlarmLabel = label;
     }
 }

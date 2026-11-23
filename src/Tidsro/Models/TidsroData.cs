@@ -15,6 +15,16 @@ public sealed class TidsroData
 
     public List<RecurringAlarmRecord> RecurringAlarms { get; set; } = new();
 
+    /// <summary>Stopwatches, in display order. Optional: older files have no key and load as none.</summary>
+    public List<StopwatchRecord> Stopwatches { get; set; } = new();
+
+    private const int MaxStopwatches = 100;
+
+    /// <summary>Logged stopwatch runs and finished timers, oldest first. Optional, like Stopwatches.</summary>
+    public List<TimeLogEntry> TimeLog { get; set; } = new();
+
+    public const int MaxTimeLog = 5000;
+
     public static TidsroData Defaults() => new() { Settings = AppSettings.Defaults() };
 
     /// <summary>Harden untrusted input loaded from disk: sanitise settings, drop unusable alarms, normalise labels.</summary>
@@ -74,12 +84,54 @@ public sealed class TidsroData
             });
         }
 
+        var swSeen = new HashSet<Guid>();
+        var stopwatches = new List<StopwatchRecord>();
+        foreach (var s in Stopwatches ?? new List<StopwatchRecord>())
+        {
+            if (s is null) continue;
+            if (stopwatches.Count >= MaxStopwatches) break;
+            if (!swSeen.Add(s.Id)) continue;                   // duplicate id -> keep the first only
+            var started = s.StartedAt;
+            // A start time that is not a sane instant would make elapsed nonsense: stop it instead.
+            if (started is { } st && (st.UtcDateTime.Year < 2000 || st.UtcDateTime.Year > 9000)) started = null;
+            stopwatches.Add(new StopwatchRecord
+            {
+                Id = s.Id,
+                Label = NormaliseLabel(s.Label),
+                ElapsedMs = Math.Clamp(s.ElapsedMs, 0, (long)TimeSpan.FromDays(3650).TotalMilliseconds),
+                StartedAt = started,
+            });
+        }
+
+        var logSeen = new HashSet<Guid>();
+        var log = new List<TimeLogEntry>();
+        foreach (var e in TimeLog ?? new List<TimeLogEntry>())
+        {
+            if (e is null) continue;
+            if (e.StartedAt == default || e.EndedAt < e.StartedAt) continue;
+            if (e.StartedAt.UtcDateTime.Year < 2000 || e.EndedAt.UtcDateTime.Year > 9000) continue;
+            if (!logSeen.Add(e.Id)) continue;
+            log.Add(new TimeLogEntry
+            {
+                Id = e.Id,
+                Kind = e.Kind == TimeLogEntry.TimerKind ? TimeLogEntry.TimerKind : TimeLogEntry.StopwatchKind,
+                Label = NormaliseLabel(e.Label),
+                StartedAt = e.StartedAt,
+                EndedAt = e.EndedAt,
+                DurationMs = Math.Clamp(e.DurationMs, 0, (long)TimeSpan.FromDays(3650).TotalMilliseconds),
+            });
+        }
+        log = log.OrderBy(e => e.StartedAt).ToList();
+        if (log.Count > MaxTimeLog) log = log.Skip(log.Count - MaxTimeLog).ToList();   // keep the newest
+
         return new TidsroData
         {
             SchemaVersion = CurrentSchema,
+            TimeLog = log,
             Settings = (Settings ?? AppSettings.Defaults()).Sanitized(),
             Alarms = alarms,
             RecurringAlarms = recurring,
+            Stopwatches = stopwatches,
         };
     }
 

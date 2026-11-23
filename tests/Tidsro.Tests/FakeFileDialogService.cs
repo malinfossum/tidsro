@@ -19,4 +19,11 @@ public sealed class FakeFileDialogService : IFileDialogService
     public string? AskOpenPath() => OpenPath;
 
     public string? AskWavPath() => WavPath;
+
+    public string? CsvPath { get; set; }
+    public string? AskCsvSavePath(string suggestedFileName)
+    {
+        LastSuggestedName = suggestedFileName;
+        return CsvPath;
+    }
 }

@@ -9,7 +9,7 @@ A calm, dark-mode-first desktop timer for Windows: countdown timers and clock-ti
 > **Tidsro** is Norwegian: *tid* (time) + *ro* (calm / peace), roughly *"calm time."* The name is the whole idea: a timer that's visible when you need it and invisible when you don't.
 
 <p align="center">
-  <img src="docs/screenshots/main-window.png" alt="Tidsro on the Quick timers tab: the running countdown shown large in its own card (29:42, done 19:52), preset buttons for 5, 30, and 60 minutes, fields for a custom duration and label with a sound picker, and two more timers stacked below. The surfaces are near-black with a single gold accent." width="560">
+  <img src="docs/screenshots/main-window.png" alt="Tidsro on the Quick timers tab, one of four tabs (Quick timers, Schedule, Week, Stopwatch): the running countdown shown large in its own card (04:59, done 14:03, Laundry done), preset buttons for 5, 30 and 60 minutes, fields for a custom duration and a label with a star button to save the label, a row of saved-label chips (Laundry, Deep work, Tea, Stand-up), a sound picker, and the running timer's row below with its editable label. The surfaces are near-black with a single gold accent." width="560">
 </p>
 
 ## Who it's for
@@ -20,7 +20,7 @@ Anyone who works or studies at a computer and wants to hold their focus through 
 
 ## Status
 
-**Shipped, with versioned [releases](https://github.com/malinfossum/tidsro/releases/latest).** Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms**. An alarm fires once at an HH:MM time, or repeats on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms can be **switched off without deleting** (kept and parked at the bottom until switched back on), edited in a dialog, and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**, you can bring **your own .wav** as an extra sound alongside the six built-in chimes, and your alarms and settings can be **exported to a file and imported back**. A **Week** tab lays the repeating alarms out as a timetable, where an alarm given an optional **end time** is drawn as a block at its real length.
+**Shipped, with versioned [releases](https://github.com/malinfossum/tidsro/releases/latest).** Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms**. An alarm fires once at an HH:MM time, or repeats on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms can be **switched off without deleting** (kept and parked at the bottom until switched back on), edited in a dialog, and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**, you can bring **your own .wav** as an extra sound alongside the six built-in chimes, and your alarms and settings can be **exported to a file and imported back**. A **Week** tab lays the repeating alarms out as a timetable, where an alarm given an optional **end time** is drawn as a block at its real length. A **Stopwatch** tab runs any number of labelled count-up stopwatches, and labels you use often can be **saved** and reused in one click on every tab.
 
 See the [changelog](CHANGELOG.md) for what's new in each release.
 
@@ -42,9 +42,9 @@ Both builds are self-contained: they run on any 64-bit Windows PC with no .NET r
 
 Launching Tidsro opens its window. It remembers where you last placed it and how big it was. Closing the window tucks Tidsro back into the system tray, where it keeps running until you choose **Quit** from the tray menu; left-click the tray icon any time to reopen it. When Tidsro is started automatically with Windows, it stays quietly in the tray.
 
-- Pick a preset (5 / 30 / 60 min) or type a custom duration: `25` (minutes), `5:00` (mm:ss), or `1:30:00` (h:mm:ss). Add an optional **label** to tell timers apart. Invalid input shows a calm inline message.
+- Pick a preset (5 / 30 / 60 min) or type a custom duration: `25` (minutes), `5:00` (mm:ss), or `1:30:00` (h:mm:ss). Add an optional **label** to tell timers apart, or click a **saved label** chip to fill it in one click (see [Saved labels](#saved-labels)). Invalid input shows a calm inline message.
 - Choose a **sound** for the next timer from the dropdown. **▶** previews it. It starts from your default sound and applies to both presets and custom timers. **My sound** appears in the list once you have chosen your own .wav in Settings.
-- Multiple countdowns can run at once, stacked soonest-first; each shows a live mm:ss (or h:mm:ss) countdown with **pause/resume, reset** (back to the full duration), and cancel. Cancelling drops a brief **Undo** bar at the bottom. Paused timers dim and drop below the active ones; resetting while paused keeps the timer stopped at the start.
+- Multiple countdowns can run at once, stacked soonest-first; each shows a live mm:ss (or h:mm:ss) countdown with **pause/resume, reset** (back to the full duration), and cancel. Cancelling drops a brief **Undo** bar at the bottom. Paused timers dim and drop below the active ones; resetting while paused keeps the timer stopped at the start. A running timer's label can be edited right on its row, and the card shown when it finishes uses the label as it reads then.
 - When a timer finishes, a calm card appears in the bottom-right corner. It does not steal focus.
   - **+5** arms a new 5-minute countdown. **Restart** re-runs the original duration. **Dismiss** closes the card.
   - Press **Ctrl+Alt+T** to bring the latest card into keyboard focus; Tab reaches the buttons; Enter activates; focus returns to your previous app on dismiss.
@@ -58,7 +58,7 @@ Launching Tidsro opens its window. It remembers where you last placed it and how
 The **Schedule** is its own tab next to Quick timers, and a compact strip below the tab content shows whatever is counting down, whichever tab you're on. Type a time (`14:30`, or 24-hour shorthand like `9`, `930`, or `1430`), an optional label, choose a sound, set **Repeat** (Once, or a weekday set), and click **Add** (or press **Enter**). The alarm is saved immediately. Turn on **Warn me 5 minutes before** for a quiet heads-up ahead of the alarm.
 
 <p align="center">
-  <img src="docs/screenshots/schedule.png" alt="The Schedule tab: a form for adding an alarm (time, label, sound, repeat, and a pre-alarm warning toggle), three alarms below with gold on/off toggles (08:00 on weekdays, 10:30 on Thursday, 11:30 on weekdays), and a slim strip along the bottom showing a timer still counting down on the other tab (Running 05:00, Laundry done)." width="560"><br>
+  <img src="docs/screenshots/schedule.png" alt="The Schedule tab: a form for adding an alarm (time, label with a star button to save it, saved-label chips, sound, repeat, and a pre-alarm warning toggle), three alarms below with gold on/off toggles (08:00 on weekdays, 10:30 on Thursday, 11:30 on weekdays), and a slim strip along the bottom showing a timer still counting down on the other tab (Running 05:00, Laundry done)." width="560"><br>
   <em>The Schedule, and the strip along the bottom keeping a running timer in view.</em>
 </p>
 
@@ -85,6 +85,40 @@ The **Week** tab lays your repeating alarms out as a timetable: a day-by-day age
   <img src="docs/screenshots/week.png" alt="The Week tab: five columns from Monday to Friday with Thursday marked as today by a gold dot and gold heading, rows of repeating alarms from 07:30 Morning walk downwards with their times in a left-hand gutter. A Lecture block on Monday, Wednesday and Friday and a Focus block on Tuesday and Thursday each run as a vertical stripe down the rows they cover; on Tuesday a Lab sits beside the Focus block in its own lane, and Thursday's block is marked in gold as the one happening now." width="560"><br>
   <em>The Week tab: blocks drawn at their length, and no columns spent on a free weekend.</em>
 </p>
+
+### Stopwatch
+
+The **Stopwatch** tab runs as many count-up stopwatches as you like, side by side. Type an optional label and click **Start** (or press **Enter**) to add one; it starts counting at once, in minutes, seconds and tenths.
+
+- Each stopwatch has **start/pause**, **reset** (back to zero; a running one keeps going from zero), and **remove**. Removing drops the usual **Undo** bar at the bottom.
+- **Start all** and **Pause all** act on the whole list. A running stopwatch has a gold outline and dot.
+- The label on each stopwatch is edited right on its card. Running countdown timers on Quick timers can be renamed the same way.
+- Stopwatches are saved. One left running keeps counting while Tidsro is closed, so it reads the real elapsed time when you come back.
+
+<p align="center">
+  <img src="docs/screenshots/stopwatch.png" alt="The Stopwatch tab: a label field with a star button and a gold Start button, saved-label chips (Laundry, Deep work, Tea, Stand-up), Start all and Pause all buttons, three stopwatches (Deep work at 47:15 and Tea at 03:44, both running with gold outlines and dots, and Reading paused at 21:26), and below them a Time log card reading '4 entries, 1:32:00 today' with Export CSV and Clear buttons and four logged entries: Stand-up 0:14:00, Reading 0:21:00, a Tea timer 0:05:00 and Deep work 0:52:00, each with its date and start and end times." width="560"><br>
+  <em>Several labelled stopwatches at once, and the time log of what has already been timed.</em>
+</p>
+
+### Time log
+
+Every stretch of timed work is written to a **Time log**, shown at the bottom of the Stopwatch tab:
+
+- A **stopwatch run** is logged when you pause it, reset it while it is running, or remove it while it is running (once the Undo window has passed). Pausing and resuming three times gives three entries, each with its own start and end.
+- A **countdown timer** is logged when it finishes, with its full duration. Cancelled timers and alarms are not logged.
+- Each entry keeps its label, date, start and end time, and duration. Runs shorter than a second are skipped.
+
+The card lists the 25 most recent entries with today's total. **Export CSV…** saves the whole log as a `.csv` file that opens in Excel or any spreadsheet. Its columns are Type, Label, Date, Start, End, Duration and Duration (seconds), in your local time. **Clear** empties the log after asking. Tidsro keeps the newest 5,000 entries, and the log is included in **Export data…** backups.
+
+### Saved labels
+
+Click the **☆** beside any label field (Quick timers, Schedule, Stopwatch, or a stopwatch's own label) to save that label. Saved labels appear as chips under each tab's label field, and one click reuses them:
+
+- On **Quick timers** a chip fills the label for the next timer.
+- On **Schedule** it fills the new alarm's label.
+- On **Stopwatch** it starts a new stopwatch with that label, already running.
+
+The **×** on a chip forgets it. Saving a label that is already saved (in any capitalisation) does nothing, and a screen reader is told so. You can keep up to 40 saved labels of up to 60 characters each. They are stored with your settings, so **Export data…** carries them, and an import that restores settings brings them back.
 
 ### Backup and restore
 

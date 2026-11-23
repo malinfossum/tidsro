@@ -203,9 +203,16 @@ public class TidsroDataTests
     }
 
     [Fact]
-    public void A_tab_index_past_the_last_tab_falls_back_to_the_first()
+    public void The_stopwatch_tab_index_survives_sanitising()
     {
         var settings = new AppSettings { SelectedTab = 3 }.Sanitized();
+        Assert.Equal(3, settings.SelectedTab);
+    }
+
+    [Fact]
+    public void A_tab_index_past_the_last_tab_falls_back_to_the_first()
+    {
+        var settings = new AppSettings { SelectedTab = AppSettings.TabCount }.Sanitized();
         Assert.Equal(0, settings.SelectedTab);
     }
 

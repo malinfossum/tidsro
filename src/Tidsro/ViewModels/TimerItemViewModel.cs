@@ -33,7 +33,19 @@ public partial class TimerItemViewModel : ObservableObject
         Refresh();
     }
 
-    public string? Label => Item.Label;
+    /// <summary>The timer's label, editable in place on its row. Whitespace-only clears it. Written
+    /// straight to the item, so the completion card shows the label as it reads when the timer fires.</summary>
+    public string? Label
+    {
+        get => Item.Label;
+        set
+        {
+            var next = string.IsNullOrWhiteSpace(value) ? null : value;
+            if (next == Item.Label) return;
+            Item.Label = next;
+            OnPropertyChanged();
+        }
+    }
     public bool HasSound => Item.Sound != SoundChoice.None;
     public string SoundTag => HasSound ? "sound" : "silent";
 
