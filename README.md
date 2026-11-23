@@ -20,7 +20,7 @@ Anyone who works or studies at a computer and wants to hold their focus through 
 
 ## Status
 
-**Shipped, with versioned [releases](https://github.com/malinfossum/tidsro/releases/latest).** Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms**. An alarm fires once at an HH:MM time, or repeats on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms can be **switched off without deleting** (kept and parked at the bottom until switched back on), edited in a dialog, and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**, you can bring **your own .wav** as an extra sound alongside the six built-in chimes, and your alarms and settings can be **exported to a file and imported back**. A **Week** tab lays the repeating alarms out as a timetable, where an alarm given an optional **end time** is drawn as a block at its real length.
+**Shipped, with versioned [releases](https://github.com/malinfossum/tidsro/releases/latest).** Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms**. An alarm fires once at an HH:MM time, or repeats on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms can be **switched off without deleting** (kept and parked at the bottom until switched back on), edited in a dialog, and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**, you can bring **your own .wav** as an extra sound alongside the six built-in chimes, and your alarms and settings can be **exported to a file and imported back**. A **Week** tab lays the repeating alarms out as a timetable, where an alarm given an optional **end time** is drawn as a block at its real length. A **Stopwatch** tab runs any number of labelled count-up stopwatches, and labels you use often can be **saved** and reused in one click on every tab.
 
 See the [changelog](CHANGELOG.md) for what's new in each release.
 
@@ -85,6 +85,25 @@ The **Week** tab lays your repeating alarms out as a timetable: a day-by-day age
   <img src="docs/screenshots/week.png" alt="The Week tab: five columns from Monday to Friday with Thursday marked as today by a gold dot and gold heading, rows of repeating alarms from 07:30 Morning walk downwards with their times in a left-hand gutter. A Lecture block on Monday, Wednesday and Friday and a Focus block on Tuesday and Thursday each run as a vertical stripe down the rows they cover; on Tuesday a Lab sits beside the Focus block in its own lane, and Thursday's block is marked in gold as the one happening now." width="560"><br>
   <em>The Week tab: blocks drawn at their length, and no columns spent on a free weekend.</em>
 </p>
+
+### Stopwatch
+
+The **Stopwatch** tab runs as many count-up stopwatches as you like, side by side. Type an optional label and click **Start** (or press **Enter**) to add one; it starts counting at once, in minutes, seconds and tenths.
+
+- Each stopwatch has **start/pause**, **reset** (back to zero; a running one keeps going from zero), and **remove**. Removing drops the usual **Undo** bar at the bottom.
+- **Start all** and **Pause all** act on the whole list. A running stopwatch has a gold outline and dot.
+- The label on each stopwatch is edited right on its card. Running countdown timers on Quick timers can be renamed the same way.
+- Stopwatches are saved. One left running keeps counting while Tidsro is closed, so it reads the real elapsed time when you come back.
+
+### Saved labels
+
+Click the **☆** beside any label field (Quick timers, Schedule, Stopwatch, or a stopwatch's own label) to save that label. Saved labels appear as chips under each tab's label field, and one click reuses them:
+
+- On **Quick timers** a chip fills the label for the next timer.
+- On **Schedule** it fills the new alarm's label.
+- On **Stopwatch** it starts a new stopwatch with that label, already running.
+
+The **×** on a chip forgets it. You can keep up to 40 saved labels, and they are stored with your settings.
 
 ### Backup and restore
 
