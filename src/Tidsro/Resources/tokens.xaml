@@ -494,8 +494,10 @@
   <Style x:Key="ShellTabItem" TargetType="TabItem">
     <Setter Property="FocusVisualStyle" Value="{StaticResource ActionFocusVisual}"/>
     <Setter Property="MinHeight" Value="34"/>
-    <Setter Property="Padding" Value="14,6"/>
-    <Setter Property="Margin" Value="0,0,4,0"/>
+    <!-- 12px, not 14: four headers (Quick timers, Schedule, Week, Stopwatch) have to share one row
+         at the 420px minimum window width. -->
+    <Setter Property="Padding" Value="12,6"/>
+    <Setter Property="Margin" Value="0,0,2,0"/>
     <Setter Property="Cursor" Value="Hand"/>
     <Setter Property="FontSize" Value="{StaticResource TextSm}"/>
     <Setter Property="Foreground" Value="{StaticResource TextFaint}"/>

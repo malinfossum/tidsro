@@ -15,6 +15,11 @@ public sealed class TidsroData
 
     public List<RecurringAlarmRecord> RecurringAlarms { get; set; } = new();
 
+    /// <summary>Stopwatches, in display order. Optional: older files have no key and load as none.</summary>
+    public List<StopwatchRecord> Stopwatches { get; set; } = new();
+
+    private const int MaxStopwatches = 100;
+
     public static TidsroData Defaults() => new() { Settings = AppSettings.Defaults() };
 
     /// <summary>Harden untrusted input loaded from disk: sanitise settings, drop unusable alarms, normalise labels.</summary>
@@ -74,12 +79,32 @@ public sealed class TidsroData
             });
         }
 
+        var swSeen = new HashSet<Guid>();
+        var stopwatches = new List<StopwatchRecord>();
+        foreach (var s in Stopwatches ?? new List<StopwatchRecord>())
+        {
+            if (s is null) continue;
+            if (stopwatches.Count >= MaxStopwatches) break;
+            if (!swSeen.Add(s.Id)) continue;                   // duplicate id -> keep the first only
+            var started = s.StartedAt;
+            // A start time that is not a sane instant would make elapsed nonsense: stop it instead.
+            if (started is { } st && (st.UtcDateTime.Year < 2000 || st.UtcDateTime.Year > 9000)) started = null;
+            stopwatches.Add(new StopwatchRecord
+            {
+                Id = s.Id,
+                Label = NormaliseLabel(s.Label),
+                ElapsedMs = Math.Clamp(s.ElapsedMs, 0, (long)TimeSpan.FromDays(3650).TotalMilliseconds),
+                StartedAt = started,
+            });
+        }
+
         return new TidsroData
         {
             SchemaVersion = CurrentSchema,
             Settings = (Settings ?? AppSettings.Defaults()).Sanitized(),
             Alarms = alarms,
             RecurringAlarms = recurring,
+            Stopwatches = stopwatches,
         };
     }
 

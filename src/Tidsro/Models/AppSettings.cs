@@ -11,11 +11,35 @@ public sealed class AppSettings
     /// path <c>CustomSoundStore</c> owns, so this string never reaches the file system.</summary>
     public string? CustomSoundName { get; set; }
 
-    /// <summary>Index of the tab the main window opens on. 0 = Quick timers, 1 = Schedule, 2 = Week.</summary>
+    /// <summary>Index of the tab the main window opens on. 0 = Quick timers, 1 = Schedule, 2 = Week,
+    /// 3 = Stopwatch.</summary>
     public int SelectedTab { get; set; }
 
-    /// <summary>Tabs the shell has: 0 Quick timers, 1 Schedule, 2 Week.</summary>
-    public const int TabCount = 3;
+    /// <summary>Tabs the shell has: 0 Quick timers, 1 Schedule, 2 Week, 3 Stopwatch.</summary>
+    public const int TabCount = 4;
+
+    /// <summary>Labels the user saved for one-click reuse on timers, alarms and stopwatches.</summary>
+    public List<string> SavedLabels { get; set; } = new();
+
+    public const int MaxSavedLabels = 40;
+    public const int MaxSavedLabelLength = 60;
+
+    /// <summary>Trim, cap, and drop blanks and case-insensitive duplicates (first one wins).</summary>
+    public static List<string> NormaliseSavedLabels(IEnumerable<string?>? labels)
+    {
+        var result = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var raw in labels ?? Enumerable.Empty<string?>())
+        {
+            if (string.IsNullOrWhiteSpace(raw)) continue;
+            var t = raw.Trim();
+            if (t.Length > MaxSavedLabelLength) t = t[..MaxSavedLabelLength];
+            if (!seen.Add(t)) continue;
+            result.Add(t);
+            if (result.Count >= MaxSavedLabels) break;
+        }
+        return result;
+    }
 
     // Last on-screen window position; null until the window has been shown and dismissed once.
     public double? WindowLeft { get; set; }
@@ -33,6 +57,7 @@ public sealed class AppSettings
         DefaultSound = Enum.IsDefined(DefaultSound) ? DefaultSound : SoundChoice.None,
         CustomSoundName = NormaliseName(CustomSoundName),
         SelectedTab = SelectedTab >= 0 && SelectedTab < TabCount ? SelectedTab : 0,
+        SavedLabels = NormaliseSavedLabels(SavedLabels),
         WindowLeft = WindowLeft is double l && double.IsFinite(l) ? l : null,
         WindowTop = WindowTop is double t && double.IsFinite(t) ? t : null,
         WindowWidth = WindowWidth is double w && double.IsFinite(w) && w >= 380 ? w : null,

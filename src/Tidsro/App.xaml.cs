@@ -30,6 +30,8 @@ public partial class App : Application
     private AppSettings _settings = null!;
     private HotkeyService _hotkey = null!;
     private DispatcherTimer _timer = null!;
+    private DispatcherTimer _stopwatchTimer = null!;
+    private DispatcherTimer _stopwatchSave = null!;
     private MainWindow? _main;
     private readonly List<CompletionPopup> _openPopups = new();
     private readonly Dictionary<CompletionPopup, DateTimeOffset> _warningFireTimes = new();
@@ -146,6 +148,17 @@ public partial class App : Application
         ArmLoadedAlarms(_data.Alarms);
         ArmLoadedRecurring(_data.RecurringAlarms);
         _mainVm.AlarmsChanged += (_, _) => SaveData();
+        _mainVm.LoadStopwatches(_data.Stopwatches);
+        _mainVm.LoadSavedLabels(_settings.SavedLabels);
+        // Typing a stopwatch's label raises a change per keystroke: coalesce them into one write.
+        _stopwatchSave = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(600) };
+        _stopwatchSave.Tick += (_, _) => { _stopwatchSave.Stop(); SaveData(); };
+        _mainVm.StopwatchesChanged += (_, _) => { _stopwatchSave.Stop(); _stopwatchSave.Start(); };
+        _mainVm.SavedLabelsChanged += (_, _) =>
+        {
+            _settings.SavedLabels = _mainVm.SavedLabels.ToList();
+            SaveData();
+        };
         _mainVm.ClosePopupsRequested += (_, _) =>
         {
             foreach (var popup in _openPopups.ToList())
@@ -172,6 +185,12 @@ public partial class App : Application
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _timer.Tick += (_, _) => { _scheduler.Tick(); _mainVm.RefreshAll(); CloseFiredWarnings(); };
         _timer.Start();
+
+        // Stopwatches show tenths, which the 250 ms heartbeat would step unevenly. A faster redraw,
+        // and only while something is actually counting.
+        _stopwatchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
+        _stopwatchTimer.Tick += (_, _) => { if (_mainVm.AnyStopwatchRunning) _mainVm.RefreshStopwatches(); };
+        _stopwatchTimer.Start();
     }
 
     // Register the global show/focus hotkey. Best-effort — the tray "Focus latest alert" item is the
@@ -288,6 +307,8 @@ public partial class App : Application
     private void Quit()
     {
         _timer.Stop();
+        _stopwatchTimer.Stop();
+        _stopwatchSave.Stop();
         _hotkey.Dispose();
         _mainVm.CommitPendingDelete();   // an uncommitted delete commits on quit (spec §3.1)
         _main?.CaptureWindowState();   // the tray's Quit never runs OnClosing; null when the window was never opened
@@ -349,6 +370,11 @@ public partial class App : Application
         _settings.WindowTop = imported.WindowTop;
         _settings.WindowWidth = imported.WindowWidth;
         _settings.WindowHeight = imported.WindowHeight;
+        if (imported.SavedLabels.Count > 0)
+        {
+            _settings.SavedLabels = imported.SavedLabels.ToList();
+            _mainVm.LoadSavedLabels(imported.SavedLabels);
+        }
 
         _mainVm.SetDefaultSound(imported.DefaultSound);
         _mainVm.SelectedTabIndex = imported.SelectedTab;
@@ -366,6 +392,7 @@ public partial class App : Application
             Settings = _settings,
             Alarms = armed.Where(a => a.TriggerType == TriggerType.ClockTime).Select(ToRecord).ToList(),
             RecurringAlarms = armed.Where(a => a.TriggerType == TriggerType.Recurring).Select(ToRecurringRecord).ToList(),
+            Stopwatches = _mainVm.StopwatchRecords(),
         };
     }
 

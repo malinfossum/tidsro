@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
         Title="Tidsro" Icon="pack://application:,,,/Assets/icons/tidsro.ico" Width="440" Height="600"
-        MinWidth="380" MinHeight="480" ResizeMode="CanResize"
+        MinWidth="420" MinHeight="480" ResizeMode="CanResize"
         Background="{StaticResource PageBg}" Foreground="{StaticResource Text}"
         FontFamily="{StaticResource FontSans}">
   <Window.InputBindings>
@@ -235,6 +235,118 @@
         </Setter.Value>
       </Setter>
     </Style>
+    <!-- ───────── Saved labels ─────────
+         One pill per saved label: the pill's main button applies the label (what "apply" means is
+         the strip's choice, passed in through the ItemsControl's Tag as a command), the small x
+         forgets it. Shared by Quick timers, Schedule and Stopwatch so the three can't drift apart. -->
+    <Style x:Key="ChipButton" TargetType="Button">
+      <Setter Property="FocusVisualStyle" Value="{StaticResource ActionFocusVisual}"/>
+      <Setter Property="Foreground" Value="{StaticResource Text}"/>
+      <Setter Property="FontSize" Value="{StaticResource TextXs}"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Padding" Value="10,4,6,4"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="b" Background="Transparent" Padding="{TemplateBinding Padding}">
+              <ContentPresenter VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="b" Property="Background" Value="{StaticResource InteractiveHover}"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="ChipRemove" TargetType="Button" BasedOn="{StaticResource ChipButton}">
+      <Setter Property="Foreground" Value="{StaticResource TextFaint}"/>
+      <Setter Property="Padding" Value="4,4,8,4"/>
+      <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+      <Setter Property="FontSize" Value="9"/>
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Setter Property="Foreground" Value="{StaticResource Danger}"/>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+
+    <Style x:Key="SavedLabelStrip" TargetType="ItemsControl">
+      <Setter Property="Focusable" Value="False"/>
+      <Setter Property="Margin" Value="0,10,0,0"/>
+      <Setter Property="AutomationProperties.Name" Value="Saved labels"/>
+      <Setter Property="ItemsPanel">
+        <Setter.Value>
+          <ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate>
+        </Setter.Value>
+      </Setter>
+      <Setter Property="ItemContainerStyle">
+        <Setter.Value>
+          <Style TargetType="ContentPresenter">
+            <Setter Property="AutomationProperties.Name" Value="{Binding}"/>
+          </Style>
+        </Setter.Value>
+      </Setter>
+      <Setter Property="ItemTemplate">
+        <Setter.Value>
+          <DataTemplate>
+            <Border Margin="0,0,6,6" CornerRadius="14" BorderThickness="1" ClipToBounds="True"
+                    BorderBrush="{StaticResource BorderControl}" Background="{StaticResource InteractiveBg}">
+              <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource ChipButton}" Content="{Binding}"
+                        Command="{Binding Tag, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                        CommandParameter="{Binding}"
+                        ToolTip="{Binding ToolTip, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                        AutomationProperties.Name="{Binding StringFormat=Use label {0}}"/>
+                <Button Style="{StaticResource ChipRemove}" Content="&#xE711;"
+                        Command="{Binding DataContext.RemoveSavedLabelCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding}"
+                        ToolTip="Forget this saved label"
+                        AutomationProperties.Name="{Binding StringFormat=Forget saved label {0}}"/>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </Setter.Value>
+      </Setter>
+      <Style.Triggers>
+        <Trigger Property="HasItems" Value="False">
+          <Setter Property="Visibility" Value="Collapsed"/>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+
+    <!-- The star beside a label field: saves what is typed there for one-click reuse. -->
+    <Style x:Key="SaveLabelButton" TargetType="Button" BasedOn="{StaticResource QuietAction}">
+      <Setter Property="Content" Value="&#xE734;"/>
+      <Setter Property="FontFamily" Value="Segoe Fluent Icons, Segoe MDL2 Assets"/>
+      <Setter Property="ToolTip" Value="Save this label for one-click reuse"/>
+      <Setter Property="AutomationProperties.Name" Value="Save label"/>
+      <Setter Property="Margin" Value="8,0,0,0"/>
+    </Style>
+
+    <!-- A label edited in place on a timer or stopwatch row: reads as plain text until hovered or
+         focused, so a list of rows doesn't turn into a wall of input boxes. -->
+    <Style x:Key="InlineLabelBox" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="BorderBrush" Value="Transparent"/>
+      <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
+      <Setter Property="FontSize" Value="{StaticResource TextSm}"/>
+      <Setter Property="MinHeight" Value="26"/>
+      <Setter Property="Padding" Value="4,2"/>
+      <Setter Property="Margin" Value="-5,0,0,2"/>
+      <Setter Property="MaxLength" Value="200"/>
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+        </Trigger>
+        <Trigger Property="IsKeyboardFocused" Value="True">
+          <Setter Property="Foreground" Value="{StaticResource Text}"/>
+          <Setter Property="Background" Value="{StaticResource InteractiveBg}"/>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
   </Window.Resources>
 
   <Grid Margin="{StaticResource WindowPadding}">
@@ -252,6 +364,7 @@
       <TabItem Header="Quick timers"/>
       <TabItem Header="Schedule"/>
       <TabItem Header="Week"/>
+      <TabItem Header="Stopwatch"/>
     </TabControl>
 
     <Grid x:Name="Panels" Grid.Row="1" Margin="{StaticResource SectionGap}">
@@ -356,16 +469,20 @@
               </Button>
             </StackPanel>
             <Grid Margin="0,12,0,0">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
               <TextBox Grid.Column="0" Text="{Binding CustomInput, UpdateSourceTrigger=PropertyChanged}"
                        AutomationProperties.Name="Custom duration" ToolTip="e.g. 25, 5:00, 1:30:00" Tag="25 min">
                 <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding StartCustomCommand}"/></TextBox.InputBindings>
               </TextBox>
               <TextBox Grid.Column="1" Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}"
-                       AutomationProperties.Name="Label" Margin="10,0,0,0" Tag="Label">
+                       AutomationProperties.Name="Label" Margin="10,0,0,0" Tag="Label" MaxLength="200">
                 <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding StartCustomCommand}"/></TextBox.InputBindings>
               </TextBox>
+              <Button Grid.Column="2" Style="{StaticResource SaveLabelButton}"
+                      Command="{Binding SaveLabelCommand}" CommandParameter="{Binding Label}"/>
             </Grid>
+            <ItemsControl Style="{StaticResource SavedLabelStrip}" ItemsSource="{Binding SavedLabels}"
+                          Tag="{Binding UseLabelForTimerCommand}" ToolTip="Use this label for the next timer"/>
             <Grid Margin="0,12,0,0">
               <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
               <TextBlock Grid.Column="0" Text="Sound" VerticalAlignment="Center" Foreground="{StaticResource TextMuted}" Margin="0,0,8,0"/>
@@ -434,7 +551,9 @@
                           AutomationProperties.Name="{Binding PauseResumeLabel}" ToolTip="{Binding PauseResumeLabel}" Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
                   <Ellipse DockPanel.Dock="Left" Width="9" Height="9" Margin="0,2,12,0" VerticalAlignment="Top" Fill="{StaticResource Accent}"/>
                   <StackPanel>
-                    <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"/>
+                    <TextBox Style="{StaticResource InlineLabelBox}" Tag="Add a label" Margin="-5,0,8,2"
+                             Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}"
+                             AutomationProperties.Name="Timer label"/>
                     <StackPanel Orientation="Horizontal">
                     <!-- The hero card above already shows this one countdown at 42px, so the row it
                          belongs to hides its own numerals and nothing else. Margin sits here rather
@@ -511,10 +630,14 @@
                 <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding AddAlarmCommand}"/></TextBox.InputBindings>
               </TextBox>
               <TextBox Grid.Column="1" Text="{Binding AlarmLabel, UpdateSourceTrigger=PropertyChanged}"
-                       AutomationProperties.Name="Alarm label" Margin="10,0,0,0" Tag="Alarm label">
+                       AutomationProperties.Name="Alarm label" Margin="10,0,0,0" Tag="Alarm label" MaxLength="200">
                 <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding AddAlarmCommand}"/></TextBox.InputBindings>
               </TextBox>
+              <Button Grid.Column="2" Style="{StaticResource SaveLabelButton}" HorizontalAlignment="Right"
+                      Command="{Binding SaveLabelCommand}" CommandParameter="{Binding AlarmLabel}"/>
             </Grid>
+            <ItemsControl Style="{StaticResource SavedLabelStrip}" ItemsSource="{Binding SavedLabels}"
+                          Tag="{Binding UseLabelForAlarmCommand}" ToolTip="Use this label for the new alarm"/>
 
             <!-- The optional end of a timetable block. Appears only once the alarm repeats: an end
                  is a block's length, and the Week tab draws recurring alarms alone. Empty means an
@@ -984,6 +1107,149 @@
         </Button.Visibility>
       </Button>
       </Grid>
+
+      <!-- Stopwatch: any number of count-up stopwatches, each with its own label. Saved labels start
+           a new, already-running stopwatch in one click. -->
+      <ScrollViewer VerticalScrollBarVisibility="Auto"
+                    Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisible}, ConverterParameter=3}">
+        <StackPanel MaxWidth="{Binding ActualWidth, ElementName=Panels, Converter={StaticResource WidthToMeasure}}" x:Name="StopwatchPanel">
+
+        <Grid>
+          <Border Style="{StaticResource CardShadowCaster}"/>
+          <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+                  CornerRadius="{StaticResource RadiusMd}" Padding="16">
+          <StackPanel>
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/>
+              </Grid.ColumnDefinitions>
+              <TextBox Grid.Column="0" Text="{Binding StopwatchLabel, UpdateSourceTrigger=PropertyChanged}"
+                       AutomationProperties.Name="Stopwatch label" Tag="Label (optional)" MaxLength="200">
+                <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding AddStopwatchCommand}"/></TextBox.InputBindings>
+              </TextBox>
+              <Button Grid.Column="1" Style="{StaticResource SaveLabelButton}"
+                      Command="{Binding SaveLabelCommand}" CommandParameter="{Binding StopwatchLabel}"/>
+              <Button Grid.Column="2" Content="Start" Command="{Binding AddStopwatchCommand}" Style="{StaticResource GoldAction}"
+                      Margin="8,0,0,0" AutomationProperties.Name="Start new stopwatch"/>
+            </Grid>
+            <TextBlock Text="Saved labels — one click starts a stopwatch" Foreground="{StaticResource TextFaint}"
+                       FontSize="{StaticResource TextXs}" Margin="0,12,0,0"
+                       Visibility="{Binding HasSavedLabels, Converter={StaticResource BoolToVisible}}"/>
+            <ItemsControl Style="{StaticResource SavedLabelStrip}" ItemsSource="{Binding SavedLabels}"
+                          Tag="{Binding StartStopwatchWithLabelCommand}"
+                          ToolTip="Start a new stopwatch with this label"/>
+            <TextBlock Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}" Margin="0,10,0,0"
+                       TextWrapping="Wrap"
+                       Visibility="{Binding HasSavedLabels, Converter={StaticResource BoolToCollapsed}}"
+                       Text="Tip: type a label and press the star to save it. Saved labels show up here and on the other tabs for one-click reuse."/>
+          </StackPanel>
+          </Border>
+        </Grid>
+
+        <TextBlock Text="No stopwatches yet — start one above" Foreground="{StaticResource TextFaint}"
+                   FontSize="{StaticResource TextSm}" Margin="{StaticResource SectionGap}"
+                   Visibility="{Binding IsStopwatchListEmpty, Converter={StaticResource BoolToVisible}}"/>
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0"
+                    Visibility="{Binding IsStopwatchListEmpty, Converter={StaticResource BoolToCollapsed}}">
+          <Button Content="Start all" Command="{Binding StartAllStopwatchesCommand}" Style="{StaticResource QuietAction}"
+                  AutomationProperties.Name="Start all stopwatches"/>
+          <Button Content="Pause all" Command="{Binding PauseAllStopwatchesCommand}" Style="{StaticResource QuietAction}"
+                  Margin="8,0,0,0" AutomationProperties.Name="Pause all stopwatches"/>
+        </StackPanel>
+
+        <ItemsControl ItemsSource="{Binding Stopwatches}" Margin="0,12,0,0" Focusable="False">
+          <ItemsControl.ItemContainerStyle>
+            <Style TargetType="ContentPresenter">
+              <Setter Property="AutomationProperties.Name" Value="{Binding AccessibleName}"/>
+            </Style>
+          </ItemsControl.ItemContainerStyle>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Grid Margin="{StaticResource RowGap}">
+                <Grid.Triggers>
+                  <EventTrigger RoutedEvent="Loaded">
+                    <BeginStoryboard><Storyboard>
+                      <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18"/>
+                    </Storyboard></BeginStoryboard>
+                  </EventTrigger>
+                </Grid.Triggers>
+                <Border Style="{StaticResource CardShadowCaster}"/>
+                <Border Background="{StaticResource CardBg}" BorderThickness="1"
+                        CornerRadius="{StaticResource RadiusMd}" Padding="16">
+                  <Border.Style>
+                    <Style TargetType="Border">
+                      <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                          <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Border.Style>
+                  <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="&#xE711;" VerticalAlignment="Center"
+                            Command="{Binding DataContext.RemoveStopwatchCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                            CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                            AutomationProperties.Name="Remove stopwatch" ToolTip="Remove stopwatch" Style="{StaticResource DangerAction}"/>
+                    <Button DockPanel.Dock="Right" Content="&#xE72C;" Command="{Binding ResetCommand}" VerticalAlignment="Center"
+                            FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                            AutomationProperties.Name="Reset stopwatch" ToolTip="Reset to zero" Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
+                    <Button DockPanel.Dock="Right" Content="{Binding StartPauseGlyph}" Command="{Binding StartPauseCommand}" VerticalAlignment="Center"
+                            FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                            AutomationProperties.Name="{Binding StartPauseLabel}" ToolTip="{Binding StartPauseLabel}" Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
+                    <!-- Hidden, not collapsed, while stopped: the labels of running and paused rows stay aligned. -->
+                    <Ellipse DockPanel.Dock="Left" Width="9" Height="9" Margin="0,10,12,0" VerticalAlignment="Top" Fill="{StaticResource Accent}">
+                      <Ellipse.Style>
+                        <Style TargetType="Ellipse">
+                          <Setter Property="Visibility" Value="Hidden"/>
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                              <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </Ellipse.Style>
+                    </Ellipse>
+                    <StackPanel Margin="0,0,8,0">
+                      <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <TextBox Style="{StaticResource InlineLabelBox}" Tag="Add a label"
+                                 Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}"
+                                 AutomationProperties.Name="Stopwatch label"/>
+                        <Button Grid.Column="1" Content="&#xE734;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                                Style="{StaticResource ChipButton}" Foreground="{StaticResource TextFaint}" Padding="6,4"
+                                Command="{Binding DataContext.SaveLabelCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                CommandParameter="{Binding Label}"
+                                Visibility="{Binding HasLabel, Converter={StaticResource BoolToVisible}}"
+                                ToolTip="Save this label for one-click reuse" AutomationProperties.Name="Save label"/>
+                      </Grid>
+                      <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding ElapsedText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource Text2xl}">
+                          <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                              <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
+                              <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                  <Setter Property="Foreground" Value="{StaticResource Text}"/>
+                                </DataTrigger>
+                              </Style.Triggers>
+                            </Style>
+                          </TextBlock.Style>
+                        </TextBlock>
+                        <TextBlock Text="{Binding FractionText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource TextLg}"
+                                   Foreground="{StaticResource TextFaint}" VerticalAlignment="Bottom" Margin="1,0,0,4"/>
+                      </StackPanel>
+                    </StackPanel>
+                  </DockPanel>
+                </Border>
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        </StackPanel>
+      </ScrollViewer>
     </Grid>
 
     <!-- No shadow caster here on purpose: the strip is recessed chrome on PanelBg, a hair BELOW the
