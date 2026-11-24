@@ -29,7 +29,7 @@ See the [changelog](CHANGELOG.md) for what's new in each release.
 **Most people should install it:**
 
 1. Open the [Releases page](https://github.com/malinfossum/tidsro/releases) and download **`Tidsro-Setup.exe`** from the latest release.
-2. Run it. Windows may warn *"Windows protected your PC"* because the app isn't code-signed yet. Click **More info → Run anyway**.
+2. Run it. Windows may warn *"Windows protected your PC"* because the app isn't code-signed (see [ADR 0005](docs/adr/0005-releases-stay-unsigned.md)). Click **More info → Run anyway**.
 3. Click through the short wizard. Tidsro installs just for you (no admin), adds a Start Menu shortcut, and starts in the system tray.
 
 Uninstall any time from **Settings → Apps → Installed apps → Tidsro**. The uninstaller asks whether to also delete your alarms, settings and log. A silent uninstall (a script or a package manager) never asks and keeps them in `%AppData%\Tidsro`.
@@ -105,6 +105,8 @@ One absence is deliberate: an alarm with an end time chimes at its start only, n
 ## Contributing
 
 Pull requests are welcome. The suite is `dotnet test`; beyond it, `tools/rigs/` drives the real app against a throwaway copy that cannot touch your own schedule, and `tools/screenshots/` re-shoots the images above from a fictional week. Both have a README of their own, and the Week tab in particular needs one of them. It has shipped three defects that a green test run said nothing about.
+
+The words Tidsro uses for its parts (countdown, card, heads-up, block) are defined in the [glossary](docs/glossary.md). The decisions behind the design, and the alternatives already turned down, are in [docs/adr/](docs/adr/). Read both before proposing a larger change.
 
 ## Stack
 
