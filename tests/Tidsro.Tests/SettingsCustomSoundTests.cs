@@ -80,7 +80,7 @@ public class SettingsCustomSoundTests : IDisposable
     }
 
     [Fact]
-    public void Cancelling_the_file_dialog_changes_nothing()
+    public void Canceling_the_file_dialog_changes_nothing()
     {
         _dialogs.WavPath = null;
 

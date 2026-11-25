@@ -112,7 +112,7 @@ public partial class App : Application
         catch { /* opening Explorer is a convenience, never critical */ }
     }
 
-    // Claim the single-instance mutex. Returns false for a second launch — after signalling the first
+    // Claim the single-instance mutex. Returns false for a second launch — after signaling the first
     // instance to surface its window — so OnStartup bails out. The first instance registers the wait that
     // brings its window forward when a later launch signals it.
     private bool TryClaimSingleInstance()
@@ -297,7 +297,7 @@ public partial class App : Application
     }
 
     // The owner for every app-level dialog: the data dialogs and the failure alerts alike. While
-    // Settings is up, dialogs centre on it so the modal chain stays intact; otherwise the main window
+    // Settings is up, dialogs center on it so the modal chain stays intact; otherwise the main window
     // when it exists, or null (very early in startup, before any window has been built).
     private Window? DialogOwner =>
         Application.Current.Windows.OfType<SettingsWindow>().FirstOrDefault() ?? (Window?)_main;

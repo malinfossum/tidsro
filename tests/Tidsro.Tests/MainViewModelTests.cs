@@ -454,7 +454,7 @@ public class MainViewModelTests
         vm.CancelTimerCommand.Execute(row);
 
         Assert.NotNull(announced);
-        Assert.Contains("cancelled", announced, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("canceled", announced, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -505,7 +505,7 @@ public class MainViewModelTests
 
         vm.CommitPendingDelete();
 
-        Assert.Equal(0, alarmsChangedCount);   // cancelled countdowns are not persisted
+        Assert.Equal(0, alarmsChangedCount);   // canceled countdowns are not persisted
         Assert.False(vm.HasPendingDelete);
     }
 
@@ -541,7 +541,7 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public void Cancelling_the_next_timer_moves_the_highlight_to_the_remaining_timer()
+    public void Canceling_the_next_timer_moves_the_highlight_to_the_remaining_timer()
     {
         var vm = New(out _, out _);
         vm.StartPresetCommand.Execute(60);
@@ -1214,7 +1214,7 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public void Cancelling_the_shown_timer_moves_the_strip_to_the_next_one()
+    public void Canceling_the_shown_timer_moves_the_strip_to_the_next_one()
     {
         var vm = New(out _, out _);
         vm.CustomInput = "30:00"; vm.Label = "long"; vm.StartCustomCommand.Execute(null);
@@ -1274,7 +1274,7 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public void Cancelling_the_last_countdown_raises_notifications_for_hero_and_strip()
+    public void Canceling_the_last_countdown_raises_notifications_for_hero_and_strip()
     {
         var vm = New(out _, out _);
         vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
@@ -1293,7 +1293,7 @@ public class MainViewModelTests
     // a working teardown from a broken one. This one stays on Schedule across the cancel: the flag has
     // to go false AND say so, because a computed property reads correct whether or not the UI is told.
     [Fact]
-    public void Cancelling_the_last_countdown_hides_the_strip_while_the_schedule_tab_is_showing()
+    public void Canceling_the_last_countdown_hides_the_strip_while_the_schedule_tab_is_showing()
     {
         var vm = New(out _, out _);
         vm.CustomInput = "5:00"; vm.StartCustomCommand.Execute(null);
@@ -1358,7 +1358,7 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public void Cancelling_the_heros_timer_moves_the_countdown_mark_to_the_next_one()
+    public void Canceling_the_heros_timer_moves_the_countdown_mark_to_the_next_one()
     {
         var vm = New(out _, out _);
         vm.CustomInput = "30:00"; vm.Label = "long"; vm.StartCustomCommand.Execute(null);

@@ -49,7 +49,7 @@ public sealed record TimetableEntry(
     /// <summary>The label as it is drawn and announced. The add form permits an alarm with no label,
     /// so the raw <see cref="Label"/> can be null or blank — which would draw an empty box and
     /// announce with a leading comma (", Monday, 09:00"). "No label" is the same stand-in the
-    /// Schedule tab's rows already use, so the two tabs name an unlabelled alarm identically.</summary>
+    /// Schedule tab's rows already use, so the two tabs name an unlabeled alarm identically.</summary>
     public string DisplayLabel => string.IsNullOrWhiteSpace(Label) ? "No label" : Label!;
 
     /// <summary>What a screen reader reads for this row. Carries the weekday, because the grid
@@ -145,9 +145,9 @@ public sealed record TimetableLane(IReadOnlyList<TimetableEntry> Entries, bool I
 /// <para><see cref="Lanes"/> is as long as the day's lane count, and each lane holds what this band
 /// has in it — usually nothing or one thing. The fixed length is what keeps a block's bar the same
 /// width all the way down its run: were the cell to draw only what it holds, a bar would widen in
-/// every band its neighbour happens not to occupy. A lane can hold more than one entry, because two
+/// every band its neighbor happens not to occupy. A lane can hold more than one entry, because two
 /// alarms can share a half-hour band without overlapping in time (09:00 and 09:15 want one lane and
-/// two lines), which is the phase-1 behaviour lanes must not break.</para></summary>
+/// two lines), which is the phase-1 behavior lanes must not break.</para></summary>
 public sealed record TimetableCell(
     Weekdays Day, string DayName, IReadOnlyList<TimetableLane> Lanes, int OverflowCount)
 {
@@ -159,7 +159,7 @@ public sealed record TimetableCell(
     public bool HasOverflow => OverflowCount > 0;
 
     /// <summary>What the grid prints in place of the entries it had no lane for. The agenda lists
-    /// every one of them, so this summarises rather than hides.</summary>
+    /// every one of them, so this summarizes rather than hides.</summary>
     public string OverflowText => $"+{OverflowCount} more";
 }
 

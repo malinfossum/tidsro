@@ -23,7 +23,7 @@ public sealed class FailureAlertPolicy
     // A final save happens at most once per run, so — unlike TryClaimSaveFailure — it ignores
     // _saveFailureAnnounced: in a sustained outage the mid-session dialog claims first and no save
     // ever succeeds to clear that flag, which would otherwise defeat the strictly more urgent
-    // quit-time warning every time it matters. Still honours the open-dialog guard.
+    // quit-time warning every time it matters. Still honors the open-dialog guard.
     public bool TryClaimFinalSaveFailure()
     {
         if (_dialogOpen) return false;

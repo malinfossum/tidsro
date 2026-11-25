@@ -40,7 +40,7 @@ public sealed class SoundChoiceToLabelConverter : IValueConverter
         SoundChoice.ElectricPianoJingle => "Electric piano jingle",
         SoundChoice.BellJingle => "Bell jingle",
         // Flat wording: these rows sit in a three-column grid where a file name long enough to be
-        // recognisable would push the preview button off the end. Settings names the file.
+        // recognizable would push the preview button off the end. Settings names the file.
         SoundChoice.Custom => "My sound",
         _ => "",
     };

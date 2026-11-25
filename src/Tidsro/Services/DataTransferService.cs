@@ -14,7 +14,7 @@ public sealed class DataTransferService
     /// would reach the global handler as a crash.</summary>
     public const long MaxImportBytes = 8 * 1024 * 1024;
 
-    // A JSON object deserialises into TidsroData whatever it contains, so a document carrying none of
+    // A JSON object deserializes into TidsroData whatever it contains, so a document carrying none of
     // these keys is not a Tidsro file however well-formed it is. This gate is what stops a mistyped
     // file reading as a legitimate empty backup.
     private static readonly string[] KnownKeys =

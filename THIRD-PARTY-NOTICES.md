@@ -15,18 +15,18 @@ The copyright year differs between the bundled files, so no single year is state
 unmodified, so their own declarations stand as written.
 
 The four font files are embedded, unmodified, in the application binary. `OFL.txt` is
-embedded alongside them, so both distribution channels carry the licence:
+embedded alongside them, so both distribution channels carry the license:
 
 - **Installer** — `OFL.txt` is also written beside the application as `OFL-IBMPlex.txt`
   (see `installer/Tidsro.iss`).
-- **Portable `Tidsro.exe`** — travels with no companion files, so it carries the licence
-  inside itself. **Settings ▸ View font licence** reads the embedded `OFL.txt` and shows
+- **Portable `Tidsro.exe`** — travels with no companion files, so it carries the license
+  inside itself. **Settings ▸ View font license** reads the embedded `OFL.txt` and shows
   it in full.
 
-Settings also shows a one-line acknowledgement ("Typeface: IBM Plex, © IBM Corp., SIL Open
+Settings also shows a one-line acknowledgment ("Typeface: IBM Plex, © IBM Corp., SIL Open
 Font License 1.1") next to that button.
 
 Source in this repository: `src/Tidsro/Assets/fonts/`.
 
-Licence: <https://openfontlicense.org>
+License: <https://openfontlicense.org>
 Source: <https://github.com/IBM/plex>

@@ -34,7 +34,7 @@ public partial class CompletionPopup : Window
         };
 
         // FocusForKeyboard clears NOACTIVATE to grab focus; re-arm it on blur so the
-        // card returns to its calm, non-focus-stealing behaviour
+        // card returns to its calm, non-focus-stealing behavior
         Deactivated += (_, _) =>
         {
             var h = new WindowInteropHelper(this).Handle;

@@ -9,7 +9,7 @@ public sealed class StartupService : IStartupService
     private const string RunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
     private const string ValueName = "Tidsro";
 
-    /// <summary>Written by the installer (and removed by the uninstaller) so we can recognise the installed copy.</summary>
+    /// <summary>Written by the installer (and removed by the uninstaller) so we can recognize the installed copy.</summary>
     private const string AppKey = @"Software\Tidsro";
     private const string InstallDirValue = "InstallDir";
 

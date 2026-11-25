@@ -17,7 +17,7 @@ public sealed class TidsroData
 
     public static TidsroData Defaults() => new() { Settings = AppSettings.Defaults() };
 
-    /// <summary>Harden untrusted input loaded from disk: sanitise settings, drop unusable alarms, normalise labels.</summary>
+    /// <summary>Harden untrusted input loaded from disk: sanitize settings, drop unusable alarms, normalize labels.</summary>
     public TidsroData Sanitized()
     {
         var seen = new HashSet<Guid>();
@@ -33,7 +33,7 @@ public sealed class TidsroData
             {
                 Id = a.Id,
                 FireAt = a.FireAt,
-                Label = NormaliseLabel(a.Label),
+                Label = NormalizeLabel(a.Label),
                 Sound = a.Sound,
                 WarnBefore = a.WarnBefore,
                 Enabled = a.Enabled,
@@ -65,7 +65,7 @@ public sealed class TidsroData
                 Hour = r.Hour,
                 Minute = r.Minute,
                 Days = days,
-                Label = NormaliseLabel(r.Label),
+                Label = NormalizeLabel(r.Label),
                 Sound = r.Sound,
                 NextFireAt = r.NextFireAt,
                 WarnBefore = r.WarnBefore,
@@ -88,7 +88,7 @@ public sealed class TidsroData
     private static bool IsRepresentable(DateTime t) =>
         t > DateTime.MinValue.AddDays(2) && t < DateTime.MaxValue.AddDays(-2);
 
-    private static string? NormaliseLabel(string? label)
+    private static string? NormalizeLabel(string? label)
     {
         if (string.IsNullOrWhiteSpace(label)) return null;
         var trimmed = label.Trim();

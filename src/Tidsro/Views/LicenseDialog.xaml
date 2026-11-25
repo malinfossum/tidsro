@@ -1,4 +1,4 @@
-<Window x:Class="Tidsro.Views.LicenceDialog"
+<Window x:Class="Tidsro.Views.LicenseDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="SIL Open Font License 1.1" Width="660" Height="560"
@@ -6,13 +6,13 @@
         Background="{StaticResource PageBg}" Foreground="{StaticResource Text}"
         FontFamily="{StaticResource FontSans}">
   <Window.Resources>
-    <!-- The app's implicit TextBox style is a single-line input: centred content host, placeholder
+    <!-- The app's implicit TextBox style is a single-line input: centered content host, placeholder
          hint from Tag, 34px minimum. None of that suits a 4 KB scrolling document, but clearing the
          style with {x:Null} does NOT get us a plain box - it drops the control back onto the Aero2
          THEME template, whose hover and keyboard-focus borders are hard-coded light blue and would
          put an off-palette outline on the one window that exists to be read. So: an explicit style,
-         every colour from a token, focus treated exactly as the app's own inputs treat it. -->
-    <Style x:Key="LicenceReader" TargetType="TextBox">
+         every color from a token, focus treated exactly as the app's own inputs treat it. -->
+    <Style x:Key="LicenseReader" TargetType="TextBox">
       <Setter Property="Background" Value="{StaticResource CardBg}"/>
       <Setter Property="Foreground" Value="{StaticResource Text}"/>
       <Setter Property="CaretBrush" Value="{StaticResource Text}"/>
@@ -32,7 +32,7 @@
           <ControlTemplate TargetType="TextBox">
             <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                     BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
-              <!-- Named PART_ContentHost and stretched, not centred: this one scrolls. -->
+              <!-- Named PART_ContentHost and stretched, not centered: this one scrolls. -->
               <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
                             VerticalScrollBarVisibility="{TemplateBinding VerticalScrollBarVisibility}"
                             HorizontalScrollBarVisibility="{TemplateBinding HorizontalScrollBarVisibility}"/>
@@ -55,22 +55,22 @@
     </Grid.RowDefinitions>
     <TextBlock Grid.Row="0" Margin="0,0,0,12" TextWrapping="Wrap"
                Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextSm}"
-               Text="The licence text bundled with the IBM Plex fonts, read from inside this application."/>
+               Text="The license text bundled with the IBM Plex fonts, read from inside this application."/>
     <!-- A read-only TextBox, not a TextBlock: it is focusable, arrow-navigable and selectable, so a
-         keyboard or screen-reader user can actually read a 4 KB licence. The caret is visible for
+         keyboard or screen-reader user can actually read a 4 KB license. The caret is visible for
          the same reason - arrow-navigable is the justification for the control, and navigating with
-         no caret is navigating blind. The licence is hard-wrapped at source and the window is sized
+         no caret is navigating blind. The license is hard-wrapped at source and the window is sized
          to fit those lines in mono, so wrapping rarely fires - but it is on, and the horizontal
          scrollbar off, on purpose: the app's ScrollBar template is vertical-only (fixed 16px Width,
          no Track.Orientation binding), so a horizontal bar would render wrong. -->
-    <TextBox Grid.Row="1" x:Name="LicenceText" Style="{StaticResource LicenceReader}"
+    <TextBox Grid.Row="1" x:Name="LicenseText" Style="{StaticResource LicenseReader}"
              IsReadOnly="True" IsReadOnlyCaretVisible="True"
              TextWrapping="Wrap" AcceptsReturn="True"
              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-             AutomationProperties.Name="Font licence text"/>
+             AutomationProperties.Name="Font license text"/>
     <Button Grid.Row="2" Content="Close" Style="{StaticResource QuietAction}"
             HorizontalAlignment="Right" MinWidth="84" Margin="0,16,0,0"
             IsCancel="True" IsDefault="True"
-            AutomationProperties.Name="Close licence"/>
+            AutomationProperties.Name="Close license"/>
   </Grid>
 </Window>

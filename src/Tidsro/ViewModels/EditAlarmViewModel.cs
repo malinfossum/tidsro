@@ -42,7 +42,7 @@ public partial class EditAlarmViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowEndInput));
     }
 
-    /// <summary>Raised when the dialog should close. true = saved, false = cancelled.</summary>
+    /// <summary>Raised when the dialog should close. true = saved, false = canceled.</summary>
     public event EventHandler<bool>? CloseRequested;
 
     public EditAlarmViewModel(Guid id, string timeInput, string endInput, string label, SoundChoice sound,

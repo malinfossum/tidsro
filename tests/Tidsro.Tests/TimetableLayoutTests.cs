@@ -241,7 +241,7 @@ public class TimetableLayoutTests
     }
 
     [Fact]
-    public void Two_alarms_pluralise()
+    public void Two_alarms_pluralize()
     {
         var week = TimetableLayout.Build(
             new[] { Recurring(9, 0, Weekdays.Mon, "A"), Recurring(11, 0, Weekdays.Mon, "B") }, At(1, 9, 0));
@@ -627,7 +627,7 @@ public class TimetableLayoutTests
     // ── An alarm with no label ─────────────────────────────────────────────
 
     [Fact]
-    public void An_unlabelled_alarm_announces_with_a_stand_in_not_a_leading_comma()
+    public void An_unlabeled_alarm_announces_with_a_stand_in_not_a_leading_comma()
     {
         var week = TimetableLayout.Build(new[] { Recurring(9, 0, Weekdays.Mon, label: null) }, At(1, 9, 0));
 
@@ -977,7 +977,7 @@ public class TimetableLayoutTests
     }
 
     [Fact]
-    public void The_agenda_still_lists_every_entry_the_grid_summarised()
+    public void The_agenda_still_lists_every_entry_the_grid_summarized()
     {
         var many = Enumerable.Range(0, 50)
             .Select(i => Block(9, 0, 570, Weekdays.Mon, $"Class {i:D2}")).ToArray();

@@ -45,7 +45,7 @@ public sealed class AlarmItemViewModel
         ? RecurrenceRules.CadenceLabel(d)
         : (IsTomorrow ? "tomorrow" : "");
 
-    // Sound state and the cadence/next cues are carried as text, never colour alone (spec §7).
+    // Sound state and the cadence/next cues are carried as text, never color alone (spec §7).
     public string AccessibleName =>
         $"Alarm at {SpokenTime}{CadencePhrase}, {DisplayLabel}, {SoundText}{(WarnBefore ? ", warns 5 minutes before" : "")}{(IsNext ? ", next" : "")}{(IsEnabled ? "" : ", off")}";
 

@@ -11,7 +11,7 @@ namespace Tidsro.Services;
 /// silently mute, with nothing on screen to say why. Owning the file means the sound keeps working.
 ///
 /// The copy always lands on one fixed name, so nothing a user picks or an imported backup carries can
-/// steer a file path. The name the user recognises is kept separately, as a label, in
+/// steer a file path. The name the user recognizes is kept separately, as a label, in
 /// <see cref="Models.AppSettings.CustomSoundName"/>.</summary>
 public sealed class CustomSoundStore
 {

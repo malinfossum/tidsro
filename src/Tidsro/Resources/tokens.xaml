@@ -36,13 +36,13 @@
   <SolidColorBrush x:Key="PageBg"     Color="#0A0A0A"/>
   <SolidColorBrush x:Key="PanelBg"    Color="#141414"/>
   <!-- CardBg and ElevatedBg are GRADIENTS, not flat fills. The first ~3% of their height carries a
-       lit top edge; below that they are the flat base colour. Shadow says "this sits below", a lit
+       lit top edge; below that they are the flat base color. Shadow says "this sits below", a lit
        edge says "this sits above" — together the card reads as a physical object catching light
        from the top of the window, which flat fills plus a shadow never quite do.
 
        The highlight is deliberately confined to the top 3%, which on every surface in the app lands
        INSIDE CardPadding. No text ever renders on it, so the §8 table measures against the flat base
-       colours and stays valid. Widening that stop would put body text on a lighter background and
+       colors and stays valid. Widening that stop would put body text on a lighter background and
        break TextFaint — it clears 4.5:1 on #1E1E1E and #262626, not on the highlight. -->
   <LinearGradientBrush x:Key="CardBg" StartPoint="0,0" EndPoint="0,1">
     <GradientStop Offset="0"     Color="#2E2E2E"/>
@@ -55,7 +55,7 @@
     <GradientStop Offset="1"     Color="#262626"/>
   </LinearGradientBrush>
 
-  <!-- Any colour a ControlTemplate ANIMATES must exist as a Color resource. A Storyboard's To=
+  <!-- Any color a ControlTemplate ANIMATES must exist as a Color resource. A Storyboard's To=
        takes a Color, so writing a literal there silently survives a palette change - which is
        exactly how the gold button kept its old gold. Colors are structs, so seeding an inline
        (unfrozen) brush from one keeps the brush animatable. -->
@@ -64,7 +64,7 @@
   <SolidColorBrush x:Key="InteractiveBg"    Color="{StaticResource InteractiveBgColor}"/>
   <SolidColorBrush x:Key="InteractiveHover" Color="{StaticResource InteractiveHoverColor}"/>
 
-  <!-- Text — warm white and warm greys, at low chroma. This is where the warmth that used to be
+  <!-- Text — warm white and warm grays, at low chroma. This is where the warmth that used to be
        smeared across every surface now lives, together with the accent. Keep the chroma low: the
        rejected palette's muted text was #C0AB93, a tan with 45 points between its red and blue
        channels, and at body-copy size that is what "washed out" looked like. These sit under 15.
@@ -79,8 +79,8 @@
   <!-- Lines, split by job. Border is ornament; BorderControl is the affordance, so it carries the
        3:1 non-text contrast WCAG 1.4.11 asks for - on every surface it is actually drawn on,
        including the InteractiveHover fill a QuietAction animates to underneath it.
-       BorderControl is warm graphite, not neutral grey, and deliberately sits just above the gate
-       rather than well over it - a mid-grey loud enough to be seen from across the window is what
+       BorderControl is warm graphite, not neutral gray, and deliberately sits just above the gate
+       rather than well over it - a mid-gray loud enough to be seen from across the window is what
        "washed out" looks like. Its floor is ElevatedBg at 3.18:1, which is what stops it going any
        dimmer: the hero and next-alarm row are the lightest things it is drawn on. Tightest text
        pair: TextFaint on ElevatedBg at 4.60:1.
@@ -89,7 +89,7 @@
   <SolidColorBrush x:Key="BorderControl" Color="#78726B"/>
 
   <!-- Accent + semantic. Accent is the gold that already sits in Assets/icons/tidsro.svg, so the
-       UI and the app's own mark are the same colour - the icon is brand and the UI follows it,
+       UI and the app's own mark are the same color - the icon is brand and the UI follows it,
        not the reverse. Do not drift one without the other. -->
   <Color x:Key="AccentColor">#E3B341</Color>
   <Color x:Key="AccentStrongColor">#F0C55C</Color>
@@ -131,7 +131,7 @@
 
   <!-- Elevation.
 
-       THE TRAP: setting Effect on an element rasterises that element AND ITS ENTIRE SUBTREE into an
+       THE TRAP: setting Effect on an element rasterizes that element AND ITS ENTIRE SUBTREE into an
        intermediate bitmap. Every glyph inside loses ClearType sub-pixel antialiasing and renders
        visibly softer - on a timer app whose numerals ARE the product, that is a real cost. So the
        shadow must never hang on a Border that contains content.
@@ -140,7 +140,7 @@
        Border with identical geometry (same Grid cell, same CornerRadius). It carries the effect and
        casts the halo; the content Border stays effect-free and its text stays crisply rendered.
        The caster is filled with PageBg, so where the content Border's antialiased corners are
-       partly transparent, what shows through is exactly the page colour that would have been there
+       partly transparent, what shows through is exactly the page color that would have been there
        anyway - the caster is invisible and only its shadow is seen. IsHitTestVisible=False keeps it
        out of the input path.
 
@@ -405,7 +405,7 @@
   </Style>
 
   <!-- Day-of-week toggle chip: Custom-day picker in the Schedule editor. Selected = gold fill (a fill
-       change, not colour alone); each chip keeps its full-day AutomationProperties.Name + ToggleButton
+       change, not color alone); each chip keeps its full-day AutomationProperties.Name + ToggleButton
        pressed state for screen readers. -->
   <Style x:Key="DayChip" TargetType="ToggleButton">
     <Setter Property="FocusVisualStyle" Value="{StaticResource ActionFocusVisual}"/>
@@ -438,7 +438,7 @@
 
   <!-- Toggle switch for boolean settings (warn-before, launch-at-startup). Restyles CheckBox so the
        IsChecked binding and screen-reader checked/unchecked semantics carry over unchanged. State reads
-       from thumb POSITION (not colour alone); gold-when-on echoes the primary action. -->
+       from thumb POSITION (not color alone); gold-when-on echoes the primary action. -->
   <Style x:Key="ToggleSwitch" TargetType="CheckBox">
     <Setter Property="FocusVisualStyle" Value="{StaticResource ActionFocusVisual}"/>
     <Setter Property="Foreground" Value="{StaticResource Text}"/>
@@ -489,7 +489,7 @@
 
   <!-- Tab headers. The stock TabControl chrome is light-themed and unusable on PageBg, so both the
        control and its items are templated end to end. Selected state reads from the gold underline,
-       not colour alone; 34px minimum height matches TextBox/ComboBox/DayChip so the app's only
+       not color alone; 34px minimum height matches TextBox/ComboBox/DayChip so the app's only
        navigation control is not also its smallest mouse target. -->
   <Style x:Key="ShellTabItem" TargetType="TabItem">
     <Setter Property="FocusVisualStyle" Value="{StaticResource ActionFocusVisual}"/>
@@ -513,7 +513,7 @@
               <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource Accent}"/>
               <Setter Property="Foreground" Value="{StaticResource Text}"/>
               <!-- Weight is the third cue after the underline and the foreground lift, and it is a
-                   real embedded face (IBMPlexSans-SemiBold), not a synthesised bold - FontResourceTests
+                   real embedded face (IBMPlexSans-SemiBold), not a synthesized bold - FontResourceTests
                    pins that, because a missing face degrades silently into faux-bold. -->
               <Setter Property="FontWeight" Value="SemiBold"/>
             </Trigger>

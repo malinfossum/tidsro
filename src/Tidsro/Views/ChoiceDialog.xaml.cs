@@ -19,7 +19,7 @@ public partial class ChoiceDialog : Window
 
     /// <summary>Ask what to restore. Returns Cancel unless the user picked a restore explicitly.
     /// <paramref name="owner"/> may be null when no window is available yet (e.g. very early in
-    /// startup); the dialog then centres on the screen instead of an owner.</summary>
+    /// startup); the dialog then centers on the screen instead of an owner.</summary>
     public static ImportChoice AskImport(Window? owner, string message)
     {
         var dialog = new ChoiceDialog("Import data", message) { Owner = owner };
@@ -31,7 +31,7 @@ public partial class ChoiceDialog : Window
     /// <summary>A single-OK message. Used for export results, import failures, and critical failures
     /// (a failed save, a caught crash) — never a tray balloon, which is invisible on machines with
     /// notifications turned off. <paramref name="owner"/> may be null when no window is available yet
-    /// (e.g. very early in startup); the dialog then centres on the screen instead of an owner.
+    /// (e.g. very early in startup); the dialog then centers on the screen instead of an owner.
     /// <paramref name="alwaysOnTop"/> is for a failure that must not be hidden behind a Topmost alarm
     /// card: it also makes the dialog reachable via Alt+Tab, since Tidsro's owner windows are
     /// otherwise hidden in the tray.</summary>

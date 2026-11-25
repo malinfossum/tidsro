@@ -274,10 +274,10 @@ public class SettingsViewModelTests
     }
 
     [Fact]
-    public void Export_with_a_cancelled_dialog_writes_nothing()
+    public void Export_with_a_canceled_dialog_writes_nothing()
     {
         using var h = new Harness(ImportChoice.Cancel);
-        h.Dialogs.SavePath = null;   // user cancelled
+        h.Dialogs.SavePath = null;   // user canceled
 
         h.Vm.ExportDataCommand.Execute(null);
 
@@ -315,7 +315,7 @@ public class SettingsViewModelTests
     }
 
     [Fact]
-    public void Import_with_a_cancelled_open_dialog_changes_nothing()
+    public void Import_with_a_canceled_open_dialog_changes_nothing()
     {
         using var h = new Harness(ImportChoice.AlarmsOnly);
         h.Dialogs.OpenPath = null;
@@ -342,7 +342,7 @@ public class SettingsViewModelTests
     }
 
     [Fact]
-    public void Import_cancelled_at_the_choice_dialog_takes_no_snapshot_and_changes_nothing()
+    public void Import_canceled_at_the_choice_dialog_takes_no_snapshot_and_changes_nothing()
     {
         using var h = new Harness(ImportChoice.Cancel);
         File.WriteAllText(Path.Combine(h.Dir, "data.json"), ValidBackup);
