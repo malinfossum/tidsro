@@ -102,7 +102,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_sounds is null) return;
 
         var source = _sounds.Dialogs.AskWavPath();
-        if (source is null) return;                  // cancelled — nothing happens
+        if (source is null) return;                  // canceled — nothing happens
 
         var name = _sounds.Store.Install(source);
         if (name is null)
@@ -155,7 +155,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_data is null) return;
 
         var path = _data.Dialogs.AskSavePath($"tidsro-backup-{_data.Today():yyyy-MM-dd}.json");
-        if (path is null) return;                    // cancelled — nothing happens
+        if (path is null) return;                    // canceled — nothing happens
 
         var data = _data.BuildData();
         try
@@ -180,9 +180,9 @@ public partial class SettingsViewModel : ObservableObject
         if (_data is null) return;
 
         var path = _data.Dialogs.AskOpenPath();
-        if (path is null) return;                    // cancelled
+        if (path is null) return;                    // canceled
 
-        var imported = _data.Transfer.Read(path);    // size, shape and sanitise gates
+        var imported = _data.Transfer.Read(path);    // size, shape and sanitize gates
         if (imported is null)
         {
             _data.ShowMessage("Import failed", "That doesn't look like a Tidsro backup. "
@@ -257,7 +257,7 @@ public partial class SettingsViewModel : ObservableObject
         DefaultSound = defaults.DefaultSound;
         _onDefaultSoundChanged(defaults.DefaultSound);
 
-        _resetWindowPlacement();                    // main window returns to 440x600 centred, so its
+        _resetWindowPlacement();                    // main window returns to 440x600 centered, so its
                                                     // OnClosing can't re-save the old coordinates
         _save();
     }

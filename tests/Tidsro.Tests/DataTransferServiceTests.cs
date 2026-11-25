@@ -75,7 +75,7 @@ public class DataTransferServiceTests : IDisposable
     }
 
     [Fact]
-    public void Read_accepts_a_document_carrying_only_one_recognised_key()
+    public void Read_accepts_a_document_carrying_only_one_recognized_key()
     {
         var path = Write("alarms-only.json", """{"Alarms":[]}""");
 

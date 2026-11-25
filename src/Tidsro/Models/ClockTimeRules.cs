@@ -12,7 +12,7 @@ public static class ClockTimeRules
 
         if (trimmed.Contains(':'))
         {
-            // Original colon path — behaviour unchanged.
+            // Original colon path — behavior unchanged.
             var parts = trimmed.Split(':', StringSplitOptions.TrimEntries);
             if (parts.Length != 2) { error = "Use HH:MM, e.g. 14:30."; return false; }
 

@@ -44,7 +44,7 @@ Launching Tidsro opens its window. It remembers where you last placed it and how
 
 - Pick a preset (5 / 30 / 60 min) or type a custom duration: `25` (minutes), `5:00` (mm:ss), or `1:30:00` (h:mm:ss). Add an optional **label** to tell timers apart. Invalid input shows a calm inline message.
 - Choose a **sound** for the next timer from the dropdown. **▶** previews it. It starts from your default sound and applies to both presets and custom timers. **My sound** appears in the list once you have chosen your own .wav in Settings.
-- Multiple countdowns can run at once, stacked soonest-first; each shows a live mm:ss (or h:mm:ss) countdown with **pause/resume, reset** (back to the full duration), and cancel. Cancelling drops a brief **Undo** bar at the bottom. Paused timers dim and drop below the active ones; resetting while paused keeps the timer stopped at the start.
+- Multiple countdowns can run at once, stacked soonest-first; each shows a live mm:ss (or h:mm:ss) countdown with **pause/resume, reset** (back to the full duration), and cancel. Canceling drops a brief **Undo** bar at the bottom. Paused timers dim and drop below the active ones; resetting while paused keeps the timer stopped at the start.
 - When a timer finishes, a calm card appears in the bottom-right corner. It does not steal focus.
   - **+5** arms a new 5-minute countdown. **Restart** re-runs the original duration. **Dismiss** closes the card.
   - Press **Ctrl+Alt+T** to bring the latest card into keyboard focus; Tab reaches the buttons; Enter activates; focus returns to your previous app on dismiss.
@@ -70,7 +70,7 @@ The **Schedule** is its own tab next to Quick timers, and a compact strip below 
 - When an alarm fires, the same quiet bottom-right card appears, with **Snooze +5** (re-arms it 5 minutes later in the Schedule) and **Dismiss**.
 
 <p align="center">
-  <img src="docs/screenshots/alarm-dialog.png" alt="The Edit alarm dialog: an 08:00 alarm labelled Morning walk, with a sound picker on Piano jingle, repeat set to Weekdays, the 5-minute pre-alarm warning switched on with a gold toggle, and Save and Cancel buttons." width="344"><br>
+  <img src="docs/screenshots/alarm-dialog.png" alt="The Edit alarm dialog: an 08:00 alarm labeled Morning walk, with a sound picker on Piano jingle, repeat set to Weekdays, the 5-minute pre-alarm warning switched on with a gold toggle, and Save and Cancel buttons." width="344"><br>
   <em>Editing an alarm: per-alarm sound, repeat, and the optional 5-minute warning.</em>
 </p>
 

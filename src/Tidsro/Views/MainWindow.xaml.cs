@@ -25,7 +25,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         DataContext = vm;
         _vm = vm;
-        vm.SelectedTabIndex = settings.SelectedTab;   // sanitised on load, so always in range
+        vm.SelectedTabIndex = settings.SelectedTab;   // sanitized on load, so always in range
 
         vm.Announcement += (_, message) => UiaNotifier.Announce(this, message);
         vm.EditAlarmRequested += (_, row) => { var dlg = editAlarmFactory(row); dlg.Owner = this; dlg.ShowDialog(); };
@@ -50,7 +50,7 @@ public partial class MainWindow : Window
         ApplyPlacement();
     }
 
-    // First show: restore the last on-screen position, or centre on first run.
+    // First show: restore the last on-screen position, or center on first run.
     private void ApplyPlacement()
     {
         if (_settings.WindowWidth is double w) Width = w;
@@ -69,7 +69,7 @@ public partial class MainWindow : Window
 
     /// <summary>Return to the XAML defaults after a settings reset, so OnClosing can't re-save the
     /// coordinates the reset just cleared. WindowStartupLocation only takes effect before a window is
-    /// first shown, so this window (already visible) is centred manually — within the work area of the
+    /// first shown, so this window (already visible) is centered manually — within the work area of the
     /// monitor it's actually on, not SystemParameters.WorkArea (always the primary monitor).</summary>
     public void ResetPlacement()
     {
@@ -82,7 +82,7 @@ public partial class MainWindow : Window
 
     /// <summary>Move an already-visible window to imported coordinates. Writing the settings alone is
     /// not enough: OnClosing writes the current placement back on every close, so the restore would
-    /// silently revert. Off-screen coordinates fall back to centring — the same guard the launch path
+    /// silently revert. Off-screen coordinates fall back to centering — the same guard the launch path
     /// applies, for the same reason (an unplugged monitor or a lower resolution).</summary>
     public void ApplyPlacement(AppSettings settings)
     {
@@ -162,7 +162,7 @@ public partial class MainWindow : Window
     public void CaptureWindowState()
     {
         _settings.SelectedTab = _vm.SelectedTabIndex;     // valid whatever the window state
-        if (WindowState != WindowState.Normal) return;    // store a usable position, not minimised/maximised
+        if (WindowState != WindowState.Normal) return;    // store a usable position, not minimized/maximized
         _settings.WindowWidth = Width;
         _settings.WindowHeight = Height;
         _settings.WindowLeft = Left;
@@ -185,7 +185,7 @@ public partial class MainWindow : Window
     /// converter deciding whether to show the line could not ask about.</para></summary>
     private void WidenForGrid_Click(object sender, RoutedEventArgs e)
     {
-        if (WindowState != WindowState.Normal) return;   // nothing to widen while maximised
+        if (WindowState != WindowState.Normal) return;   // nothing to widen while maximized
         var week = _vm.Timetable.Week;
         var work = ScreenHelper.WorkAreaForWindow(this);
 

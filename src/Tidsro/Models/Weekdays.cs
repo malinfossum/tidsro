@@ -1,6 +1,6 @@
 namespace Tidsro.Models;
 
-/// <summary>The set of weekdays a recurring alarm repeats on. Serialises as one integer.</summary>
+/// <summary>The set of weekdays a recurring alarm repeats on. Serializes as one integer.</summary>
 [Flags]
 public enum Weekdays
 {

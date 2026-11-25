@@ -164,7 +164,7 @@ function Select-Element { param($El) $El.GetCurrentPattern([System.Windows.Autom
 # ---------------------------------------------------------------------------- fixture
 
 # A fictional demo week. Nothing here describes anyone's real routine, and it is chosen to exercise
-# every behaviour the README claims: a row whose entries disagree on the minute (so the cells print
+# every behavior the README claims: a row whose entries disagree on the minute (so the cells print
 # their own times), a single-day alarm, and an empty weekend.
 $WeekPlan = @(
     @{ Hour = 7;  Minute = 30; Days = 'MonTueWedThuFri'; Label = 'Morning walk';    Sound = 1; Warn = $false }
@@ -195,7 +195,7 @@ function ConvertTo-DayFlags {
     param([string]$Days)
     $value = 0
     foreach ($name in $DayFlags.Keys) { if ($Days -match $name) { $value += $DayFlags[$name] } }
-    if ($value -eq 0) { throw "no weekday recognised in '$Days'" }
+    if ($value -eq 0) { throw "no weekday recognized in '$Days'" }
     $value
 }
 

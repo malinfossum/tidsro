@@ -12,8 +12,8 @@ public partial class SettingsWindow : Window
     }
 
     // Opens the OFL text embedded in this binary. Owned by Settings, which is itself modal, so the
-    // licence window nests under it rather than under the main window.
-    private void ViewLicence_Click(object sender, RoutedEventArgs e) => LicenceDialog.Show(this);
+    // license window nests under it rather than under the main window.
+    private void ViewLicense_Click(object sender, RoutedEventArgs e) => LicenseDialog.Show(this);
 
     // Save applies the draft then closes; Cancel/✕ close without saving, which discards the draft
     // (App builds a fresh SettingsViewModel from the shared snapshot each time Settings opens).

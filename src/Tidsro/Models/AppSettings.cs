@@ -31,7 +31,7 @@ public sealed class AppSettings
         SchemaVersion = 1,
         LaunchAtStartup = LaunchAtStartup,
         DefaultSound = Enum.IsDefined(DefaultSound) ? DefaultSound : SoundChoice.None,
-        CustomSoundName = NormaliseName(CustomSoundName),
+        CustomSoundName = NormalizeName(CustomSoundName),
         SelectedTab = SelectedTab >= 0 && SelectedTab < TabCount ? SelectedTab : 0,
         WindowLeft = WindowLeft is double l && double.IsFinite(l) ? l : null,
         WindowTop = WindowTop is double t && double.IsFinite(t) ? t : null,
@@ -41,7 +41,7 @@ public sealed class AppSettings
 
     private const int MaxName = 200;
 
-    private static string? NormaliseName(string? name)
+    private static string? NormalizeName(string? name)
     {
         if (string.IsNullOrWhiteSpace(name)) return null;
         var trimmed = name.Trim();

@@ -2,7 +2,7 @@ using System.Windows;
 
 namespace Tidsro.Views;
 
-// A dark, owner-centred yes/no in the app's own styling. Esc cancels via IsCancel, and closing with
+// A dark, owner-centered yes/no in the app's own styling. Esc cancels via IsCancel, and closing with
 // the title-bar X leaves DialogResult null — which Ask reads as "not confirmed".
 public partial class ConfirmDialog : Window
 {

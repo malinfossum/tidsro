@@ -409,7 +409,7 @@ public class SchedulerServiceTests
         c.Advance(TimeSpan.FromMinutes(1));    // 1 min in, still before fire
         s.Tick();
 
-        Assert.Equal(0, warned);               // suppressed: WarningSent initialised true at arm
+        Assert.Equal(0, warned);               // suppressed: WarningSent initialized true at arm
     }
 
     [Fact]

@@ -38,7 +38,7 @@
            is what scrolls. Focusable is keyboard focus only - the peers, and the entries' accessible
            names that ride on them, are untouched. -->
       <Setter Property="Focusable" Value="False"/>
-      <!-- Centred in the row band, with the gutter label beside it. Top-aligned, every row read as
+      <!-- Centered in the row band, with the gutter label beside it. Top-aligned, every row read as
            top-heavy: the text sat under the hairline with the rest of the band empty beneath it. -->
       <Setter Property="VerticalAlignment" Value="Center"/>
       <Setter Property="ItemContainerStyle">
@@ -102,11 +102,11 @@
                            Visibility="{Binding InlinesTime, Converter={StaticResource BoolToVisible}}"/>
                 <!-- The "off" mark. Segoe Fluent Icons Cancel (E711), the same icon family the sound
                      tags already use. Dimming alone never encodes state (spec 4), so an off entry
-                     carries a shape as well as a colour. -->
+                     carries a shape as well as a color. -->
                 <TextBlock Grid.Column="1" Text="&#xE711;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                            FontSize="{StaticResource TextXs}" Margin="0,0,4,0"
                            Visibility="{Binding IsEnabled, Converter={StaticResource BoolToCollapsed}}"/>
-                <!-- DisplayLabel, not Label: an unlabelled alarm is allowed, and it would otherwise
+                <!-- DisplayLabel, not Label: an unlabeled alarm is allowed, and it would otherwise
                      draw a blank cell. -->
                 <TextBlock Grid.Column="2" Text="{Binding DisplayLabel}" FontSize="{StaticResource TextXs}"
                            TextTrimming="CharacterEllipsis"/>
@@ -118,7 +118,7 @@
     </Style>
     <!-- The lane strip inside one cell: one column per lane the day draws, left to right, so a
          block's bar keeps the same width down its whole run instead of widening wherever its
-         neighbour happens to be absent. A UniformGrid skips a collapsed child and closes the gap,
+         neighbor happens to be absent. A UniformGrid skips a collapsed child and closes the gap,
          so each lane sits in its own Border - the same no-automation-peer trick the day columns use.
 
          This control is the one automation cost of lanes: an occupied cell now carries a nameless
@@ -149,7 +149,7 @@
                  the tree. A three-hour block is therefore one bar and one announcement, not three.
 
                  The bar never animates when it becomes current, in keeping with the app's
-                 reduced-motion posture, and the colour is never the only signal: the entry's
+                 reduced-motion posture, and the color is never the only signal: the entry's
                  accessible name carries the range, and the row's gutter carries the time. -->
             <Border Margin="1,0" MinHeight="18" Padding="0">
               <Border.Style>
@@ -206,7 +206,7 @@
     <!-- The offer to widen the window until the grid draws. A Button because it acts, wearing the
          same quiet line the rest of this tab uses for its asides: a chrome button on a read-only
          panel would be the loudest thing on it. Underlined on hover AND on keyboard focus, so what
-         marks it as clickable is never colour alone. -->
+         marks it as clickable is never color alone. -->
     <Style x:Key="TimetableWidenHint" TargetType="Button">
       <Setter Property="FocusVisualStyle" Value="{StaticResource ActionFocusVisual}"/>
       <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -258,13 +258,13 @@
       <ScrollViewer VerticalScrollBarVisibility="Auto"
                     Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisible}, ConverterParameter=0}">
         <!-- ONE MEASURE for the whole tab. The cap lives here, on the content panel, so the composer
-             card and every alarm row share a maximum width and centre together as one column — the card
+             card and every alarm row share a maximum width and center together as one column — the card
              surface hugs its contents and the leftover space is PAGE, not card.
 
              This is the third layer this cap was tried on, and the first that looks intentional:
              capping the COLUMN pinned the fields left with dead space beside them; capping the FORM
              left a full-width card with a small form floating inside it. HorizontalAlignment stays
-             Stretch on purpose — a Stretch element constrained by MaxWidth is CENTRED by WPF, which is
+             Stretch on purpose — a Stretch element constrained by MaxWidth is CENTERED by WPF, which is
              the whole mechanism.
 
              The measure is PROPORTIONAL, not fixed - WidthToMeasureConverter clamps 66% of the
@@ -280,10 +280,10 @@
              The hero borrows only the NUMERALS of Running[0]: that row stays in the list below with
              all of its controls (see IsCountdownInHero), so the hero needs no buttons of its own.
              Buttons here would have had to bind StripTimer rather than a captured item, and
-             CancelTimer removes that item synchronously - a second click would then have cancelled a
+             CancelTimer removes that item synchronously - a second click would then have canceled a
              second timer. Caption, numerals, label. Nothing else. -->
         <!-- Shadow: the caster is a childless sibling BEHIND the card. Hanging the effect on the
-             card itself would rasterise the 42px numerals with it. See CardShadowCaster in
+             card itself would rasterize the 42px numerals with it. See CardShadowCaster in
              tokens.xaml. Visibility lives on the Grid so the caster collapses with the card. -->
         <Grid Margin="0,0,0,24"
               Visibility="{Binding ShowHero, Converter={StaticResource BoolToVisible}}">
@@ -397,7 +397,7 @@
                the control a new collection every tick and rebuild every container. -->
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <!-- The caster carries the shadow so the row's own numerals are not rasterised with
+              <!-- The caster carries the shadow so the row's own numerals are not rasterized with
                    it; the fade-in moves to the Grid so card and shadow appear together. -->
               <Grid Margin="{StaticResource RowGap}">
                 <Grid.Triggers>
@@ -482,13 +482,13 @@
       <ScrollViewer VerticalScrollBarVisibility="Auto"
                     Visibility="{Binding SelectedTabIndex, Converter={StaticResource IndexToVisible}, ConverterParameter=1}">
         <!-- ONE MEASURE for the whole tab. The cap lives here, on the content panel, so the composer
-             card and every alarm row share a maximum width and centre together as one column — the card
+             card and every alarm row share a maximum width and center together as one column — the card
              surface hugs its contents and the leftover space is PAGE, not card.
 
              This is the third layer this cap was tried on, and the first that looks intentional:
              capping the COLUMN pinned the fields left with dead space beside them; capping the FORM
              left a full-width card with a small form floating inside it. HorizontalAlignment stays
-             Stretch on purpose — a Stretch element constrained by MaxWidth is CENTRED by WPF, which is
+             Stretch on purpose — a Stretch element constrained by MaxWidth is CENTERED by WPF, which is
              the whole mechanism.
 
              The measure is PROPORTIONAL, not fixed - WidthToMeasureConverter clamps 66% of the
@@ -585,7 +585,7 @@
           </ItemsControl.ItemContainerStyle>
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <!-- Shadow on a childless sibling, never on the row itself: an Effect rasterises the
+              <!-- Shadow on a childless sibling, never on the row itself: an Effect rasterizes the
                    whole subtree and would soften the alarm time and every label inside. -->
               <Grid Margin="{StaticResource RowGap}">
                 <Grid.Triggers>
@@ -722,14 +722,14 @@
               <DataTemplate>
                 <StackPanel Margin="0,0,0,16">
                   <!-- Today is marked here exactly as it is in the grid's column headers: a dot AND
-                       the brass accent. Colour alone never encodes state (WCAG 1.4.1), and the word
+                       the brass accent. Color alone never encodes state (WCAG 1.4.1), and the word
                        "today" is already in the day's accessible name above. -->
                   <StackPanel Orientation="Horizontal">
                     <TextBlock Text="●" Margin="0,0,4,0" FontSize="{StaticResource TextXs}"
                                Foreground="{StaticResource Accent}"
                                Visibility="{Binding IsToday, Converter={StaticResource BoolToVisible}}"/>
                     <TextBlock Text="{Binding Name}" FontSize="{StaticResource TextXs}">
-                      <!-- The default colour is a Setter, not a local attribute: a local value beats
+                      <!-- The default color is a Setter, not a local attribute: a local value beats
                            a style trigger in WPF, so setting Foreground inline here would make the
                            accent below dead markup. -->
                       <TextBlock.Style>
@@ -790,7 +790,7 @@
                                        FontSize="{StaticResource TextXs}" Margin="0,2,6,0"
                                        VerticalAlignment="Top"
                                        Visibility="{Binding IsEnabled, Converter={StaticResource BoolToCollapsed}}"/>
-                            <!-- DisplayLabel, not Label: an unlabelled alarm is allowed and would
+                            <!-- DisplayLabel, not Label: an unlabeled alarm is allowed and would
                                  otherwise draw a blank line. -->
                             <TextBlock Grid.Column="2" Text="{Binding DisplayLabel}" TextWrapping="Wrap"
                                        MaxHeight="40"/>
@@ -839,7 +839,7 @@
 
                  The headings are chrome and the rows are the data, so they are separated three
                  ways: a rule in BorderControl, twice as bright as the rows' own hairlines; the
-                 muted text colour the rest of the app gives its captions; and a clear band of space
+                 muted text color the rest of the app gives its captions; and a clear band of space
                  before the first row. One of the three alone left the two reading as one block. -->
             <Border BorderBrush="{StaticResource BorderControl}" BorderThickness="0,0,0,1"
                     Padding="0,0,0,6" Margin="0,0,0,4">
@@ -862,11 +862,11 @@
                 </ItemsControl.ItemContainerStyle>
                 <ItemsControl.ItemTemplate>
                   <DataTemplate>
-                    <!-- Left, not centred, and on the cells' own left margin: the entries below
+                    <!-- Left, not centered, and on the cells' own left margin: the entries below
                          are left-aligned text now that they have no boxes filling the column, so a
-                         centred heading floats half a column to the right of what it names. -->
+                         centered heading floats half a column to the right of what it names. -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="2,0,0,0">
-                      <!-- Today is marked by a glyph as well as the accent: colour alone never
+                      <!-- Today is marked by a glyph as well as the accent: color alone never
                            encodes state (WCAG 1.4.1). -->
                       <TextBlock Text="●" Margin="0,0,4,0" Foreground="{StaticResource Accent}"
                                  Visibility="{Binding IsToday, Converter={StaticResource BoolToVisible}}"/>
@@ -877,7 +877,7 @@
                             <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
                             <Style.Triggers>
                               <!-- Today's name takes the accent as well as the dot beside it. The
-                                   dot is what carries the meaning; the colour only reinforces it
+                                   dot is what carries the meaning; the color only reinforces it
                                    (WCAG 1.4.1). -->
                               <DataTrigger Binding="{Binding IsToday}" Value="True">
                                 <Setter Property="Foreground" Value="{StaticResource Accent}"/>
@@ -903,7 +903,7 @@
 
                        MinHeight is the ONE row-height value in this rendering, and because the
                        gutter label and all seven cells live inside this Grid it governs every one
-                       of them at once. Every row is the same height and its content is centred in
+                       of them at once. Every row is the same height and its content is centered in
                        it: the rows carry one line each, they are the only rows there are now that
                        an empty half hour draws nothing, and an even rhythm is what makes the panel
                        read as a timetable. MinHeight rather than Height so a half hour holding two
@@ -947,7 +947,7 @@
                       <Border><StackPanel><ItemsControl Style="{StaticResource TimetableLanes}" ItemsSource="{Binding Cells[4].Lanes}"/><TextBlock Style="{StaticResource TimetableOverflow}" Text="{Binding Cells[4].OverflowText}" Visibility="{Binding Cells[4].HasOverflow, Converter={StaticResource BoolToVisible}}"/></StackPanel></Border>
                       <!-- Saturday and Sunday, dropped as a pair on a week with a free weekend. The
                            week decides it once (HidesWeekend) and every row reads the same answer,
-                           so no row can end up a column wider than its neighbours. -->
+                           so no row can end up a column wider than its neighbors. -->
                       <Border Visibility="{Binding DataContext.Timetable.Week.HidesWeekend, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToCollapsed}}"><StackPanel><ItemsControl Style="{StaticResource TimetableLanes}" ItemsSource="{Binding Cells[5].Lanes}"/><TextBlock Style="{StaticResource TimetableOverflow}" Text="{Binding Cells[5].OverflowText}" Visibility="{Binding Cells[5].HasOverflow, Converter={StaticResource BoolToVisible}}"/></StackPanel></Border>
                       <Border Visibility="{Binding DataContext.Timetable.Week.HidesWeekend, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource BoolToCollapsed}}"><StackPanel><ItemsControl Style="{StaticResource TimetableLanes}" ItemsSource="{Binding Cells[6].Lanes}"/><TextBlock Style="{StaticResource TimetableOverflow}" Text="{Binding Cells[6].OverflowText}" Visibility="{Binding Cells[6].HasOverflow, Converter={StaticResource BoolToVisible}}"/></StackPanel></Border>
                     </UniformGrid>
@@ -971,7 +971,7 @@
       <!-- Said only when it is true and only when it would work: WidthToRevealGrid answers no on a
            window already wide enough, on a week with no columns to draw, and on a screen that could
            not hold the grid anyway. The agenda is a complete rendering of the same week, so this
-           offers a second view of it - it never apologises for this one. -->
+           offers a second view of it - it never apologizes for this one. -->
       <Button Grid.Row="1" Style="{StaticResource TimetableWidenHint}" Click="WidenForGrid_Click"
               Content="Widen the window to see the week as a grid">
         <Button.Visibility>

@@ -93,7 +93,7 @@ public sealed class SchedulerService
     }
 
     // A transient, list-less copy of one occurrence. The completion card's Snooze/Dismiss act on THIS,
-    // so the live recurring alarm (still in _alarms, already advanced) is never cancelled. Typed ClockTime
+    // so the live recurring alarm (still in _alarms, already advanced) is never canceled. Typed ClockTime
     // so the card shows Snooze +5 / Dismiss (no Restart).
     private static TimerItem OccurrenceSnapshot(TimerItem alarm, DateTimeOffset occurrence) => new()
     {

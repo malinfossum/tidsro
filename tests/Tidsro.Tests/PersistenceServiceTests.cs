@@ -227,13 +227,13 @@ public class PersistenceServiceTests : IDisposable
     public void WriteTo_does_not_delete_a_corrupt_file_beside_the_destination()
     {
         var target = Path.Combine(_dir, "export.json");
-        var neighbour = target + ".corrupt";
-        File.WriteAllText(neighbour, "someone else's file");
+        var neighbor = target + ".corrupt";
+        File.WriteAllText(neighbor, "someone else's file");
 
         PersistenceService.WriteTo(target, TidsroData.Defaults());
 
         Assert.True(File.Exists(target));
-        Assert.True(File.Exists(neighbour));   // export must not clear quarantine outside AppData
+        Assert.True(File.Exists(neighbor));   // export must not clear quarantine outside AppData
     }
 
     [Fact]

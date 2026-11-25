@@ -61,21 +61,21 @@ public class FontResourceTests
         Assert.Contains(key, ResourceKeys());
     }
 
-    // OFL 1.1 §2 requires the licence to accompany every redistributed copy of the font software.
+    // OFL 1.1 §2 requires the license to accompany every redistributed copy of the font software.
     // The installer ships OFL-IBMPlex.txt beside the app, but publish.ps1 also produces a standalone
-    // portable Tidsro.exe with no companion files - so for that channel the licence only travels if
-    // it is inside the binary. The path comes from LicenceDialog, so moving the file without moving
-    // the reader (or vice versa) fails here rather than at a user's Settings ▸ View font licence.
+    // portable Tidsro.exe with no companion files - so for that channel the license only travels if
+    // it is inside the binary. The path comes from LicenseDialog, so moving the file without moving
+    // the reader (or vice versa) fails here rather than at a user's Settings ▸ View font license.
     [Fact]
-    public void The_font_licence_is_embedded_where_the_dialog_reads_it()
+    public void The_font_license_is_embedded_where_the_dialog_reads_it()
     {
-        Assert.Contains(LicenceDialog.EmbeddedLicencePath.ToLowerInvariant(), ResourceKeys());
+        Assert.Contains(LicenseDialog.EmbeddedLicensePath.ToLowerInvariant(), ResourceKeys());
     }
 
     [Fact]
-    public void The_embedded_licence_is_the_OFL_text_itself_not_a_pointer_to_it()
+    public void The_embedded_license_is_the_OFL_text_itself_not_a_pointer_to_it()
     {
-        var text = ResourceText(LicenceDialog.EmbeddedLicencePath.ToLowerInvariant());
+        var text = ResourceText(LicenseDialog.EmbeddedLicensePath.ToLowerInvariant());
 
         Assert.Contains("SIL OPEN FONT LICENSE Version 1.1", text, StringComparison.Ordinal);
         Assert.Contains("PERMISSION & CONDITIONS", text, StringComparison.Ordinal);
@@ -159,10 +159,10 @@ public class FontResourceTests
 
     // The weight hierarchy (spec §6) asks for SemiBold on the selected tab, section headings and
     // primary buttons, and Medium for Plex Mono. Asking for a weight a family does not have is not
-    // an error: WPF synthesises a fake bold from the Regular face, which looks plausible and ships
+    // an error: WPF synthesizes a fake bold from the Regular face, which looks plausible and ships
     // 359 KB of unused .ttf alongside it - the same silent-degradation shape as the "Inter" bug.
     // TryGetGlyphTypeface resolves the request all the way down to the physical face, so comparing
-    // that face's own weight is what proves a real embedded face renders rather than a synthesised one.
+    // that face's own weight is what proves a real embedded face renders rather than a synthesized one.
     [Theory]
     [InlineData("IBM Plex Sans", 600)]   // SemiBold — IBMPlexSans-SemiBold.ttf
     [InlineData("IBM Plex Mono", 500)]   // Medium   — IBMPlexMono-Medium.ttf

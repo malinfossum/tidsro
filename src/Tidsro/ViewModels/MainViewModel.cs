@@ -92,7 +92,7 @@ public partial class MainViewModel : ObservableObject
         _scheduler.Alarms.Select(a => (a.Id, a.EndsAt)).ToHashSet();
 
     private TimerItem? _pendingDelete;
-    private TimeSpan? _pendingDeleteRemaining;   // non-null when the pending item is a cancelled countdown
+    private TimeSpan? _pendingDeleteRemaining;   // non-null when the pending item is a canceled countdown
     [ObservableProperty] private string? _pendingDeleteLabel;
     public bool HasPendingDelete => _pendingDelete is not null;
 
@@ -280,20 +280,20 @@ public partial class MainViewModel : ObservableObject
         if (row is null) return;
         CommitPendingDelete();                       // only one outstanding undo at a time
         var item = row.Item;
-        var remaining = _scheduler.Remaining(item);  // capture BEFORE cancelling
+        var remaining = _scheduler.Remaining(item);  // capture BEFORE canceling
         _scheduler.Cancel(item);
         Running.Remove(row);                         // instant removal — no 1s tick lag
         MarkNextRunning();                           // highlight jumps to the new soonest at once
         _pendingDelete = item;
         _pendingDeleteRemaining = remaining;
-        PendingDeleteLabel = $"Timer cancelled{(string.IsNullOrEmpty(item.Label) ? "" : $" · {item.Label}")}";
+        PendingDeleteLabel = $"Timer canceled{(string.IsNullOrEmpty(item.Label) ? "" : $" · {item.Label}")}";
         OnPropertyChanged(nameof(HasPendingDelete));
-        Announce("Timer cancelled");
+        Announce("Timer canceled");
     }
 
     public void RefreshAll()
     {
-        // drop rows whose underlying timer is no longer running (cancelled/fired+dismissed)
+        // drop rows whose underlying timer is no longer running (canceled/fired+dismissed)
         for (var i = Running.Count - 1; i >= 0; i--)
         {
             if (!_scheduler.Running.Contains(Running[i].Item)) Running.RemoveAt(i);
@@ -533,7 +533,7 @@ public partial class MainViewModel : ObservableObject
         OnPropertyChanged(nameof(HasPendingDelete));
     }
 
-    /// <summary>Finalise an outstanding delete: for alarms, it leaves disk now. Called on timeout, on quit, or before another action.</summary>
+    /// <summary>Finalize an outstanding delete: for alarms, it leaves disk now. Called on timeout, on quit, or before another action.</summary>
     public void CommitPendingDelete()
     {
         if (_pendingDelete is not { } item) return;
