@@ -575,7 +575,7 @@
                    FontSize="{StaticResource TextSm}" Margin="{StaticResource SectionGap}"
                    Visibility="{Binding IsDayEmpty, Converter={StaticResource BoolToVisible}}"/>
 
-        <ItemsControl ItemsSource="{Binding Alarms}" Margin="{StaticResource SectionGap}">
+        <ItemsControl x:Name="AlarmList" ItemsSource="{Binding Alarms}" Margin="{StaticResource SectionGap}">
           <!-- The name belongs on the generated container: a Border has no automation peer, so a name
                set inside the template never reaches the tree and the row falls back to ToString(). -->
           <ItemsControl.ItemContainerStyle>

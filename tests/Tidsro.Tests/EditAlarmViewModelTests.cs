@@ -267,6 +267,20 @@ public class EditAlarmViewModelTests
     }
 
     [Fact]
+    public void A_validation_error_replaces_the_skip_warning()
+    {
+        var vm = WithLostSkip(out var applied);
+        vm.SaveCommand.Execute(null);
+
+        vm.TimeInput = "25:00";
+        vm.SaveCommand.Execute(null);
+
+        Assert.NotNull(vm.Error);
+        Assert.Null(vm.SkipWarning);
+        Assert.Empty(applied);
+    }
+
+    [Fact]
     public void Changing_the_edit_after_the_warning_warns_again_or_clears_it()
     {
         var vm = WithLostSkip(out var applied);

@@ -3,6 +3,11 @@ using Tidsro.Models;
 namespace Tidsro.ViewModels;
 
 /// <summary>One row in the "Your day" agenda. Presentation only — the parent owns edit/delete.</summary>
+/// <summary>The row control an action came from, so focus can return to it after the rebuild.</summary>
+public enum AlarmRowAction { Toggle, Skip, UndoSkip }
+
+public sealed record AlarmRowFocus(Guid AlarmId, AlarmRowAction Action);
+
 public sealed class AlarmItemViewModel
 {
     public TimerItem Item { get; }
@@ -58,7 +63,8 @@ public sealed class AlarmItemViewModel
         : (IsTomorrow ? " tomorrow" : "");
 
     // Skip-next: only a recurring alarm that is on has a next time to pass over. A one-shot alarm is
-    // deleted instead, and an alarm that is off is already silent.
+    // deleted instead, and an alarm that is off is already silent. A skip made before it was switched
+    // off still shows, dimmed with the row, and Undo skip still takes it back.
     public bool CanSkip => Item.TriggerType == TriggerType.Recurring && Item.IsEnabled;
     public bool IsSkipped => SkippedCount > 0;
 

@@ -26,6 +26,10 @@ public sealed class HeadsUpTracker<TCard> where TCard : notnull
 
     public void Closed(TCard card) => _open.Remove(card);
 
+    /// <summary>Drop every parked card. Clear all and Import close every card and replace the alarms;
+    /// nothing from before may come back.</summary>
+    public void Forget() => _parked.Clear();
+
     public Changes Reconcile(DateTimeOffset now, Func<Guid, DateTimeOffset, bool> willRingAt)
     {
         var fired = new List<TCard>();

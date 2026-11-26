@@ -207,7 +207,7 @@ public class SkipNextTests
     }
 
     [Fact]
-    public void An_alarm_that_is_off_keeps_its_skipped_dates()
+    public void An_alarm_that_is_off_keeps_its_skip_and_can_still_undo_it()
     {
         var (s, _) = New();
         var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None);
@@ -215,11 +215,11 @@ public class SkipNextTests
 
         s.SetEnabled(alarm, false);
 
-        Assert.Equal(0, s.SkippedCount(alarm));   // the row shows no skip while the alarm is off
+        Assert.Equal(1, s.SkippedCount(alarm));   // the row still shows it, dimmed
         Assert.Equal([Day(1)], s.SkippedDates(alarm));
-
-        s.SetEnabled(alarm, true);
-        Assert.Equal(1, s.SkippedCount(alarm));   // and it is still there when it comes back on
+        Assert.False(s.SkipNext(alarm));           // but no new skip while it is off
+        Assert.True(s.UndoSkip(alarm));
+        Assert.Equal(At(1, 10), alarm.EndsAt);
     }
 
     [Fact]
@@ -523,6 +523,51 @@ public class SkipNextViewModelTests
     }
 
     [Fact]
+    public void An_edit_of_an_alarm_with_a_stale_next_time_falls_back_to_the_natural_one()
+    {
+        var vm = WithDailyTalk(out var clock, out _);
+        clock.Now = Jan(1, 9).AddDays(-(SchedulerService.MaxSkips + 10));   // the clock stepped back
+
+        vm.ApplyAlarmEdit(vm.Alarms[0].Item.Id, 10, 0, RecurrenceRules.AllDays, "Talk", SoundChoice.None, false);
+
+        var row = Assert.Single(vm.Alarms);
+        Assert.Equal(clock.Now.Date.AddHours(10), row.Item.EndsAt!.Value.DateTime);
+        Assert.False(row.IsSkipped);
+    }
+
+    [Fact]
+    public void A_row_that_is_off_shows_its_skip_and_offers_only_Undo_skip()
+    {
+        var vm = WithDailyTalk(out _, out _);
+        vm.SkipAlarmCommand.Execute(vm.Alarms[0]);
+
+        vm.ToggleAlarmCommand.Execute(vm.Alarms[0]);   // off
+
+        var row = vm.Alarms[0];
+        Assert.True(row.IsSkipped);
+        Assert.False(row.CanSkip);
+        vm.UndoSkipAlarmCommand.Execute(row);
+        Assert.False(vm.Alarms[0].IsSkipped);
+    }
+
+    [Fact]
+    public void Row_actions_ask_the_view_to_put_focus_back_on_the_same_control()
+    {
+        var vm = WithDailyTalk(out _, out _);
+        var asked = new List<AlarmRowFocus>(); vm.AlarmRowFocusRequested += (_, f) => asked.Add(f);
+        var id = vm.Alarms[0].Item.Id;
+
+        vm.SkipAlarmCommand.Execute(vm.Alarms[0]);
+        vm.UndoSkipAlarmCommand.Execute(vm.Alarms[0]);
+        vm.ToggleAlarmCommand.Execute(vm.Alarms[0]);
+
+        Assert.Equal(
+            [new AlarmRowFocus(id, AlarmRowAction.Skip), new AlarmRowFocus(id, AlarmRowAction.UndoSkip),
+             new AlarmRowFocus(id, AlarmRowAction.Toggle)],
+            asked);
+    }
+
+    [Fact]
     public void Skip_at_the_cap_is_announced_not_ignored()
     {
         var vm = WithDailyTalk(out _, out _);
@@ -595,6 +640,19 @@ public class HeadsUpTrackerTests
 
         Assert.Empty(c.Back);
         Assert.False(t.IsShown(Id, Ten));
+    }
+
+    [Fact]
+    public void Forget_drops_every_parked_card()
+    {
+        var t = new HeadsUpTracker<string>();
+        t.Opened("card", Id, Ten);
+        t.Reconcile(Before, (_, _) => false);
+        t.Closed("card");
+
+        t.Forget();
+
+        Assert.Empty(t.Reconcile(Before, (_, _) => true).Back);
     }
 
     [Fact]

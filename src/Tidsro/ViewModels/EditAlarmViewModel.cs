@@ -18,7 +18,7 @@ public partial class EditAlarmViewModel : ObservableObject
     private readonly Func<Guid, int, int, Weekdays, IReadOnlyList<DateOnly>> _lostSkips;
     // The time and days the skip warning was shown for. A second Save of the same edit goes through;
     // a different edit warns again with its own dates.
-    private (int Hour, int Minute, Weekdays Days)? _warnedFor;
+    private string? _warnedFor;
 
     public SoundChoice[] SoundOptions { get; }
 
@@ -85,22 +85,25 @@ public partial class EditAlarmViewModel : ObservableObject
         var days = ResolveDays();
         // Custom with nothing ticked would otherwise fall through as a one-shot, silently.
         if (Repeat == RepeatOption.Custom && days == Weekdays.None)
-        { Error = "Pick at least one day."; return; }
+        { Error = "Pick at least one day."; SkipWarning = null; return; }
 
         // A one-shot has no end to give. Here a bad end is reported, because there is a person to
         // tell; everywhere else -- a hand-edited file, an import -- it is silently dropped.
         var endInput = days == Weekdays.None ? null : EndInput;
         if (!ClockTimeRules.TryParseWindow(TimeInput, endInput, out var h, out var m, out var end, out var err))
-        { Error = err; return; }
+        { Error = err; SkipWarning = null; return; }
 
         Error = null;
 
         // A skip can only pass over the next occurrences in order, so new days or a new time can put an
         // unskipped occurrence first and bring a skipped day back. Say so once, before it happens.
         var lost = _lostSkips(_id, h, m, days);
-        if (lost.Count > 0 && _warnedFor != (h, m, days))
+        // Keyed on the edit and the dates it brings back, so a second Save only goes through for the
+        // exact loss that was shown (the dates can move if the dialog stays open past a skipped time).
+        var key = $"{h}:{m}:{days}:{string.Join(",", lost)}";
+        if (lost.Count > 0 && _warnedFor != key)
         {
-            _warnedFor = (h, m, days);
+            _warnedFor = key;
             SkipWarning = $"This change brings back the skipped {(lost.Count == 1 ? "day" : "days")} " +
                 $"{string.Join(", ", lost.Select(RecurrenceRules.ShortDate))}. Save again to keep it.";
             return;

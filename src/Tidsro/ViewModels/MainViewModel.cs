@@ -105,6 +105,10 @@ public partial class MainViewModel : ObservableObject
     public event EventHandler<string>? Announcement;
     /// <summary>Raised when the user picks an agenda row to edit, so the View opens the modal Edit-alarm dialog.</summary>
     public event EventHandler<AlarmItemViewModel>? EditAlarmRequested;
+
+    /// <summary>Raised after a row action rebuilt the agenda, which destroyed the focused control.
+    /// The view puts focus back on the same control in the same alarm's new row.</summary>
+    public event EventHandler<AlarmRowFocus>? AlarmRowFocusRequested;
     /// <summary>Raised before a bulk wipe so the View can close open completion cards — their Snooze
     /// would otherwise re-arm an alarm into the schedule we are emptying.</summary>
     public event EventHandler? ClosePopupsRequested;
@@ -547,6 +551,7 @@ public partial class MainViewModel : ObservableObject
         RebuildAgenda();
         AlarmsChanged?.Invoke(this, EventArgs.Empty);   // the on/off change is persisted
         Announce($"Alarm at {row.TimeText} turned {(item.IsEnabled ? "on" : "off")}");
+        AlarmRowFocusRequested?.Invoke(this, new AlarmRowFocus(item.Id, AlarmRowAction.Toggle));
     }
 
     [RelayCommand]
@@ -565,6 +570,7 @@ public partial class MainViewModel : ObservableObject
         RebuildAgenda();
         AlarmsChanged?.Invoke(this, EventArgs.Empty);   // the new next time is what gets saved
         Announce($"Skipped the alarm at {row.TimeText} on {RecurrenceRules.ShortDate(skipped)}. Next: {DescribeNext(item)}");
+        AlarmRowFocusRequested?.Invoke(this, new AlarmRowFocus(item.Id, AlarmRowAction.Skip));
     }
 
     [RelayCommand]
@@ -577,6 +583,7 @@ public partial class MainViewModel : ObservableObject
         RebuildAgenda();
         AlarmsChanged?.Invoke(this, EventArgs.Empty);
         Announce($"Skip undone. Next: {DescribeNext(item)}");
+        AlarmRowFocusRequested?.Invoke(this, new AlarmRowFocus(item.Id, AlarmRowAction.UndoSkip));
     }
 
     private static string DescribeNext(TimerItem item) =>

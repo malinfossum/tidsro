@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -29,6 +30,8 @@ public partial class MainWindow : Window
 
         vm.Announcement += (_, message) => UiaNotifier.Announce(this, message);
         vm.EditAlarmRequested += (_, row) => { var dlg = editAlarmFactory(row); dlg.Owner = this; dlg.ShowDialog(); };
+        // After the rows are rebuilt and laid out, not before: the new containers must exist.
+        vm.AlarmRowFocusRequested += (_, f) => Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => FocusAlarmRow(f));
 
         _undoTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(9) };   // comfortable undo floor (spec §3.1)
         _undoTimer.Tick += (_, _) => { _undoTimer.Stop(); vm.CommitPendingDelete(); };
@@ -48,6 +51,38 @@ public partial class MainWindow : Window
         _settings = settings;
         _persist = persist;
         ApplyPlacement();
+    }
+
+    // A row action rebuilds the agenda, which destroys the focused button. Put focus back on the same
+    // control in the same alarm's new row, so a keyboard user can press Skip again or reach Undo skip.
+    // Undo skip hides itself once the last skip is taken back; Skip is then the nearest control.
+    // Mouse users see no ring: WPF draws focus visuals only after keyboard input.
+    private void FocusAlarmRow(AlarmRowFocus focus)
+    {
+        if (!IsActive) return;   // the user has moved to another window; leave focus alone
+        var row = AlarmList.Items.OfType<AlarmItemViewModel>().FirstOrDefault(r => r.Item.Id == focus.AlarmId);
+        if (row is null || AlarmList.ItemContainerGenerator.ContainerFromItem(row) is not DependencyObject container)
+            return;
+        ICommand command = focus.Action switch
+        {
+            AlarmRowAction.Toggle => _vm.ToggleAlarmCommand,
+            AlarmRowAction.Skip => _vm.SkipAlarmCommand,
+            _ => _vm.UndoSkipAlarmCommand,
+        };
+        var target = FindCommandTarget(container, command)
+            ?? (focus.Action == AlarmRowAction.UndoSkip ? FindCommandTarget(container, _vm.SkipAlarmCommand) : null);
+        target?.Focus();
+    }
+
+    private static UIElement? FindCommandTarget(DependencyObject root, ICommand command)
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is ButtonBase { IsVisible: true } button && ReferenceEquals(button.Command, command)) return button;
+            if (FindCommandTarget(child, command) is { } found) return found;
+        }
+        return null;
     }
 
     // First show: restore the last on-screen position, or center on first run. Centering is done here

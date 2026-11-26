@@ -97,13 +97,13 @@ public sealed class SchedulerService
     }
 
     /// <summary>How many occurrences lie between now and the alarm's next one, i.e. how many it
-    /// will pass over. Zero for anything that is not a recurring alarm that is on. It falls by itself
-    /// as a skipped occurrence's time goes by.</summary>
-    public int SkippedCount(TimerItem alarm) => alarm.IsEnabled ? SkippedOccurrences(alarm, MaxSkips).Count : 0;
+    /// will pass over. Zero for anything that is not a recurring alarm. It counts an alarm that is
+    /// off too: its skip waits in its next time and applies again when it is switched back on, so the
+    /// row shows it and Undo skip still works. It falls by itself as a skipped time goes by.</summary>
+    public int SkippedCount(TimerItem alarm) => SkippedOccurrences(alarm, MaxSkips).Count;
 
-    /// <summary>The local dates the alarm passes over before it rings again. Unlike
-    /// <see cref="SkippedCount"/> this counts an alarm that is off too: its skip waits in its next
-    /// time and still applies when it is switched back on. Empty when the next time is further out
+    /// <summary>The local dates the alarm passes over before it rings again, counted the same way
+    /// as <see cref="SkippedCount"/>. Empty when the next time is further out
     /// than <see cref="MaxSkips"/> occurrences: that is a stale time (a clock that stepped back), not
     /// a skip, and an edit drops it the way a load does.</summary>
     public IReadOnlyList<DateOnly> SkippedDates(TimerItem alarm)
@@ -166,7 +166,7 @@ public sealed class SchedulerService
     }
 
     // The occurrences between now and the alarm's next time, at most `limit` of them. Ignores IsEnabled
-    // on purpose: SkippedCount and SkipNext add that rule, SkippedDates must not.
+    // on purpose: only SkipNext refuses an alarm that is off.
     private List<DateTimeOffset> SkippedOccurrences(TimerItem alarm, int limit)
     {
         var skipped = new List<DateTimeOffset>();

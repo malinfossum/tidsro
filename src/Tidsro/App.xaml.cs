@@ -174,6 +174,7 @@ public partial class App : Application
                 // Close: a normal close restores the foreground window captured when the card appeared
                 // (often a different app), which would push the modal Settings dialog behind it.
                 if (popup.IsLoaded) popup.CloseWithoutRestoringFocus();
+            _headsUps.Forget();   // a parked heads-up must not come back after a clear or an import
         };
 
         new StartupService(StartupService.CurrentExePath).RefreshIfEnabled();
@@ -239,7 +240,11 @@ public partial class App : Application
         ShowHeadsUp(item, playId);
     }
 
-    private void ShowHeadsUp(TimerItem item, int playId = 0)
+    // A returning card opens while Tidsro is in front (the user just pressed Undo or switched the alarm
+    // on), so the window it would hand focus back to on close is Tidsro itself. It closes without that.
+    private readonly HashSet<CompletionPopup> _returnedHeadsUps = new();
+
+    private void ShowHeadsUp(TimerItem item, int playId = 0, bool returning = false)
     {
         var fireAt = item.EndsAt ?? _scheduler.Now;   // this occurrence's fire time, captured now
         if (_headsUps.IsShown(item.Id, fireAt)) return;   // never stack a second card for one occurrence
@@ -247,6 +252,11 @@ public partial class App : Application
         var popup = ShowCard(new PopupViewModel(item, head));   // heads-up (close-only) variant
         popup.Closed += (_, _) => _sound.Stop(playId);
         _headsUps.Opened(popup, item.Id, fireAt);
+        if (returning)
+        {
+            _returnedHeadsUps.Add(popup);
+            popup.Closed += (_, _) => _returnedHeadsUps.Remove(popup);
+        }
     }
 
     // Show a completion card bottom-right without stealing focus, track it in the stack, and keep the
@@ -273,13 +283,19 @@ public partial class App : Application
     {
         var changes = _headsUps.Reconcile(_scheduler.Now, _scheduler.WillRingAt);
         foreach (var popup in changes.Fired)
-            if (popup.IsLoaded) popup.Close();   // IsLoaded: never re-close a window already closing
+        {
+            if (!popup.IsLoaded) continue;   // never re-close a window already closing
+            if (_returnedHeadsUps.Contains(popup)) popup.CloseWithoutRestoringFocus();
+            else popup.Close();
+        }
         // The user is working in Tidsro when an occurrence goes away (a skip, Off, a delete), so focus
         // must stay here, not jump back to whatever was in front when the card first appeared.
         foreach (var popup in changes.Gone)
             if (popup.IsLoaded) popup.CloseWithoutRestoringFocus();
+        // Only while the alarm still asks for a heads-up: an edit may have switched Warn off meanwhile.
         foreach (var id in changes.Back)
-            if (_scheduler.Alarms.FirstOrDefault(a => a.Id == id) is { } alarm) ShowHeadsUp(alarm);
+            if (_scheduler.Alarms.FirstOrDefault(a => a.Id == id) is { WarnBefore: true } alarm)
+                ShowHeadsUp(alarm, returning: true);
     }
 
     private void PositionPopup(CompletionPopup popup, int indexFromBottom)
