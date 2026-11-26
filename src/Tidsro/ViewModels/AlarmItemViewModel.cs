@@ -9,11 +9,15 @@ public sealed class AlarmItemViewModel
     public bool IsTomorrow { get; }
     public bool IsNext { get; }
 
-    public AlarmItemViewModel(TimerItem item, bool isTomorrow, bool isNext)
+    /// <summary>How many occurrences this alarm will pass over before it rings again (skip-next).</summary>
+    public int SkippedCount { get; }
+
+    public AlarmItemViewModel(TimerItem item, bool isTomorrow, bool isNext, int skippedCount = 0)
     {
         Item = item;
         IsTomorrow = isTomorrow;
         IsNext = isNext;
+        SkippedCount = skippedCount;
     }
 
     public string TimeText => Item.EndsAt is { } e ? e.ToString("HH\\:mm") : "--:--";
@@ -47,11 +51,25 @@ public sealed class AlarmItemViewModel
 
     // Sound state and the cadence/next cues are carried as text, never color alone (spec §7).
     public string AccessibleName =>
-        $"Alarm at {SpokenTime}{CadencePhrase}, {DisplayLabel}, {SoundText}{(WarnBefore ? ", warns 5 minutes before" : "")}{(IsNext ? ", next" : "")}{(IsEnabled ? "" : ", off")}";
+        $"Alarm at {SpokenTime}{CadencePhrase}, {DisplayLabel}, {SoundText}{(WarnBefore ? ", warns 5 minutes before" : "")}{(IsNext ? ", next" : "")}{(IsSkipped ? $", {SkipText.ToLowerInvariant()}" : "")}{(IsEnabled ? "" : ", off")}";
 
     private string CadencePhrase => Item.RecurringDays is { } d
         ? $" {RecurrenceRules.CadenceLabel(d).ToLowerInvariant()}"
         : (IsTomorrow ? " tomorrow" : "");
+
+    // Skip-next: only an enabled repeating alarm has a next time to pass over. A one-shot is
+    // deleted instead, and a disabled alarm is already silent.
+    public bool CanSkip => Item.TriggerType == TriggerType.Recurring && Item.IsEnabled;
+    public bool IsSkipped => SkippedCount > 0;
+
+    /// <summary>"Skipped, next Fri 02.01" or "2 skipped, next Sat 03.01": the row says what will
+    /// actually happen, so the skip is never a silent surprise.</summary>
+    public string SkipText => !IsSkipped || Item.EndsAt is not { } next
+        ? ""
+        : $"{(SkippedCount == 1 ? "Skipped" : $"{SkippedCount} skipped")}, next {RecurrenceRules.ShortDate(next)}";
+
+    public string SkipLabel => $"Skip the next alarm at {TimeText}";
+    public string UndoSkipLabel => $"Undo skip for the alarm at {TimeText}";
 
     public string EditLabel => $"Edit alarm at {TimeText}";
     public string DeleteLabel => $"Delete alarm at {TimeText}";

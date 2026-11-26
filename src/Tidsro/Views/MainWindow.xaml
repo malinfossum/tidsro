@@ -609,48 +609,74 @@
                     </Style.Triggers>
                   </Style>
                 </Border.Style>
-                <DockPanel>
-                  <Button DockPanel.Dock="Right" Content="&#xE711;"
-                          Command="{Binding DataContext.DeleteAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                          CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                          AutomationProperties.Name="{Binding DeleteLabel}" ToolTip="{Binding DeleteLabel}" Style="{StaticResource DangerAction}"/>
-                  <Button DockPanel.Dock="Right" Content="&#xE70F;"
-                          Command="{Binding DataContext.BeginEditAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                          CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                          AutomationProperties.Name="{Binding EditLabel}" ToolTip="{Binding EditLabel}" Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
-                  <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}"
+                <!-- Two rows so the text keeps the card's full width at the 380px minimum: the time,
+                     label and skip cue on top beside the on/off switch, then the sound line sharing
+                     the bottom row with the actions. Five controls beside the text left it no room. -->
+                <Grid>
+                  <Grid.Resources>
+                    <Style x:Key="DimWhenOff" TargetType="FrameworkElement">
+                      <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                          <Setter Property="Opacity" Value="0.45"/>
+                        </DataTrigger>
+                      </Style.Triggers>
+                    </Style>
+                  </Grid.Resources>
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                  </Grid.RowDefinitions>
+                  <Ellipse Width="9" Height="9" Margin="0,2,12,0" VerticalAlignment="Top" Fill="{StaticResource Accent}"
+                           Visibility="{Binding IsNext, Converter={StaticResource BoolToVisible}}"/>
+                  <StackPanel Grid.Column="1" Style="{StaticResource DimWhenOff}">
+                    <WrapPanel>
+                      <TextBlock Text="{Binding RangeText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource TextLg}" Foreground="{StaticResource Text}" Margin="0,0,8,0"/>
+                      <TextBlock Text="{Binding CadenceText}" Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}" VerticalAlignment="Center"/>
+                    </WrapPanel>
+                    <TextBlock Text="{Binding DisplayLabel}" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding SkipText}" Foreground="{StaticResource Accent}" FontSize="{StaticResource TextXs}" Margin="0,2,0,0"
+                               TextWrapping="Wrap" Visibility="{Binding IsSkipped, Converter={StaticResource BoolToVisible}}"/>
+                  </StackPanel>
+                  <CheckBox Grid.Column="2" Style="{StaticResource ToggleSwitch}"
                             IsChecked="{Binding IsEnabled, Mode=OneWay}"
                             Command="{Binding DataContext.ToggleAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                             CommandParameter="{Binding}"
-                            VerticalAlignment="Center" Margin="0,0,10,0"
+                            VerticalAlignment="Top" Margin="8,0,0,0"
                             AutomationProperties.Name="{Binding ToggleLabel}"/>
-                  <StackPanel Orientation="Horizontal">
-                    <Ellipse Width="9" Height="9" Margin="0,2,12,0" VerticalAlignment="Top" Fill="{StaticResource Accent}"
-                             Visibility="{Binding IsNext, Converter={StaticResource BoolToVisible}}"/>
-                    <StackPanel>
-                      <StackPanel.Style>
-                        <Style TargetType="StackPanel">
-                          <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsEnabled}" Value="False">
-                              <Setter Property="Opacity" Value="0.45"/>
-                            </DataTrigger>
-                          </Style.Triggers>
-                        </Style>
-                      </StackPanel.Style>
-                      <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="{Binding RangeText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource TextLg}" Foreground="{StaticResource Text}"/>
-                        <TextBlock Text="{Binding CadenceText}" Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}" VerticalAlignment="Center" Margin="8,0,0,0"/>
-                      </StackPanel>
-                      <TextBlock Text="{Binding DisplayLabel}" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"/>
-                      <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                        <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="{StaticResource TextXs}" Foreground="{StaticResource TextFaint}" Margin="0,0,4,0">
-                          <TextBlock.Text><Binding Path="HasSound"><Binding.Converter><StaticResource ResourceKey="SoundGlyph"/></Binding.Converter></Binding></TextBlock.Text>
-                        </TextBlock>
-                        <TextBlock Text="{Binding SoundText}" Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}"/>
-                      </StackPanel>
+                  <DockPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,0">
+                    <Button DockPanel.Dock="Right" Content="&#xE711;"
+                            Command="{Binding DataContext.DeleteAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                            CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                            AutomationProperties.Name="{Binding DeleteLabel}" ToolTip="{Binding DeleteLabel}" Style="{StaticResource DangerAction}" MinWidth="44" MinHeight="44"/>
+                    <Button DockPanel.Dock="Right" Content="&#xE70F;"
+                            Command="{Binding DataContext.BeginEditAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                            CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                            AutomationProperties.Name="{Binding EditLabel}" ToolTip="{Binding EditLabel}" Style="{StaticResource QuietAction}" MinWidth="44" MinHeight="44" Margin="0,0,8,0"/>
+                    <!-- Skip-next: repeating alarms only. Each press passes over one more occurrence;
+                         Undo skip appears while one is pending and takes back the latest. -->
+                    <Button DockPanel.Dock="Right" Content="&#xE893;"
+                            Command="{Binding DataContext.SkipAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                            CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                            Visibility="{Binding CanSkip, Converter={StaticResource BoolToVisible}}"
+                            AutomationProperties.Name="{Binding SkipLabel}" ToolTip="{Binding SkipLabel}" Style="{StaticResource QuietAction}" MinWidth="44" MinHeight="44" Margin="0,0,8,0"/>
+                    <Button DockPanel.Dock="Right" Content="&#xE7A7;"
+                            Command="{Binding DataContext.UndoSkipAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                            CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                            Visibility="{Binding IsSkipped, Converter={StaticResource BoolToVisible}}"
+                            AutomationProperties.Name="{Binding UndoSkipLabel}" ToolTip="{Binding UndoSkipLabel}" Style="{StaticResource QuietAction}" MinWidth="44" MinHeight="44" Margin="0,0,8,0"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Style="{StaticResource DimWhenOff}">
+                      <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="{StaticResource TextXs}" Foreground="{StaticResource TextFaint}" Margin="0,0,4,0" VerticalAlignment="Center">
+                        <TextBlock.Text><Binding Path="HasSound"><Binding.Converter><StaticResource ResourceKey="SoundGlyph"/></Binding.Converter></Binding></TextBlock.Text>
+                      </TextBlock>
+                      <TextBlock Text="{Binding SoundText}" Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}" VerticalAlignment="Center"/>
                     </StackPanel>
-                  </StackPanel>
-                </DockPanel>
+                  </DockPanel>
+                </Grid>
                 </Border>
               </Grid>
             </DataTemplate>

@@ -87,9 +87,11 @@ public partial class MainViewModel : ObservableObject
 
     // Snapshot of (id, fire-time) the agenda was last built from. A recurring alarm advances its
     // EndsAt on firing without changing its id, so reconciling on ids alone would leave a stale row.
-    private HashSet<(Guid Id, DateTimeOffset? EndsAt)> _agendaSignature = new();
-    private HashSet<(Guid Id, DateTimeOffset? EndsAt)> AgendaSignature() =>
-        _scheduler.Alarms.Select(a => (a.Id, a.EndsAt)).ToHashSet();
+    private HashSet<(Guid Id, DateTimeOffset? EndsAt, int Skipped)> _agendaSignature = new();
+    // The skip count is in the signature because it falls by itself: when a skipped occurrence's
+    // time passes, EndsAt stays put but the row's "Skipped" cue must go.
+    private HashSet<(Guid Id, DateTimeOffset? EndsAt, int Skipped)> AgendaSignature() =>
+        _scheduler.Alarms.Select(a => (a.Id, a.EndsAt, _scheduler.SkippedCount(a))).ToHashSet();
 
     private TimerItem? _pendingDelete;
     private TimeSpan? _pendingDeleteRemaining;   // non-null when the pending item is a canceled countdown
@@ -402,6 +404,9 @@ public partial class MainViewModel : ObservableObject
         bool warnBefore, int? endMinute = null)
     {
         var existing = _scheduler.Alarms.FirstOrDefault(a => a.Id == id);
+        // An edit re-arms from scratch, which would silently undo a skip. Carry the count over, so
+        // fixing a label never brings back an alarm she chose to skip.
+        var skipped = existing is null ? 0 : _scheduler.SkippedCount(existing);
         if (existing is not null) _scheduler.RemoveAlarm(existing);
         var clean = CleanLabel(label);
         if (days == Weekdays.None)
@@ -412,8 +417,9 @@ public partial class MainViewModel : ObservableObject
         }
         else
         {
-            _scheduler.ArmRecurringAlarm(hour, minute, days, clean, sound, id, warnBefore: warnBefore,
+            var rearmed = _scheduler.ArmRecurringAlarm(hour, minute, days, clean, sound, id, warnBefore: warnBefore,
                 endMinute: endMinute);
+            _scheduler.ReapplySkips(rearmed, skipped);
             Announce($"Alarm updated for {hour:00}:{minute:00}, {RecurrenceRules.CadenceLabel(days)}");
         }
         RebuildAgenda();
@@ -529,6 +535,33 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void SkipAlarm(AlarmItemViewModel? row)
+    {
+        if (row is null) return;
+        CommitPendingDelete();                          // settle any outstanding undo first
+        var item = row.Item;
+        if (item.EndsAt is not { } skipped || !_scheduler.SkipNext(item)) return;
+        RebuildAgenda();
+        AlarmsChanged?.Invoke(this, EventArgs.Empty);   // the new next time is what gets saved
+        Announce($"Skipped the alarm at {row.TimeText} on {RecurrenceRules.ShortDate(skipped)}. Next: {DescribeNext(item)}");
+    }
+
+    [RelayCommand]
+    private void UndoSkipAlarm(AlarmItemViewModel? row)
+    {
+        if (row is null) return;
+        CommitPendingDelete();
+        var item = row.Item;
+        if (!_scheduler.UndoSkip(item)) return;
+        RebuildAgenda();
+        AlarmsChanged?.Invoke(this, EventArgs.Empty);
+        Announce($"Skip undone. Next: {DescribeNext(item)}");
+    }
+
+    private static string DescribeNext(TimerItem item) =>
+        item.EndsAt is { } next ? $"{RecurrenceRules.ShortDate(next)} {next:HH\\:mm}" : "";
+
+    [RelayCommand]
     private void UndoDelete()
     {
         if (_pendingDelete is not { } item) return;
@@ -636,7 +669,7 @@ public partial class MainViewModel : ObservableObject
             var a = ordered[i];
             var isTomorrow = a.EndsAt is { } e && e.Date != today;
             var isNext = i == 0 && a.IsEnabled;   // a disabled alarm is never "next"
-            Alarms.Add(new AlarmItemViewModel(a, isTomorrow, isNext));
+            Alarms.Add(new AlarmItemViewModel(a, isTomorrow, isNext, _scheduler.SkippedCount(a)));
         }
         OnPropertyChanged(nameof(IsDayEmpty));
         Timetable.Rebuild();

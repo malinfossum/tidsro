@@ -66,6 +66,70 @@ public sealed class SchedulerService
         }
     }
 
+    // Skip-next keeps no skip list. A skip moves the alarm's own next occurrence one step forward,
+    // so the skipped day is simply never reached (ADR 0002: the alarm's state is the record), and
+    // the saved NextFireAt carries it through a relaunch and an export with no new field.
+
+    /// <summary>Skip the next occurrence of an enabled recurring alarm. Each call skips one more.
+    /// Returns false, changing nothing, for a one-shot or a disabled alarm.</summary>
+    public bool SkipNext(TimerItem alarm)
+    {
+        if (!IsSkippable(alarm, out var days, out var end)) return false;
+        SetNext(alarm, RecurrenceRules.NextOccurrence(end, _clock.Zone, end.Hour, end.Minute, days));
+        return true;
+    }
+
+    /// <summary>Take back the latest skip: the alarm steps back one occurrence. Returns false when
+    /// nothing is skipped, so it can never move an alarm to a time that has already passed.</summary>
+    public bool UndoSkip(TimerItem alarm)
+    {
+        if (SkippedCount(alarm) == 0 || alarm.EndsAt is not { } end || alarm.RecurringDays is not { } days)
+            return false;
+        SetNext(alarm, RecurrenceRules.MostRecentOccurrence(end.AddSeconds(-1), _clock.Zone, end.Hour, end.Minute, days));
+        return true;
+    }
+
+    /// <summary>How many occurrences lie between now and the alarm's next one, i.e. how many it
+    /// will pass over. Zero for anything that is not an enabled recurring alarm. It falls by itself
+    /// as a skipped occurrence's time goes by.</summary>
+    public int SkippedCount(TimerItem alarm)
+    {
+        if (!IsSkippable(alarm, out var days, out var end)) return 0;
+        var count = 0;
+        var candidate = RecurrenceRules.NextOccurrence(_clock.Now, _clock.Zone, end.Hour, end.Minute, days);
+        while (candidate < end && count < MaxSkips)
+        {
+            count++;
+            candidate = RecurrenceRules.NextOccurrence(candidate, _clock.Zone, end.Hour, end.Minute, days);
+        }
+        return count;
+    }
+
+    /// <summary>Skip <paramref name="count"/> occurrences of a freshly armed alarm. An edit re-arms the
+    /// alarm from scratch, so this carries its skips across.</summary>
+    public void ReapplySkips(TimerItem alarm, int count)
+    {
+        for (var i = 0; i < count; i++)
+            if (!SkipNext(alarm)) return;
+    }
+
+    // A bound on the count loop only. Nobody skips a year of a daily alarm one click at a time.
+    private const int MaxSkips = 366;
+
+    private static bool IsSkippable(TimerItem alarm, out Weekdays days, out DateTimeOffset end)
+    {
+        days = alarm.RecurringDays ?? Weekdays.None;
+        end = alarm.EndsAt ?? default;
+        return alarm.TriggerType == TriggerType.Recurring && alarm.IsEnabled
+            && alarm.RecurringDays is not null && alarm.EndsAt is not null;
+    }
+
+    private void SetNext(TimerItem alarm, DateTimeOffset next)
+    {
+        alarm.EndsAt = next;
+        alarm.WarningSent = alarm.WarnBefore && _clock.Now >= next - WarningLead;
+    }
+
     /// <summary>Arm a recurring alarm. Pass <paramref name="nextFireAt"/> to restore a persisted alarm's next occurrence.</summary>
     // endMinute is carried, never read: it is a timetable block's end, and this scheduler has exactly one
     // fire point per alarm. Nothing below branches on it, and nothing in Tick does either.

@@ -66,6 +66,18 @@ public static class RecurrenceRules
         return string.Join(" ", parts);
     }
 
+    /// <summary>"Mon".."Sun", from the same table as the cadence label, so no culture decides it.</summary>
+    public static string DayName(DayOfWeek day)
+    {
+        var flag = DayFlag(day);
+        foreach (var (f, name) in Ordered)
+            if (f == flag) return name;
+        return "";
+    }
+
+    /// <summary>A short date for a cue: "Fri 02.01".</summary>
+    public static string ShortDate(DateTimeOffset when) => $"{DayName(when.DayOfWeek)} {when:dd.MM}";
+
     private static bool Includes(Weekdays set, DayOfWeek day) => (set & DayFlag(day)) != 0;
 
     private static Weekdays DayFlag(DayOfWeek day) => day switch
