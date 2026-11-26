@@ -12,7 +12,7 @@
       <Button Content="Yes" Style="{StaticResource GoldAction}"
               MinWidth="84" Margin="0,0,8,0" Click="Yes_Click"
               KeyboardNavigation.AcceptsReturn="True"
-              AutomationProperties.Name="Confirm"/>
+              AutomationProperties.Name="Confirm" AutomationProperties.AutomationId="ConfirmButton"/>
       <Button x:Name="CancelButton" Content="Cancel" Style="{StaticResource QuietAction}"
               IsCancel="True" IsDefault="True" MinWidth="84"
               AutomationProperties.Name="Cancel"/>

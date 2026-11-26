@@ -25,10 +25,10 @@ $here   = $PSScriptRoot
 $data   = Join-Path $Root 'appdata\Tidsro\data.json'
 $backup = Join-Path $Root 'backup.json'
 
-function Click([int]$ProcId, [string]$Name) {
+function Click([int]$ProcId, [string]$Id) {
     & powershell.exe -NoProfile -ExecutionPolicy RemoteSigned `
-        -Command "& '$here\Click-Button.ps1' -ProcessId $ProcId -Buttons @('$Name')"
-    if ($LASTEXITCODE -ne 0) { throw "clicking '$Name' failed" }
+        -Command "& '$here\Click-Button.ps1' -ProcessId $ProcId -Buttons @('$Id')"
+    if ($LASTEXITCODE -ne 0) { throw "clicking '$Id' failed" }
 }
 function Show-Ends {
     (Get-Content $data -Raw | ConvertFrom-Json).RecurringAlarms | ForEach-Object {
@@ -45,9 +45,9 @@ Copy-Item $data $backup -Force          # schema 5, the same shape Export writes
 Write-Host '--- seeded, copied to a backup file ---'
 Show-Ends | ForEach-Object { Write-Host $_ }
 
-Click $rig.Id 'Settings'
-Click $rig.Id 'Clear all alarms'
-Click $rig.Id 'Confirm'
+Click $rig.Id 'OpenSettingsButton'
+Click $rig.Id 'ClearAllAlarmsButton'
+Click $rig.Id 'ConfirmButton'
 Start-Sleep -Seconds 1
 $left = (Get-Content $data -Raw | ConvertFrom-Json).RecurringAlarms.Count
 if ($left -ne 0) { throw "clear left $left recurring alarms behind" }
@@ -55,12 +55,12 @@ Write-Host '--- cleared ---'
 
 # The click blocks while the dialog is up, so fire it off and drive the dialog from here.
 Start-Process powershell.exe -ArgumentList '-NoProfile', '-ExecutionPolicy', 'RemoteSigned', `
-    '-Command', "& '$here\Click-Button.ps1' -ProcessId $($rig.Id) -Buttons @('Import data from a file')"
+    '-Command', "& '$here\Click-Button.ps1' -ProcessId $($rig.Id) -Buttons @('ImportDataButton')"
 Start-Sleep -Seconds 4
 & powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File "$here\Front-Dialog.ps1" -ProcessId $rig.Id
 & powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File "$here\Type-IntoDialog.ps1" -ProcessId $rig.Id -Path $backup
 Start-Sleep -Seconds 3
-Click $rig.Id 'Restore alarms only'
+Click $rig.Id 'RestoreAlarmsOnlyButton'
 Start-Sleep -Seconds 2
 
 Write-Host '--- after import ---'

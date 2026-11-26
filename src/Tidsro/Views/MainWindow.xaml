@@ -1053,6 +1053,6 @@
       </Border>
     </Grid>
 
-    <Button Grid.Row="5" Content="Settings" HorizontalAlignment="Left" Click="OnSettings" Style="{StaticResource QuietAction}" Margin="{StaticResource SectionGap}"/>
+    <Button Grid.Row="5" Content="Settings" AutomationProperties.AutomationId="OpenSettingsButton" HorizontalAlignment="Left" Click="OnSettings" Style="{StaticResource QuietAction}" Margin="{StaticResource SectionGap}"/>
   </Grid>
 </Window>
