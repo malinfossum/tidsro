@@ -88,11 +88,12 @@ $CT   = [System.Windows.Automation.ControlType]
 $uiaRoot = $AE::RootElement
 $byPid = New-Object System.Windows.Automation.PropertyCondition($AE::ProcessIdProperty, $rig.Id)
 
+# Looks up by AutomationId, never by text, so a copy change cannot break the rig.
 function Find-El {
-    param([string]$Name, $Type)
+    param([string]$Id, $Type)
     $cond = New-Object System.Windows.Automation.AndCondition(
         $byPid,
-        (New-Object System.Windows.Automation.PropertyCondition($AE::NameProperty, $Name)),
+        (New-Object System.Windows.Automation.PropertyCondition($AE::AutomationIdProperty, $Id)),
         (New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, $Type)))
     $el = $null
     for ($i = 0; $i -lt 20 -and -not $el; $i++) {
@@ -103,22 +104,19 @@ function Find-El {
     $el
 }
 
-# The button name is quoted because powershell -File splits an unquoted argument on spaces.
-function Click-Async([string]$Name) {
+# Quoted defensively: powershell -File splits an unquoted argument on spaces, though no id has one.
+function Click-Async([string]$Id) {
     Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @(
         '-NoProfile', '-ExecutionPolicy', 'RemoteSigned', '-File', "$here\Click-Button.ps1",
-        '-ProcessId', $rig.Id, '-Buttons', "`"$Name`"")
+        '-ProcessId', $rig.Id, '-Buttons', "`"$Id`"")
 }
 
 # The slot's state, read off the window: the file name, or the note that there is none. The value
 # TextBlock carries no AutomationProperties.Name, so its accessible name IS its text.
 function Get-Slot($Win) {
-    foreach ($t in $Win.FindAll($Tree::Descendants,
-        (New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, $CT::Text)))) {
-        $n = $t.Current.Name
-        if ($n -eq 'No sound chosen' -or $n -match '\.wav$') { return $n }
-    }
-    '<not found>'
+    $t = $Win.FindFirst($Tree::Descendants,
+        (New-Object System.Windows.Automation.PropertyCondition($AE::AutomationIdProperty, 'CustomSoundLabel')))
+    if ($t) { $t.Current.Name } else { '<not found>' }
 }
 
 function Save-Shot([IntPtr]$Handle, [string]$Name) {
@@ -142,9 +140,9 @@ function Expect([bool]$Ok, [string]$What) {
 
 try {
     # Settings is modal, so ShowDialog blocks the click - fire it and drive from here.
-    Click-Async 'Settings'
+    Click-Async 'OpenSettingsButton'
     Start-Sleep -Seconds 5
-    $settings = Find-El 'Settings' $CT::Window
+    $settings = Find-El 'SettingsWindow' $CT::Window
     if (-not $settings) { throw 'the Settings window never appeared' }
     $hSettings = [IntPtr]$settings.Current.NativeWindowHandle
 
@@ -154,21 +152,22 @@ try {
     Save-Shot $hSettings 'custom-sound-empty.png'
 
     Write-Host '--- a file it cannot play ---'
-    Click-Async 'Choose a custom sound'
+    Click-Async 'ChooseCustomSoundButton'
     Start-Sleep -Seconds 4
     & powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File "$here\Front-Dialog.ps1" -ProcessId $rig.Id
     & powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File "$here\Type-IntoDialog.ps1" -ProcessId $rig.Id -Path $bad
     Start-Sleep -Seconds 3
-    $refusal = Find-El "That file won't do" $CT::Window
-    Expect ($null -ne $refusal) 'the refusal reaches the screen'
+    # Found by id, then checked by title: the dialog is shared, and the title is what is under test.
+    $refusal = Find-El 'ChoiceDialog' $CT::Window
+    Expect ($null -ne $refusal -and $refusal.Current.Name -eq "That file won't do") 'the refusal reaches the screen'
     Expect (-not (Test-Path $installed)) 'the refused file was not installed'
     if ($refusal) {
-        Click-Async 'OK'
+        Click-Async 'ChoiceDialogDismissButton'
         Start-Sleep -Seconds 2
     }
 
     Write-Host '--- choosing a real .wav ---'
-    Click-Async 'Choose a custom sound'
+    Click-Async 'ChooseCustomSoundButton'
     Start-Sleep -Seconds 4
     & powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File "$here\Front-Dialog.ps1" -ProcessId $rig.Id
     & powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File "$here\Type-IntoDialog.ps1" -ProcessId $rig.Id -Path $good
@@ -181,7 +180,7 @@ try {
     Save-Shot $hSettings 'custom-sound-chosen.png'
 
     Write-Host '--- removing it ---'
-    Click-Async 'Remove the custom sound'
+    Click-Async 'RemoveCustomSoundButton'
     Start-Sleep -Seconds 3
     Expect ((Get-Slot $settings) -eq 'No sound chosen') 'the window says no sound is chosen again'
     Expect (-not (Test-Path $installed)) 'the copy is gone from disk'

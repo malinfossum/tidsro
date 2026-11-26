@@ -15,7 +15,7 @@ the rendering.
 |---|---|
 | `Build-Rig.ps1` | Copies `src/Tidsro` to a scratch folder, patches the mutex and every `%AppData%\Tidsro` path (data, log, custom sounds), builds Release. `-Ref` builds any tag, so an old version can be run against a new file. |
 | `Seed-Fixture.ps1` | Writes a fictional week (two blocks, two instants, one one-shot), starts the rig, optionally screenshots it, and returns the process. |
-| `Click-Button.ps1` | Clicks buttons by accessible name through UI Automation. |
+| `Click-Button.ps1` | Clicks buttons by AutomationId through UI Automation. |
 | `Front-Dialog.ps1` | Brings the rig's Win32 file dialog to the front. |
 | `Type-IntoDialog.ps1` | Types a path into that dialog and presses Enter, refusing if the foreground window is not the rig. |
 | `Verify-Import.ps1` | End to end: seed, clear, import, and assert both blocks kept their end times. This is the check that found the v2.5.1 bug. |
@@ -31,12 +31,13 @@ the rendering.
 
 ## Traps, each of which cost real time
 
-- **UI Automation needs Windows PowerShell.** `UIAutomationClient` does not load cleanly in pwsh 7.
-  Call the UIA scripts with `powershell.exe`.
-- **Ask for the accessible name, not the label.** The Settings dialog's save button is
-  `Save settings`. Guessing `Save` finds nothing.
-- **`FindFirst` on a name alone matches the `TextBlock` inside the button**, which has no
-  `InvokePattern`. AND a `ControlType` into the condition.
+- **UI Automation works in pwsh 7.** `UIAutomationClient` loads there and drives `Click-Button.ps1`,
+  while Windows PowerShell 5.1 on my machine refuses to run scripts. The Verify scripts still start
+  their helpers with `powershell.exe`.
+- **Look controls up by AutomationId, never by label or accessible name.** A copy change then cannot
+  break a rig. A control a rig newly drives needs an `AutomationProperties.AutomationId` in its XAML.
+- **AND a `ControlType` into every condition.** A name lookup alone used to match the `TextBlock`
+  inside the button, which has no `InvokePattern`. `Click-Button.ps1` keeps the type as a guard.
 - **Search from the root element, not from the app's window.** A WPF modal sits beside the window,
   not under it, so a descendants search of the window misses every button in the dialog.
 - **The file dialog is a separate `#32770` window.** Foregrounding the app's main window steals

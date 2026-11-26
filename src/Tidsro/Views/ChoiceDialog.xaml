@@ -1,7 +1,7 @@
 <Window x:Class="Tidsro.Views.ChoiceDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Width="380" SizeToContent="Height" WindowStartupLocation="CenterOwner"
+        AutomationProperties.AutomationId="ChoiceDialog" Width="380" SizeToContent="Height" WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize" ShowInTaskbar="False"
         FocusManager.FocusedElement="{Binding ElementName=CancelButton}"
         Background="{StaticResource PageBg}" Foreground="{StaticResource Text}"
@@ -14,7 +14,7 @@
               HorizontalAlignment="Left" MinWidth="180" Margin="0,0,0,8"
               Click="AlarmsOnly_Click"
               KeyboardNavigation.AcceptsReturn="True"
-              AutomationProperties.Name="Restore alarms only"/>
+              AutomationProperties.Name="Restore alarms only" AutomationProperties.AutomationId="RestoreAlarmsOnlyButton"/>
       <Button x:Name="EverythingButton" Content="Restore everything"
               Style="{StaticResource QuietAction}" TabIndex="1"
               HorizontalAlignment="Left" MinWidth="180"
@@ -25,7 +25,7 @@
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
       <Button x:Name="CancelButton" Content="Cancel" Style="{StaticResource QuietAction}"
               IsCancel="True" IsDefault="True" MinWidth="84" TabIndex="2"
-              AutomationProperties.Name="Cancel"/>
+              AutomationProperties.Name="Cancel" AutomationProperties.AutomationId="ChoiceDialogDismissButton"/>
     </StackPanel>
   </StackPanel>
 </Window>

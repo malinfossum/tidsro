@@ -1,7 +1,7 @@
 <Window x:Class="Tidsro.Views.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Settings" Width="360" SizeToContent="Height" WindowStartupLocation="CenterOwner"
+        Title="Settings" AutomationProperties.AutomationId="SettingsWindow" Width="360" SizeToContent="Height" WindowStartupLocation="CenterOwner"
         Background="{StaticResource PageBg}" Foreground="{StaticResource Text}"
         FontFamily="{StaticResource FontSans}">
   <StackPanel Margin="24">
@@ -26,11 +26,11 @@
                FontSize="{StaticResource TextXs}" Margin="0,0,0,8"/>
     <!-- No AutomationProperties.Name: it would REPLACE the accessible name a TextBlock gets from its
          own Text, so a screen reader would announce the label and never the file that was chosen. -->
-    <TextBlock Text="{Binding CustomSoundLabel}" TextWrapping="Wrap" Margin="0,0,0,8"/>
+    <TextBlock Text="{Binding CustomSoundLabel}" AutomationProperties.AutomationId="CustomSoundLabel" TextWrapping="Wrap" Margin="0,0,0,8"/>
     <StackPanel Orientation="Horizontal">
       <Button Content="Choose .wav…" Style="{StaticResource QuietAction}" MinWidth="120"
               Command="{Binding ChooseCustomSoundCommand}"
-              AutomationProperties.Name="Choose a custom sound"/>
+              AutomationProperties.Name="Choose a custom sound" AutomationProperties.AutomationId="ChooseCustomSoundButton"/>
       <!-- Hidden, not merely disabled, until there is a sound to act on: QuietAction has no dimmed
            state, so a disabled button here reads as clickable and does nothing. -->
       <Button Content="&#xE768;" Width="40" Margin="8,0,0,0" Style="{StaticResource QuietAction}"
@@ -41,7 +41,7 @@
       <Button Content="Remove" Style="{StaticResource QuietAction}" MinWidth="84" Margin="8,0,0,0"
               Command="{Binding RemoveCustomSoundCommand}"
               Visibility="{Binding HasCustomSound, Converter={StaticResource BoolToVisible}}"
-              AutomationProperties.Name="Remove the custom sound"/>
+              AutomationProperties.Name="Remove the custom sound" AutomationProperties.AutomationId="RemoveCustomSoundButton"/>
     </StackPanel>
 
     <Separator Margin="0,24,0,0" Background="{StaticResource TextMuted}" Opacity="0.3"/>
@@ -56,11 +56,11 @@
     <Button Content="Import data…" Style="{StaticResource QuietAction}"
             HorizontalAlignment="Left" MinWidth="150" Margin="0,0,0,8"
             Command="{Binding ImportDataCommand}"
-            AutomationProperties.Name="Import data from a file"/>
+            AutomationProperties.Name="Import data from a file" AutomationProperties.AutomationId="ImportDataButton"/>
     <Button Content="Clear all alarms" Style="{StaticResource QuietAction}"
             HorizontalAlignment="Left" MinWidth="150" Margin="0,0,0,8"
             Command="{Binding ClearAlarmsCommand}"
-            AutomationProperties.Name="Clear all alarms"/>
+            AutomationProperties.Name="Clear all alarms" AutomationProperties.AutomationId="ClearAllAlarmsButton"/>
     <Button Content="Reset all settings" Style="{StaticResource QuietAction}"
             HorizontalAlignment="Left" MinWidth="150"
             Command="{Binding ResetSettingsCommand}"
@@ -73,7 +73,7 @@
          with the fonts, and the portable exe travels alone. This reads the embedded OFL.txt. -->
     <Button Content="View font license" Style="{StaticResource QuietAction}"
             HorizontalAlignment="Left" Margin="0,8,0,0" Click="ViewLicense_Click"
-            AutomationProperties.Name="View font license"/>
+            AutomationProperties.Name="View font license" AutomationProperties.AutomationId="ViewFontLicenseButton"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
       <Button Content="Save" Style="{StaticResource GoldAction}" IsDefault="True"
               MinWidth="84" Margin="0,0,8,0" Click="Save_Click"
