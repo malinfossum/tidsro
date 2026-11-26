@@ -284,6 +284,13 @@ public partial class MainViewModel : ObservableObject
         _scheduler.Cancel(item);
         Running.Remove(row);                         // instant removal — no 1s tick lag
         MarkNextRunning();                           // highlight jumps to the new soonest at once
+        if (item.State == TimerState.Fired)
+        {
+            // It already rang, so there is nothing to count down again. Restoring it would leave a
+            // 00:00 row that never fires and never clears, so canceling it is final.
+            Announce("Timer canceled");
+            return;
+        }
         _pendingDelete = item;
         _pendingDeleteRemaining = remaining;
         PendingDeleteLabel = $"Timer canceled{(string.IsNullOrEmpty(item.Label) ? "" : $" · {item.Label}")}";

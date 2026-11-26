@@ -520,6 +520,25 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public void Canceling_a_countdown_that_already_rang_offers_no_undo()
+    {
+        // A rung timer has nothing left to count. Bringing it back would leave a 00:00 row that
+        // never fires again and never clears.
+        var vm = New(out var clock, out var sched);
+        vm.StartPresetCommand.Execute(5);
+        clock.Advance(TimeSpan.FromMinutes(5));
+        sched.Tick();                                    // it rings; the row stays until the card is dismissed
+        vm.RefreshAll();
+
+        vm.CancelTimerCommand.Execute(vm.Running[0]);
+        vm.UndoDeleteCommand.Execute(null);
+
+        Assert.False(vm.HasPendingDelete);
+        Assert.Empty(vm.Running);
+        Assert.Empty(sched.Running);
+    }
+
+    [Fact]
     public void UndoDelete_after_timer_cancel_announces_restoration()
     {
         var vm = New(out _, out _);
