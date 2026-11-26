@@ -598,17 +598,15 @@ public partial class MainViewModel : ObservableObject
         }
         else if (item.RecurringDays is { } days && item.EndsAt is { } next)
         {
-            var restored = _scheduler.ArmRecurringAlarm(next.Hour, next.Minute, days, item.Label, item.Sound, item.Id, next,
+            _scheduler.ArmRecurringAlarm(next.Hour, next.Minute, days, item.Label, item.Sound, item.Id, next,
                 item.WarnBefore, item.IsEnabled, item.EndMinute);
-            _scheduler.ReopenWarning(restored);   // the delete closed its heads-up; owe it again
             RebuildAgenda();
             Announce("Alarm restored");
             // No persist needed: the record was never removed from disk.
         }
         else if (item.EndsAt is { } fireAt)
         {
-            var restored = _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id, item.WarnBefore, item.IsEnabled);   // re-arm; next tick re-checks grace if past
-            _scheduler.ReopenWarning(restored);   // the delete closed its heads-up; owe it again
+            _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id, item.WarnBefore, item.IsEnabled);   // re-arm; next tick re-checks grace if past
             RebuildAgenda();
             Announce("Alarm restored");
             // No persist needed: the record was never removed from disk.

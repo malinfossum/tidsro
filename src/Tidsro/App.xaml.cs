@@ -32,7 +32,7 @@ public partial class App : Application
     private DispatcherTimer _timer = null!;
     private MainWindow? _main;
     private readonly List<CompletionPopup> _openPopups = new();
-    private readonly Dictionary<CompletionPopup, (Guid AlarmId, DateTimeOffset FireAt)> _warningFireTimes = new();
+    private readonly HeadsUpTracker<CompletionPopup> _headsUps = new();
     private Mutex? _instanceMutex;
     private EventWaitHandle? _showEvent;
     private RegisteredWaitHandle? _showWait;
@@ -234,26 +234,28 @@ public partial class App : Application
 
     private void OnAlarmWarning(object? sender, TimerItem item)
     {
-        // An occurrence that went away and came back inside one tick (off and on again) is owed its
-        // heads-up again, but its first card may not have closed yet. Never stack a second one.
-        if (_warningFireTimes.ContainsValue((item.Id, item.EndsAt ?? _scheduler.Now))) return;
-
         // Mirror the alarm's sound choice: a soft chime only when the alarm itself is sounded; silent otherwise.
         var playId = item.Sound != SoundChoice.None ? _sound.Play(SoundChoice.SoftChime) : 0;
+        ShowHeadsUp(item, playId);
+    }
 
+    private void ShowHeadsUp(TimerItem item, int playId = 0)
+    {
+        var fireAt = item.EndsAt ?? _scheduler.Now;   // this occurrence's fire time, captured now
+        if (_headsUps.IsShown(item.Id, fireAt)) return;   // never stack a second card for one occurrence
         var head = string.IsNullOrWhiteSpace(item.Label) ? "Alarm" : item.Label!.Trim();
         var popup = ShowCard(new PopupViewModel(item, head));   // heads-up (close-only) variant
         popup.Closed += (_, _) => _sound.Stop(playId);
-        _warningFireTimes[popup] = (item.Id, item.EndsAt ?? _scheduler.Now);   // capture this occurrence's fire time
+        _headsUps.Opened(popup, item.Id, fireAt);
     }
 
     // Show a completion card bottom-right without stealing focus, track it in the stack, and keep the
     // stack tidy as cards open and close. Returns the popup so a caller can track extra state (a warning's
-    // fire time). Removing from _warningFireTimes on close is a no-op for ordinary fired cards.
+    // fire time). Telling _headsUps about the close is a no-op for ordinary fired cards.
     private CompletionPopup ShowCard(PopupViewModel vm)
     {
         var popup = new CompletionPopup(vm);
-        popup.Closed += (_, _) => { _openPopups.Remove(popup); _warningFireTimes.Remove(popup); RestackPopups(); };
+        popup.Closed += (_, _) => { _openPopups.Remove(popup); _headsUps.Closed(popup); RestackPopups(); };
         // first placement uses an estimated height; reposition the stack once the card has actually measured
         popup.ContentRendered += (_, _) => RestackPopups();
         _openPopups.Add(popup);
@@ -265,14 +267,19 @@ public partial class App : Application
     // The heads-up gives way to the completion card: close any warning whose alarm has reached its fire time.
     // Decoupled from Fired, so it works for one-shots and recurring alike (the captured fire time is the
     // occurrence's, not the live alarm's already-advanced EndsAt). It also closes once that occurrence
-    // will no longer ring (skipped, switched off, deleted or moved by an edit), so the card never
-    // announces an alarm that is not coming.
+    // will no longer ring (skipped, switched off, deleted or moved by an edit), and shows again, without
+    // a second chime, if the occurrence comes back. HeadsUpTracker holds the rules.
     private void CloseFiredWarnings()
     {
-        var now = _scheduler.Now;
-        foreach (var (popup, (alarmId, fireAt)) in _warningFireTimes.ToList())
-            if ((now >= fireAt || !_scheduler.WillRingAt(alarmId, fireAt)) && popup.IsLoaded)
-                popup.Close();   // IsLoaded: never re-close a window already closing
+        var changes = _headsUps.Reconcile(_scheduler.Now, _scheduler.WillRingAt);
+        foreach (var popup in changes.Fired)
+            if (popup.IsLoaded) popup.Close();   // IsLoaded: never re-close a window already closing
+        // The user is working in Tidsro when an occurrence goes away (a skip, Off, a delete), so focus
+        // must stay here, not jump back to whatever was in front when the card first appeared.
+        foreach (var popup in changes.Gone)
+            if (popup.IsLoaded) popup.CloseWithoutRestoringFocus();
+        foreach (var id in changes.Back)
+            if (_scheduler.Alarms.FirstOrDefault(a => a.Id == id) is { } alarm) ShowHeadsUp(alarm);
     }
 
     private void PositionPopup(CompletionPopup popup, int indexFromBottom)

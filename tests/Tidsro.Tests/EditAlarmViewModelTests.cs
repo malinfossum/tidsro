@@ -17,7 +17,7 @@ public class EditAlarmViewModelTests
         applied = captured;
         sound = new FakeSoundService();
         return new EditAlarmViewModel(id ?? Guid.NewGuid(), timeInput, endInput, "Tea", SoundChoice.Bell, days, warnBefore,
-            Options, (i, h, m, d, l, s, w, e) => captured.Add((i, h, m, d, l, s, w, e)), sound);
+            Options, (i, h, m, d, l, s, w, e) => captured.Add((i, h, m, d, l, s, w, e)), sound, (_, _, _, _) => []);
     }
 
     [Fact]

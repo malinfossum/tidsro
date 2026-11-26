@@ -288,36 +288,6 @@ public class SkipNextTests
     }
 
     [Fact]
-    public void Undoing_a_skip_inside_the_lead_owes_the_heads_up_again()
-    {
-        var (s, c) = New();
-        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None, warnBefore: true);
-        var warned = 0; s.Warning += (_, _) => warned++;
-        c.Now = At(1, 9).AddMinutes(56); s.Tick();   // heads-up shown
-        s.SkipNext(alarm);                           // the App closes the card
-
-        s.UndoSkip(alarm);
-        s.Tick();
-
-        Assert.Equal(2, warned);
-    }
-
-    [Fact]
-    public void Switching_an_alarm_back_on_inside_the_lead_owes_the_heads_up_again()
-    {
-        var (s, c) = New();
-        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None, warnBefore: true);
-        var warned = 0; s.Warning += (_, _) => warned++;
-        c.Now = At(1, 9).AddMinutes(56); s.Tick();
-
-        s.SetEnabled(alarm, false);
-        s.SetEnabled(alarm, true);
-        s.Tick();
-
-        Assert.Equal(2, warned);
-    }
-
-    [Fact]
     public void A_stale_next_time_is_not_carried_through_an_edit()
     {
         // A clock that stepped back leaves the next time far more than MaxSkips occurrences out.
@@ -553,22 +523,6 @@ public class SkipNextViewModelTests
     }
 
     [Fact]
-    public void Undoing_a_delete_inside_the_lead_owes_the_heads_up_again()
-    {
-        var vm = New(out var clock, out var sched);
-        vm.AlarmTimeInput = "10:00"; vm.AlarmRepeat = RepeatOption.Daily; vm.AlarmWarnBefore = true;
-        vm.AddAlarmCommand.Execute(null);
-        var warned = 0; sched.Warning += (_, _) => warned++;
-        clock.Now = Jan(1, 9).AddMinutes(56); sched.Tick();
-
-        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
-        vm.UndoDeleteCommand.Execute(null);
-        sched.Tick();
-
-        Assert.Equal(2, warned);
-    }
-
-    [Fact]
     public void Skip_at_the_cap_is_announced_not_ignored()
     {
         var vm = WithDailyTalk(out _, out _);
@@ -580,5 +534,76 @@ public class SkipNextViewModelTests
 
         Assert.Equal(0, changed);
         Assert.Equal($"Cannot skip more than {SchedulerService.MaxSkips} occurrences ahead", announced);
+    }
+}
+
+// The heads-up card rules, without a window: a string stands in for the card.
+public class HeadsUpTrackerTests
+{
+    private static readonly Guid Id = Guid.NewGuid();
+    private static readonly DateTimeOffset Ten = new(2026, 1, 1, 10, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset Before = Ten.AddMinutes(-4);
+
+    [Fact]
+    public void A_card_closes_when_its_alarm_fires()
+    {
+        var t = new HeadsUpTracker<string>();
+        t.Opened("card", Id, Ten);
+
+        var c = t.Reconcile(Ten, (_, _) => true);
+
+        Assert.Equal(["card"], c.Fired);
+        Assert.Empty(c.Gone);
+    }
+
+    [Fact]
+    public void A_card_closes_early_when_its_occurrence_will_not_ring_and_comes_back_with_it()
+    {
+        var t = new HeadsUpTracker<string>();
+        t.Opened("card", Id, Ten);
+        var ringing = false;
+
+        var gone = t.Reconcile(Before, (_, _) => ringing);
+        t.Closed("card");
+        ringing = true;                                  // an undo, or switched back on
+        var back = t.Reconcile(Before.AddSeconds(1), (_, _) => ringing);
+
+        Assert.Equal(["card"], gone.Gone);
+        Assert.Equal([Id], back.Back);
+    }
+
+    [Fact]
+    public void A_parked_card_is_forgotten_once_its_time_has_passed()
+    {
+        var t = new HeadsUpTracker<string>();
+        t.Opened("card", Id, Ten);
+        t.Reconcile(Before, (_, _) => false);
+        t.Closed("card");
+
+        Assert.Empty(t.Reconcile(Ten, (_, _) => false).Back);
+        Assert.Empty(t.Reconcile(Before, (_, _) => true).Back);   // even if the clock steps back
+    }
+
+    [Fact]
+    public void A_card_the_user_closed_stays_closed()
+    {
+        var t = new HeadsUpTracker<string>();
+        t.Opened("card", Id, Ten);
+        t.Closed("card");                                // the user dismissed it
+
+        var c = t.Reconcile(Before, (_, _) => true);
+
+        Assert.Empty(c.Back);
+        Assert.False(t.IsShown(Id, Ten));
+    }
+
+    [Fact]
+    public void IsShown_is_true_only_for_the_same_occurrence()
+    {
+        var t = new HeadsUpTracker<string>();
+        t.Opened("card", Id, Ten);
+
+        Assert.True(t.IsShown(Id, Ten));
+        Assert.False(t.IsShown(Id, Ten.AddDays(1)));
     }
 }

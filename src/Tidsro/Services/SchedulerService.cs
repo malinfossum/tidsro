@@ -56,27 +56,21 @@ public sealed class SchedulerService
 
     /// <summary>Turn an alarm on or off. Re-enabling a recurring alarm whose next occurrence has
     /// already passed (e.g. switched off over the summer) rolls it forward to the next future one,
-    /// so it never fires the instant it comes back, and never emits a stale missed note. Switching
-    /// it on inside the warning lead shows the heads-up again: switching it off closed the card.</summary>
+    /// so it never fires the instant it comes back, and never emits a stale missed note.</summary>
     public void SetEnabled(TimerItem alarm, bool enabled)
     {
         alarm.IsEnabled = enabled;
-        if (!enabled) return;
-        if (alarm.TriggerType == TriggerType.Recurring
+        if (enabled
+            && alarm.TriggerType == TriggerType.Recurring
             && alarm.RecurringDays is { } days
             && alarm.EndsAt is { } end
             && end <= _clock.Now)
         {
-            alarm.EndsAt = RecurrenceRules.NextOccurrence(_clock.Now, _clock.Zone, end.Hour, end.Minute, days);
+            var next = RecurrenceRules.NextOccurrence(_clock.Now, _clock.Zone, end.Hour, end.Minute, days);
+            alarm.EndsAt = next;
+            alarm.WarningSent = alarm.WarnBefore && _clock.Now >= next - WarningLead;
         }
-        ReopenWarning(alarm);
     }
-
-    /// <summary>Owe the heads-up again for an occurrence that has come back: undo of a delete, of a
-    /// skip, or switching the alarm back on. The App closed the card when the occurrence went away,
-    /// so without this it would ring with no heads-up. Tick only warns inside the lead and before the
-    /// fire time, so this is safe at any moment.</summary>
-    public void ReopenWarning(TimerItem alarm) => alarm.WarningSent = false;
 
     // Skip-next keeps no skip list. A skip moves the alarm's own next occurrence one step forward,
     // so the skipped day is simply never reached (ADR 0002: the alarm's state is the record), and
@@ -99,7 +93,6 @@ public sealed class SchedulerService
         if (SkippedCount(alarm) == 0 || alarm.EndsAt is not { } end || alarm.RecurringDays is not { } days)
             return false;
         SetNext(alarm, RecurrenceRules.MostRecentOccurrence(end.AddSeconds(-1), _clock.Zone, end.Hour, end.Minute, days));
-        ReopenWarning(alarm);   // a skip inside the lead closed the card; the restored occurrence is owed one
         return true;
     }
 

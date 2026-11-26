@@ -15,7 +15,7 @@ public partial class EditAlarmViewModel : ObservableObject
     private readonly Guid _id;
     private readonly Action<Guid, int, int, Weekdays, string?, SoundChoice, bool, int?> _apply;
     private readonly ISoundService _sound;
-    private readonly Func<Guid, int, int, Weekdays, IReadOnlyList<DateOnly>>? _lostSkips;
+    private readonly Func<Guid, int, int, Weekdays, IReadOnlyList<DateOnly>> _lostSkips;
     // The time and days the skip warning was shown for. A second Save of the same edit goes through;
     // a different edit warns again with its own dates.
     private (int Hour, int Minute, Weekdays Days)? _warnedFor;
@@ -56,7 +56,7 @@ public partial class EditAlarmViewModel : ObservableObject
     public EditAlarmViewModel(Guid id, string timeInput, string endInput, string label, SoundChoice sound,
         Weekdays days, bool warnBefore, SoundChoice[] soundOptions,
         Action<Guid, int, int, Weekdays, string?, SoundChoice, bool, int?> apply, ISoundService soundSvc,
-        Func<Guid, int, int, Weekdays, IReadOnlyList<DateOnly>>? lostSkips = null)
+        Func<Guid, int, int, Weekdays, IReadOnlyList<DateOnly>> lostSkips)
     {
         _id = id;
         _timeInput = timeInput;
@@ -97,7 +97,7 @@ public partial class EditAlarmViewModel : ObservableObject
 
         // A skip can only pass over the next occurrences in order, so new days or a new time can put an
         // unskipped occurrence first and bring a skipped day back. Say so once, before it happens.
-        var lost = _lostSkips?.Invoke(_id, h, m, days) ?? [];
+        var lost = _lostSkips(_id, h, m, days);
         if (lost.Count > 0 && _warnedFor != (h, m, days))
         {
             _warnedFor = (h, m, days);
