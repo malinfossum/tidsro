@@ -45,6 +45,6 @@ public sealed class AppSettings
     {
         if (string.IsNullOrWhiteSpace(name)) return null;
         var trimmed = name.Trim();
-        return trimmed.Length > MaxName ? trimmed[..MaxName] : trimmed;
+        return TextRules.Cap(trimmed, MaxName);
     }
 }

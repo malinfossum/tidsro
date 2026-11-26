@@ -92,6 +92,6 @@ public sealed class TidsroData
     {
         if (string.IsNullOrWhiteSpace(label)) return null;
         var trimmed = label.Trim();
-        return trimmed.Length > MaxLabel ? trimmed[..MaxLabel] : trimmed;
+        return TextRules.Cap(trimmed, MaxLabel);
     }
 }
