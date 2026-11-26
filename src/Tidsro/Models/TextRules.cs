@@ -9,6 +9,7 @@ public static class TextRules
     /// or dropped whole, never split.</summary>
     public static string Cap(string text, int max)
     {
+        ArgumentOutOfRangeException.ThrowIfLessThan(max, 1);
         if (text.Length <= max) return text;
 
         var cut = 0;
