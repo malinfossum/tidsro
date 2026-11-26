@@ -94,8 +94,7 @@ public partial class MainWindow : Window
     /// <summary>Move an already-visible window to imported coordinates. Writing the settings alone is
     /// not enough: OnClosing writes the current placement back on every close, so the restore would
     /// silently revert. Off-screen coordinates fall back to centering at the imported size. The launch
-    /// path applies the same guard for the same reason (an unplugged monitor or a lower resolution).
-    /// Only the position falls back: the size was never the problem.</summary>
+    /// path applies the same guard for the same reason (an unplugged monitor or a lower resolution).</summary>
     public void ApplyPlacement(AppSettings settings)
     {
         if (settings.WindowWidth is double w) Width = w;
@@ -115,9 +114,11 @@ public partial class MainWindow : Window
     }
 
     // Guard against a saved position stranded off-screen by an unplugged monitor, a lower resolution,
-    // or the gap beside a smaller monitor. Width is already the size this window is about to take.
+    // or the gap beside a smaller monitor. Width is already the size this window is about to take, but
+    // Windows shrinks a window wider than its maximum track size, so only that much title bar exists.
     private bool IsOnScreen(double left, double top) =>
-        ScreenHelper.IsTitleBarOnScreen(left, top, Width, ScreenHelper.MonitorWorkAreas());
+        ScreenHelper.IsTitleBarOnScreen(left, top, Math.Min(Width, SystemParameters.MaximumWindowTrackWidth),
+                                        ScreenHelper.MonitorWorkAreas());
 
     /// <summary>A collapsed panel cannot hold keyboard focus, so switching tabs while focus sits in
     /// the panel content — which Ctrl+Tab allows from anywhere in the window — drops focus to the
