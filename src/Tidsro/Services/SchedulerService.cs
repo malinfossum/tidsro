@@ -125,6 +125,7 @@ public sealed class SchedulerService
     /// so the time spent in the undo window does not count against it.</summary>
     public void RestoreCountdown(TimerItem item, TimeSpan remaining)
     {
+        if (item.State == TimerState.Fired) return;   // it already rang; back in the list it would never fire or clear
         if (item.State == TimerState.Running) item.EndsAt = _clock.Now + remaining;
         if (!_running.Contains(item)) _running.Add(item);
     }

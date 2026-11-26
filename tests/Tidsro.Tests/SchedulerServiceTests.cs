@@ -23,6 +23,20 @@ public class SchedulerServiceTests
     }
 
     [Fact]
+    public void RestoreCountdown_leaves_a_countdown_that_already_rang_out()
+    {
+        var (s, c) = New();
+        var item = s.StartCountdown(TimeSpan.FromMinutes(1), null, SoundChoice.None);
+        c.Advance(TimeSpan.FromMinutes(1));
+        s.Tick();
+        s.Cancel(item);
+
+        s.RestoreCountdown(item, TimeSpan.Zero);
+
+        Assert.Empty(s.Running);
+    }
+
+    [Fact]
     public void Tick_before_end_does_not_fire_and_remaining_counts_down()
     {
         var (s, c) = New();
