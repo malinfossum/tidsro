@@ -36,8 +36,8 @@ the rendering.
   their helpers with `powershell.exe`.
 - **Look controls up by AutomationId, never by label or accessible name.** A copy change then cannot
   break a rig. A control a rig newly drives needs an `AutomationProperties.AutomationId` in its XAML.
-- **`FindFirst` on a name alone matches the `TextBlock` inside the button**, which has no
-  `InvokePattern`. AND a `ControlType` into the condition.
+- **AND a `ControlType` into every condition.** A name lookup alone used to match the `TextBlock`
+  inside the button, which has no `InvokePattern`. `Click-Button.ps1` keeps the type as a guard.
 - **Search from the root element, not from the app's window.** A WPF modal sits beside the window,
   not under it, so a descendants search of the window misses every button in the dialog.
 - **The file dialog is a separate `#32770` window.** Foregrounding the app's main window steals

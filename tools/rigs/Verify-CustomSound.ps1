@@ -104,7 +104,7 @@ function Find-El {
     $el
 }
 
-# The id is quoted because powershell -File splits an unquoted argument on spaces.
+# Quoted defensively: powershell -File splits an unquoted argument on spaces, though no id has one.
 function Click-Async([string]$Id) {
     Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @(
         '-NoProfile', '-ExecutionPolicy', 'RemoteSigned', '-File', "$here\Click-Button.ps1",
