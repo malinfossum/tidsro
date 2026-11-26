@@ -235,6 +235,52 @@ public class TidsroDataTests
         Assert.Equal(200, settings.CustomSoundName!.Length);
     }
 
+    // --- The cap never splits an emoji -----------------------------------------------------------
+    // Both caps count UTF-16 code units, and an emoji outside the basic plane is two of them. A cut
+    // between the two would save half an emoji, which renders as a broken box.
+
+    [Fact]
+    public void A_label_cap_that_falls_inside_an_emoji_drops_the_whole_emoji()
+    {
+        var alarm = Good(); alarm.Label = new string('x', 199) + "😀";
+        var label = new TidsroData { Alarms = { alarm } }.Sanitized().Alarms[0].Label!;
+        Assert.Equal(new string('x', 199), label);
+    }
+
+    [Fact]
+    public void A_label_cap_keeps_an_emoji_that_fits()
+    {
+        var alarm = Good(); alarm.Label = new string('x', 198) + "😀" + "tail";
+        var label = new TidsroData { Alarms = { alarm } }.Sanitized().Alarms[0].Label!;
+        Assert.Equal(new string('x', 198) + "😀", label);
+    }
+
+    [Fact]
+    public void A_recurring_label_cap_never_splits_an_emoji()
+    {
+        var rec = GoodRec(); rec.Label = new string('x', 199) + "😀";
+        var label = new TidsroData { RecurringAlarms = { rec } }.Sanitized().RecurringAlarms[0].Label!;
+        Assert.Equal(new string('x', 199), label);
+    }
+
+    [Fact]
+    public void A_label_cap_never_splits_a_joined_emoji()
+    {
+        // A family emoji is several emoji joined into one visible character. Cutting between its
+        // parts would leave a different, smaller emoji on screen.
+        const string family = "👨‍👩‍👧";
+        var alarm = Good(); alarm.Label = new string('x', 196) + family;
+        var label = new TidsroData { Alarms = { alarm } }.Sanitized().Alarms[0].Label!;
+        Assert.Equal(new string('x', 196), label);
+    }
+
+    [Fact]
+    public void A_custom_sound_name_cap_never_splits_an_emoji()
+    {
+        var settings = new AppSettings { CustomSoundName = new string('n', 199) + "😀" }.Sanitized();
+        Assert.Equal(new string('n', 199), settings.CustomSoundName);
+    }
+
     [Fact]
     public void The_custom_choice_survives_sanitizing_as_the_default_sound()
     {

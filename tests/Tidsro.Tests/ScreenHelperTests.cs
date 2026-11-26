@@ -25,4 +25,90 @@ public class ScreenHelperTests
         Assert.True(p.Y >= work.Top);
         Assert.True(p.X + 320 >= work.Left);   // never fully off-screen
     }
+
+    // ── The saved-position guard: the title bar must sit on a real monitor ──
+    // A 1440p monitor on the left and a 1080p one on the right, tops aligned, taskbar 40 high on each.
+    // The strip under the right monitor (y 1080 to 1440) is inside the virtual screen box but on no monitor.
+
+    private static readonly Rect[] UnequalPair =
+    [
+        new Rect(0, 0, 2560, 1400),
+        new Rect(2560, 0, 1920, 1040),
+    ];
+
+    [Fact]
+    public void A_title_bar_on_a_monitor_counts_as_on_screen()
+    {
+        Assert.True(ScreenHelper.IsTitleBarOnScreen(100, 100, 440, UnequalPair));
+        Assert.True(ScreenHelper.IsTitleBarOnScreen(2700, 200, 440, UnequalPair));
+    }
+
+    [Fact]
+    public void A_title_bar_in_the_gap_under_the_smaller_monitor_is_off_screen()
+    {
+        Assert.False(ScreenHelper.IsTitleBarOnScreen(3000, 1200, 440, UnequalPair));
+    }
+
+    [Fact]
+    public void A_title_bar_under_the_taskbar_is_off_screen()
+    {
+        Assert.False(ScreenHelper.IsTitleBarOnScreen(3000, 1050, 440, UnequalPair));
+    }
+
+    [Fact]
+    public void A_title_bar_past_every_edge_is_off_screen()
+    {
+        Assert.False(ScreenHelper.IsTitleBarOnScreen(5000, 100, 440, UnequalPair));
+        Assert.False(ScreenHelper.IsTitleBarOnScreen(100, -200, 440, UnequalPair));
+        Assert.False(ScreenHelper.IsTitleBarOnScreen(-1000, 100, 440, UnequalPair));
+    }
+
+    [Fact]
+    public void A_window_across_two_monitors_is_on_screen()
+    {
+        // Mostly in the gap, but the left end of its title bar is on the big monitor and can be grabbed.
+        Assert.True(ScreenHelper.IsTitleBarOnScreen(2400, 1200, 440, UnequalPair));
+    }
+
+    [Fact]
+    public void A_window_snapped_to_the_left_edge_is_on_screen()
+    {
+        // Windows reports a snapped window a few pixels left of the edge (its invisible resize border).
+        Assert.True(ScreenHelper.IsTitleBarOnScreen(-7, 0, 440, UnequalPair));
+    }
+
+    [Fact]
+    public void A_title_bar_with_only_a_sliver_on_screen_is_off_screen()
+    {
+        Assert.False(ScreenHelper.IsTitleBarOnScreen(4470, 100, 440, UnequalPair));   // 10 wide on screen
+    }
+
+    [Fact]
+    public void A_fractional_position_from_a_scaled_display_is_on_screen()
+    {
+        // At 125% a physical top of 11 is saved as 8.8 DIPs, which never adds up to a whole number.
+        var scaled = new[] { new Rect(0, 0, 1536, 832) };
+        Assert.True(ScreenHelper.IsTitleBarOnScreen(100.4, 8.8, 440, scaled));
+        Assert.True(ScreenHelper.IsTitleBarOnScreen(1495.8 + 0.2, 8.8, 440, scaled));   // just 40 left to grab
+    }
+
+    [Fact]
+    public void A_window_with_only_its_caption_buttons_on_screen_is_off_screen()
+    {
+        // Minimize, maximize and close cannot be dragged, so they do not make the window reachable.
+        Assert.False(ScreenHelper.IsTitleBarOnScreen(-350, 100, 440, UnequalPair));
+    }
+
+    [Fact]
+    public void A_title_bar_across_two_stacked_monitors_is_on_screen()
+    {
+        var stacked = new[] { new Rect(0, 0, 1920, 1080), new Rect(0, 1080, 1920, 1040) };
+        Assert.True(ScreenHelper.IsTitleBarOnScreen(100, 1065, 440, stacked));   // 15 on each
+    }
+
+    [Fact]
+    public void No_monitors_means_off_screen()
+    {
+        Assert.False(ScreenHelper.IsTitleBarOnScreen(100, 100, 440, []));
+    }
 }

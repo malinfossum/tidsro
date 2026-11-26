@@ -120,6 +120,16 @@ public sealed class SchedulerService
         return item;
     }
 
+    /// <summary>Put a canceled countdown back as it was: the same item, so its original duration and its
+    /// paused state come back with it. A running one gets <paramref name="remaining"/> again from now,
+    /// so the time spent in the undo window does not count against it.</summary>
+    public void RestoreCountdown(TimerItem item, TimeSpan remaining)
+    {
+        if (item.State == TimerState.Fired) return;   // it already rang; back in the list it would never fire or clear
+        if (item.State == TimerState.Running) item.EndsAt = _clock.Now + remaining;
+        if (!_running.Contains(item)) _running.Add(item);
+    }
+
     public TimeSpan Remaining(TimerItem item)
     {
         if (item.State == TimerState.Paused) return item.PausedRemaining ?? TimeSpan.Zero;

@@ -35,6 +35,8 @@ public partial class App : Application
     private readonly Dictionary<CompletionPopup, DateTimeOffset> _warningFireTimes = new();
     private Mutex? _instanceMutex;
     private EventWaitHandle? _showEvent;
+    private RegisteredWaitHandle? _showWait;
+    private volatile bool _exiting;   // set first in Quit and OnExit, so a late show signal is ignored
     private readonly FailureAlertPolicy _alerts = new();
 
     protected override void OnStartup(StartupEventArgs e)
@@ -127,9 +129,20 @@ public partial class App : Application
         }
 
         _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowWindowEventName);
-        ThreadPool.RegisterWaitForSingleObject(_showEvent,
-            (_, _) => Dispatcher.Invoke(ShowMainWindow), null, Timeout.Infinite, executeOnlyOnce: false);
+        _showWait = ThreadPool.RegisterWaitForSingleObject(_showEvent,
+            (_, _) => OnShowSignal(), null, Timeout.Infinite, executeOnlyOnce: false);
         return true;
+    }
+
+    // Runs on a thread-pool thread when a later launch signals. Once exit has begun it does nothing:
+    // Application.Shutdown runs OnExit before the dispatcher starts its own shutdown, so the flag covers
+    // the stretch HasShutdownStarted does not. BeginInvoke, not Invoke: it never blocks the pool thread
+    // and never throws on a dispatcher that is closing, and unlike InvokeAsync a failure in
+    // ShowMainWindow still reaches OnDispatcherUnhandledException instead of vanishing into a Task.
+    private void OnShowSignal()
+    {
+        if (_exiting || Dispatcher.HasShutdownStarted) return;
+        Dispatcher.BeginInvoke(new Action(() => { if (!_exiting) ShowMainWindow(); }));
     }
 
     // Load persisted data, build the services and main view-model, arm the saved alarms, and self-heal a
@@ -287,6 +300,7 @@ public partial class App : Application
 
     private void Quit()
     {
+        _exiting = true;                 // a failed final save shows a dialog that pumps messages; no window may open then
         _timer.Stop();
         _hotkey.Dispose();
         _mainVm.CommitPendingDelete();   // an uncommitted delete commits on quit (spec §3.1)
@@ -455,6 +469,8 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        _exiting = true;
+        _showWait?.Unregister(null);   // before the event it waits on is disposed
         _tray?.Dispose();
         _showEvent?.Dispose();
         _instanceMutex?.Dispose();

@@ -481,6 +481,64 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public void UndoDelete_after_timer_cancel_keeps_the_original_duration_of_a_running_countdown()
+    {
+        var vm = New(out var clock, out var sched);
+        vm.StartPresetCommand.Execute(10);
+        clock.Advance(TimeSpan.FromMinutes(4));      // 6:00 left
+        var id = vm.Running[0].Item.Id;
+
+        vm.CancelTimerCommand.Execute(vm.Running[0]);
+        clock.Advance(TimeSpan.FromSeconds(3));      // the undo window costs the timer nothing
+        vm.UndoDeleteCommand.Execute(null);
+
+        var item = Assert.Single(vm.Running).Item;
+        Assert.Equal(id, item.Id);                                   // the same timer, not a new one
+        Assert.Equal(TimerState.Running, item.State);
+        Assert.Equal(TimeSpan.FromMinutes(6), sched.Remaining(item));
+        Assert.Equal(TimeSpan.FromMinutes(10), item.OriginalDuration);   // still a 10-minute timer
+    }
+
+    [Fact]
+    public void UndoDelete_after_timer_cancel_brings_a_paused_countdown_back_paused()
+    {
+        var vm = New(out var clock, out var sched);
+        vm.StartPresetCommand.Execute(10);
+        clock.Advance(TimeSpan.FromMinutes(4));
+        vm.Running[0].PauseResumeCommand.Execute(null);   // paused at 6:00 left
+
+        vm.CancelTimerCommand.Execute(vm.Running[0]);
+        vm.UndoDeleteCommand.Execute(null);
+        clock.Advance(TimeSpan.FromMinutes(1));          // a paused timer does not count down
+        vm.RefreshAll();
+
+        var row = Assert.Single(vm.Running);
+        Assert.True(row.IsPaused);
+        Assert.Equal(TimerState.Paused, row.Item.State);
+        Assert.Equal(TimeSpan.FromMinutes(6), sched.Remaining(row.Item));
+        Assert.Equal(TimeSpan.FromMinutes(10), row.Item.OriginalDuration);
+    }
+
+    [Fact]
+    public void Canceling_a_countdown_that_already_rang_offers_no_undo()
+    {
+        // A rung timer has nothing left to count. Bringing it back would leave a 00:00 row that
+        // never fires again and never clears.
+        var vm = New(out var clock, out var sched);
+        vm.StartPresetCommand.Execute(5);
+        clock.Advance(TimeSpan.FromMinutes(5));
+        sched.Tick();                                    // it rings; the row stays until the card is dismissed
+        vm.RefreshAll();
+
+        vm.CancelTimerCommand.Execute(vm.Running[0]);
+        vm.UndoDeleteCommand.Execute(null);
+
+        Assert.False(vm.HasPendingDelete);
+        Assert.Empty(vm.Running);
+        Assert.Empty(sched.Running);
+    }
+
+    [Fact]
     public void UndoDelete_after_timer_cancel_announces_restoration()
     {
         var vm = New(out _, out _);
