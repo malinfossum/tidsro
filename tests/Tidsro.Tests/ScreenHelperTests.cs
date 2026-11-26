@@ -84,6 +84,29 @@ public class ScreenHelperTests
     }
 
     [Fact]
+    public void A_fractional_position_from_a_scaled_display_is_on_screen()
+    {
+        // At 125% a physical top of 11 is saved as 8.8 DIPs, which never adds up to a whole number.
+        var scaled = new[] { new Rect(0, 0, 1536, 832) };
+        Assert.True(ScreenHelper.IsTitleBarOnScreen(100.4, 8.8, 440, scaled));
+        Assert.True(ScreenHelper.IsTitleBarOnScreen(1495.8 + 0.2, 8.8, 440, scaled));   // just 40 left to grab
+    }
+
+    [Fact]
+    public void A_window_with_only_its_caption_buttons_on_screen_is_off_screen()
+    {
+        // Minimize, maximize and close cannot be dragged, so they do not make the window reachable.
+        Assert.False(ScreenHelper.IsTitleBarOnScreen(-350, 100, 440, UnequalPair));
+    }
+
+    [Fact]
+    public void A_title_bar_across_two_stacked_monitors_is_on_screen()
+    {
+        var stacked = new[] { new Rect(0, 0, 1920, 1080), new Rect(0, 1080, 1920, 1040) };
+        Assert.True(ScreenHelper.IsTitleBarOnScreen(100, 1065, 440, stacked));   // 15 on each
+    }
+
+    [Fact]
     public void No_monitors_means_off_screen()
     {
         Assert.False(ScreenHelper.IsTitleBarOnScreen(100, 100, 440, []));
