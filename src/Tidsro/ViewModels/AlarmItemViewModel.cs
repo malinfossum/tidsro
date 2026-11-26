@@ -12,7 +12,7 @@ public sealed class AlarmItemViewModel
     /// <summary>How many occurrences this alarm will pass over before it rings again (skip-next).</summary>
     public int SkippedCount { get; }
 
-    public AlarmItemViewModel(TimerItem item, bool isTomorrow, bool isNext, int skippedCount = 0)
+    public AlarmItemViewModel(TimerItem item, bool isTomorrow, bool isNext, int skippedCount)
     {
         Item = item;
         IsTomorrow = isTomorrow;
@@ -57,8 +57,8 @@ public sealed class AlarmItemViewModel
         ? $" {RecurrenceRules.CadenceLabel(d).ToLowerInvariant()}"
         : (IsTomorrow ? " tomorrow" : "");
 
-    // Skip-next: only an enabled repeating alarm has a next time to pass over. A one-shot is
-    // deleted instead, and a disabled alarm is already silent.
+    // Skip-next: only a recurring alarm that is on has a next time to pass over. A one-shot alarm is
+    // deleted instead, and an alarm that is off is already silent.
     public bool CanSkip => Item.TriggerType == TriggerType.Recurring && Item.IsEnabled;
     public bool IsSkipped => SkippedCount > 0;
 

@@ -76,7 +76,10 @@ public static class RecurrenceRules
     }
 
     /// <summary>A short date for a cue: "Fri 02.01".</summary>
-    public static string ShortDate(DateTimeOffset when) => $"{DayName(when.DayOfWeek)} {when:dd.MM}";
+    public static string ShortDate(DateTimeOffset when) => ShortDate(DateOnly.FromDateTime(when.DateTime));
+
+    /// <summary>The same short date for a calendar day.</summary>
+    public static string ShortDate(DateOnly day) => $"{DayName(day.DayOfWeek)} {day:dd.MM}";
 
     private static bool Includes(Weekdays set, DayOfWeek day) => (set & DayFlag(day)) != 0;
 

@@ -404,24 +404,31 @@ public partial class MainViewModel : ObservableObject
         bool warnBefore, int? endMinute = null)
     {
         var existing = _scheduler.Alarms.FirstOrDefault(a => a.Id == id);
-        // An edit re-arms from scratch, which would silently undo a skip. Carry the count over, so
-        // fixing a label never brings back an alarm she chose to skip.
-        var skipped = existing is null ? 0 : _scheduler.SkippedCount(existing);
+        // An edit re-arms from scratch, which on its own would switch an alarm that is Off back on and
+        // silently undo a skip. Carry both across. The skip travels as dates, so a new time or new days
+        // still pass over the days that were skipped, never just the same number of occurrences.
+        var enabled = existing?.IsEnabled ?? true;
+        var skippedDates = existing is null ? [] : _scheduler.SkippedDates(existing);
         if (existing is not null) _scheduler.RemoveAlarm(existing);
         var clean = CleanLabel(label);
+        TimerItem rearmed;
+        string announcement;
         if (days == Weekdays.None)
         {
             var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, _scheduler.Zone, hour, minute);
-            _scheduler.ArmClockAlarm(fireAt, clean, sound, id, warnBefore: warnBefore);
-            Announce($"Alarm updated for {fireAt:HH\\:mm}");
+            rearmed = _scheduler.ArmClockAlarm(fireAt, clean, sound, id, warnBefore: warnBefore, enabled: enabled);
+            announcement = $"Alarm updated for {fireAt:HH\\:mm}";
         }
         else
         {
-            var rearmed = _scheduler.ArmRecurringAlarm(hour, minute, days, clean, sound, id, warnBefore: warnBefore,
-                endMinute: endMinute);
-            _scheduler.ReapplySkips(rearmed, skipped);
-            Announce($"Alarm updated for {hour:00}:{minute:00}, {RecurrenceRules.CadenceLabel(days)}");
+            rearmed = _scheduler.ArmRecurringAlarm(hour, minute, days, clean, sound, id, warnBefore: warnBefore,
+                enabled: enabled, endMinute: endMinute);
+            announcement = $"Alarm updated for {hour:00}:{minute:00}, {RecurrenceRules.CadenceLabel(days)}";
         }
+        var lost = _scheduler.ReapplySkips(rearmed, skippedDates);
+        if (lost.Count > 0)
+            announcement += $". The skip no longer applies to {string.Join(", ", lost.Select(RecurrenceRules.ShortDate))}";
+        Announce(announcement);
         RebuildAgenda();
         AlarmsChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -540,7 +547,13 @@ public partial class MainViewModel : ObservableObject
         if (row is null) return;
         CommitPendingDelete();                          // settle any outstanding undo first
         var item = row.Item;
-        if (item.EndsAt is not { } skipped || !_scheduler.SkipNext(item)) return;
+        if (item.EndsAt is not { } skipped) return;
+        if (!_scheduler.SkipNext(item))
+        {
+            // Only the cap refuses a row that offers Skip; say so rather than ignore the press.
+            if (row.CanSkip) Announce($"Cannot skip more than {SchedulerService.MaxSkips} alarms ahead");
+            return;
+        }
         RebuildAgenda();
         AlarmsChanged?.Invoke(this, EventArgs.Empty);   // the new next time is what gets saved
         Announce($"Skipped the alarm at {row.TimeText} on {RecurrenceRules.ShortDate(skipped)}. Next: {DescribeNext(item)}");

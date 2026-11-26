@@ -48,6 +48,12 @@ public sealed class SchedulerService
 
     public void RemoveAlarm(TimerItem item) => _alarms.Remove(item);
 
+    /// <summary>True while the alarm with this id is on and still due at exactly this time. A skip, an
+    /// edit to another time, switching it off or deleting it makes this false, which is how the App
+    /// knows to close a heads-up for an occurrence that will no longer ring.</summary>
+    public bool WillRingAt(Guid id, DateTimeOffset fireAt) =>
+        _alarms.Any(a => a.Id == id && a.IsEnabled && a.EndsAt == fireAt);
+
     /// <summary>Turn an alarm on or off. Re-enabling a recurring alarm whose next occurrence has
     /// already passed (e.g. switched off over the summer) rolls it forward to the next future one,
     /// so it never fires the instant it comes back, and never emits a stale missed note.</summary>
@@ -70,14 +76,15 @@ public sealed class SchedulerService
     // so the skipped day is simply never reached (ADR 0002: the alarm's state is the record), and
     // the saved NextFireAt carries it through a relaunch and an export with no new field.
 
-    /// <summary>Skip the next occurrence of an enabled recurring alarm. Each call skips one more.
-    /// Returns false, changing nothing, for a one-shot or a disabled alarm.</summary>
-    public bool SkipNext(TimerItem alarm)
-    {
-        if (!IsSkippable(alarm, out var days, out var end)) return false;
-        SetNext(alarm, RecurrenceRules.NextOccurrence(end, _clock.Zone, end.Hour, end.Minute, days));
-        return true;
-    }
+    /// <summary>The most occurrences one alarm can pass over. It bounds every skip walk, and a saved
+    /// next time further out than this is treated as stale rather than as a skip.</summary>
+    public const int MaxSkips = 100;
+
+    /// <summary>Skip the next occurrence of a recurring alarm that is on. Each call skips one more,
+    /// up to <see cref="MaxSkips"/>. Returns false, changing nothing, for a one-shot alarm, an alarm
+    /// that is off, or one already at the cap.</summary>
+    public bool SkipNext(TimerItem alarm) =>
+        alarm.IsEnabled && SkippedOccurrences(alarm, MaxSkips).Count < MaxSkips && Advance(alarm);
 
     /// <summary>Take back the latest skip: the alarm steps back one occurrence. Returns false when
     /// nothing is skipped, so it can never move an alarm to a time that has already passed.</summary>
@@ -90,39 +97,71 @@ public sealed class SchedulerService
     }
 
     /// <summary>How many occurrences lie between now and the alarm's next one, i.e. how many it
-    /// will pass over. Zero for anything that is not an enabled recurring alarm. It falls by itself
+    /// will pass over. Zero for anything that is not a recurring alarm that is on. It falls by itself
     /// as a skipped occurrence's time goes by.</summary>
-    public int SkippedCount(TimerItem alarm)
+    public int SkippedCount(TimerItem alarm) => alarm.IsEnabled ? SkippedOccurrences(alarm, MaxSkips).Count : 0;
+
+    /// <summary>The local dates the alarm passes over before it rings again. Unlike
+    /// <see cref="SkippedCount"/> this counts an alarm that is off too: its skip waits in its next
+    /// time and still applies when it is switched back on.</summary>
+    public IReadOnlyList<DateOnly> SkippedDates(TimerItem alarm) =>
+        SkippedOccurrences(alarm, MaxSkips).Select(LocalDate).ToList();
+
+    /// <summary>Carry skips across an edit, which re-arms the alarm from scratch. The skips travel as
+    /// dates, not a count, so a new time or new days still pass over the same days: the alarm skips
+    /// each leading occurrence that falls on a skipped date. Returns the skipped dates it now rings
+    /// on after all, because the new schedule puts an unskipped occurrence first (or is a one-shot).</summary>
+    public IReadOnlyList<DateOnly> ReapplySkips(TimerItem alarm, IReadOnlyCollection<DateOnly> dates)
     {
-        if (!IsSkippable(alarm, out var days, out var end)) return 0;
-        var count = 0;
-        var candidate = RecurrenceRules.NextOccurrence(_clock.Now, _clock.Zone, end.Hour, end.Minute, days);
-        while (candidate < end && count < MaxSkips)
+        if (dates.Count == 0) return [];
+        var skip = dates.ToHashSet();
+        for (var i = 0; i < MaxSkips && alarm.EndsAt is { } next && skip.Contains(LocalDate(next)); i++)
+            if (!Advance(alarm)) break;
+
+        // Walk what is left of the schedule up to the last skipped date and collect the skipped
+        // dates it still rings on.
+        var last = skip.Max();
+        var ringsOn = new List<DateOnly>();
+        var occurrence = alarm.EndsAt;
+        for (var i = 0; i <= MaxSkips && occurrence is { } o && LocalDate(o) <= last; i++)
         {
-            count++;
+            if (skip.Contains(LocalDate(o))) ringsOn.Add(LocalDate(o));
+            occurrence = alarm.RecurringDays is { } days
+                ? RecurrenceRules.NextOccurrence(o, _clock.Zone, o.Hour, o.Minute, days)
+                : null;
+        }
+        return ringsOn;
+    }
+
+    // The occurrences between now and the alarm's next time, at most `limit` of them. Ignores IsEnabled
+    // on purpose: SkippedCount and SkipNext add that rule, SkippedDates must not.
+    private List<DateTimeOffset> SkippedOccurrences(TimerItem alarm, int limit)
+    {
+        var skipped = new List<DateTimeOffset>();
+        if (alarm.TriggerType != TriggerType.Recurring || alarm.RecurringDays is not { } days
+            || alarm.EndsAt is not { } end)
+            return skipped;
+        var candidate = RecurrenceRules.NextOccurrence(_clock.Now, _clock.Zone, end.Hour, end.Minute, days);
+        while (candidate < end && skipped.Count < limit)
+        {
+            skipped.Add(candidate);
             candidate = RecurrenceRules.NextOccurrence(candidate, _clock.Zone, end.Hour, end.Minute, days);
         }
-        return count;
+        return skipped;
     }
 
-    /// <summary>Skip <paramref name="count"/> occurrences of a freshly armed alarm. An edit re-arms the
-    /// alarm from scratch, so this carries its skips across.</summary>
-    public void ReapplySkips(TimerItem alarm, int count)
+    // Move a recurring alarm one occurrence on, whether it is on or off.
+    private bool Advance(TimerItem alarm)
     {
-        for (var i = 0; i < count; i++)
-            if (!SkipNext(alarm)) return;
+        if (alarm.TriggerType != TriggerType.Recurring || alarm.RecurringDays is not { } days
+            || alarm.EndsAt is not { } end)
+            return false;
+        SetNext(alarm, RecurrenceRules.NextOccurrence(end, _clock.Zone, end.Hour, end.Minute, days));
+        return true;
     }
 
-    // A bound on the count loop only. Nobody skips a year of a daily alarm one click at a time.
-    private const int MaxSkips = 366;
-
-    private static bool IsSkippable(TimerItem alarm, out Weekdays days, out DateTimeOffset end)
-    {
-        days = alarm.RecurringDays ?? Weekdays.None;
-        end = alarm.EndsAt ?? default;
-        return alarm.TriggerType == TriggerType.Recurring && alarm.IsEnabled
-            && alarm.RecurringDays is not null && alarm.EndsAt is not null;
-    }
+    private DateOnly LocalDate(DateTimeOffset when) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(when, _clock.Zone).DateTime);
 
     private void SetNext(TimerItem alarm, DateTimeOffset next)
     {
@@ -137,7 +176,8 @@ public sealed class SchedulerService
         Guid? id = null, DateTimeOffset? nextFireAt = null, bool warnBefore = false, bool enabled = true,
         int? endMinute = null)
     {
-        var ends = nextFireAt ?? RecurrenceRules.NextOccurrence(_clock.Now, _clock.Zone, hour, minute, days);
+        var natural = RecurrenceRules.NextOccurrence(_clock.Now, _clock.Zone, hour, minute, days);
+        var ends = nextFireAt ?? natural;
         var item = new TimerItem
         {
             Id = id ?? Guid.NewGuid(),
@@ -152,6 +192,11 @@ public sealed class SchedulerService
             IsEnabled = enabled,
             EndMinute = endMinute,
         };
+        // A saved next time more than MaxSkips occurrences out is no skip anyone made one press at a
+        // time (a hand-edited file, or a clock that once ran far ahead). Left alone, the alarm would
+        // stay silent for months and its row would claim a hundred skips, so it falls back to the
+        // natural next occurrence.
+        if (SkippedOccurrences(item, MaxSkips + 1).Count > MaxSkips) SetNext(item, natural);
         _alarms.Add(item);
         return item;
     }

@@ -1,3 +1,4 @@
+using System.IO;
 using Tidsro.Models;
 using Tidsro.Services;
 using Tidsro.ViewModels;
@@ -153,15 +154,152 @@ public class SkipNextTests
         Assert.Equal(0, s.SkippedCount(once));
     }
 
+    private static DateOnly Day(int day) => new(2026, 1, day);
+
     [Fact]
-    public void ReapplySkips_skips_the_same_number_on_a_re_armed_alarm()
+    public void ReapplySkips_passes_over_the_skipped_dates_on_a_re_armed_alarm()
     {
         var (s, _) = New();
         var alarm = s.ArmRecurringAlarm(11, 0, RecurrenceRules.AllDays, null, SoundChoice.None);
 
-        s.ReapplySkips(alarm, 2);
+        var lost = s.ReapplySkips(alarm, [Day(1), Day(2)]);
 
         Assert.Equal(At(3, 11), alarm.EndsAt);
+        Assert.Empty(lost);
+    }
+
+    [Fact]
+    public void ReapplySkips_does_not_skip_a_day_that_was_not_skipped()
+    {
+        // 09:00 Thursday, today's 10:00 skipped. Moving the alarm to 08:00 makes Friday the next
+        // occurrence. A count of one would skip Friday; the dates leave it alone.
+        var (s, _) = New();
+        var alarm = s.ArmRecurringAlarm(8, 0, RecurrenceRules.AllDays, null, SoundChoice.None);
+
+        var lost = s.ReapplySkips(alarm, [Day(1)]);
+
+        Assert.Equal(At(2, 8), alarm.EndsAt);
+        Assert.Empty(lost);   // Thursday 08:00 has passed, so it does not ring on the skipped day either
+    }
+
+    [Fact]
+    public void ReapplySkips_reports_a_skipped_day_the_new_schedule_rings_on_after_all()
+    {
+        // A Friday alarm with Fri 02.01 skipped, edited to Thu + Fri: Thursday now comes first, and a
+        // skip only passes over the next occurrences in order, so Friday rings after all.
+        var (s, _) = New();
+        var alarm = s.ArmRecurringAlarm(10, 0, Weekdays.Thu | Weekdays.Fri, null, SoundChoice.None);
+
+        var lost = s.ReapplySkips(alarm, [Day(2)]);
+
+        Assert.Equal(At(1, 10), alarm.EndsAt);
+        Assert.Equal([Day(2)], lost);
+    }
+
+    [Fact]
+    public void ReapplySkips_on_a_one_shot_reports_the_day_it_rings_on()
+    {
+        var (s, _) = New();
+        var once = s.ArmClockAlarm(At(1, 10), null, SoundChoice.None);
+
+        Assert.Equal([Day(1)], s.ReapplySkips(once, [Day(1)]));
+        Assert.Empty(s.ReapplySkips(once, [Day(2)]));
+    }
+
+    [Fact]
+    public void An_alarm_that_is_off_keeps_its_skipped_dates()
+    {
+        var (s, _) = New();
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None);
+        s.SkipNext(alarm);
+
+        s.SetEnabled(alarm, false);
+
+        Assert.Equal(0, s.SkippedCount(alarm));   // the row shows no skip while the alarm is off
+        Assert.Equal([Day(1)], s.SkippedDates(alarm));
+
+        s.SetEnabled(alarm, true);
+        Assert.Equal(1, s.SkippedCount(alarm));   // and it is still there when it comes back on
+    }
+
+    [Fact]
+    public void SkipNext_stops_at_the_cap()
+    {
+        var (s, _) = New();
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None);
+
+        for (var i = 0; i < SchedulerService.MaxSkips; i++) Assert.True(s.SkipNext(alarm));
+        var capped = alarm.EndsAt;
+
+        Assert.False(s.SkipNext(alarm));
+        Assert.Equal(capped, alarm.EndsAt);
+        Assert.Equal(SchedulerService.MaxSkips, s.SkippedCount(alarm));
+    }
+
+    [Fact]
+    public void A_skip_survives_a_save_and_a_load()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"tidsro-skip-{Guid.NewGuid():N}.json");
+        try
+        {
+            var (s, _) = New();
+            var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, "Talk", SoundChoice.None);
+            s.SkipNext(alarm);
+            var end = alarm.EndsAt!.Value;
+            var svc = new PersistenceService(path);
+            // The fake clock runs in UTC, so its wall time is the local time the app would save.
+            svc.Save(new TidsroData
+            {
+                Settings = AppSettings.Defaults(),
+                RecurringAlarms =
+                {
+                    new RecurringAlarmRecord
+                    {
+                        Id = alarm.Id, Hour = end.Hour, Minute = end.Minute, Days = RecurrenceRules.AllDays,
+                        Label = "Talk", Sound = SoundChoice.None, Enabled = true, NextFireAt = end.DateTime,
+                    },
+                },
+            });
+
+            var r = Assert.Single(svc.Load().RecurringAlarms);
+            var (fresh, _) = New();
+            var restored = fresh.ArmRecurringAlarm(r.Hour, r.Minute, r.Days, r.Label, r.Sound, r.Id,
+                new DateTimeOffset(r.NextFireAt, TimeSpan.Zero), r.WarnBefore, r.Enabled, r.EndMinute);
+
+            Assert.Equal(At(2, 10), restored.EndsAt);
+            Assert.Equal(1, fresh.SkippedCount(restored));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void A_saved_next_time_beyond_the_cap_falls_back_to_the_natural_one()
+    {
+        var (s, _) = New();
+
+        var stale = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None,
+            nextFireAt: At(1, 10).AddDays(SchedulerService.MaxSkips + 1));
+
+        Assert.Equal(At(1, 10), stale.EndsAt);
+        Assert.Equal(0, s.SkippedCount(stale));
+    }
+
+    [Fact]
+    public void WillRingAt_is_false_once_the_occurrence_is_skipped_or_off()
+    {
+        var (s, _) = New();
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None);
+
+        Assert.True(s.WillRingAt(alarm.Id, At(1, 10)));
+        s.SkipNext(alarm);
+        Assert.False(s.WillRingAt(alarm.Id, At(1, 10)));
+
+        s.UndoSkip(alarm);
+        s.SetEnabled(alarm, false);
+        Assert.False(s.WillRingAt(alarm.Id, At(1, 10)));
     }
 }
 
@@ -267,5 +405,90 @@ public class SkipNextViewModelTests
         var daily = WithDailyTalk(out _, out _);
         daily.ToggleAlarmCommand.Execute(daily.Alarms[0]);                      // off
         Assert.False(daily.Alarms[0].CanSkip);
+    }
+
+    private static DateTimeOffset Jan(int day, int hour) => new(2026, 1, day, hour, 0, 0, TimeSpan.Zero);
+
+    [Fact]
+    public void Moving_a_skipped_alarm_earlier_skips_the_same_day_not_the_next_one()
+    {
+        var vm = WithDailyTalk(out _, out _);
+        vm.SkipAlarmCommand.Execute(vm.Alarms[0]);   // skips Thu 01.01
+
+        vm.ApplyAlarmEdit(vm.Alarms[0].Item.Id, 8, 0, RecurrenceRules.AllDays, "Talk", SoundChoice.None, false);
+
+        var row = Assert.Single(vm.Alarms);
+        Assert.Equal(Jan(2, 8), row.Item.EndsAt);   // Friday still rings
+        Assert.False(row.IsSkipped);
+    }
+
+    [Fact]
+    public void Changing_the_days_of_a_skipped_alarm_skips_the_same_day()
+    {
+        var vm = WithDailyTalk(out _, out _);
+        vm.SkipAlarmCommand.Execute(vm.Alarms[0]);   // skips Thu 01.01
+
+        vm.ApplyAlarmEdit(vm.Alarms[0].Item.Id, 10, 0, Weekdays.Thu | Weekdays.Sat, "Talk", SoundChoice.None, false);
+
+        var row = Assert.Single(vm.Alarms);
+        Assert.Equal(Jan(3, 10), row.Item.EndsAt);
+        Assert.Equal("Skipped, next Sat 03.01", row.SkipText);
+    }
+
+    [Fact]
+    public void An_edit_that_rings_on_a_skipped_day_says_so()
+    {
+        var vm = WithDailyTalk(out _, out _);
+        vm.SkipAlarmCommand.Execute(vm.Alarms[0]);   // skips Thu 01.01
+        string? announced = null; vm.Announcement += (_, m) => announced = m;
+
+        vm.ApplyAlarmEdit(vm.Alarms[0].Item.Id, 10, 0, Weekdays.None, "Talk", SoundChoice.None, false);   // now a one-shot
+
+        Assert.Equal(Jan(1, 10), vm.Alarms[0].Item.EndsAt);
+        Assert.Equal("Alarm updated for 10:00. The skip no longer applies to Thu 01.01", announced);
+    }
+
+    [Fact]
+    public void Editing_an_alarm_that_is_off_keeps_it_off_and_keeps_its_skip()
+    {
+        var vm = WithDailyTalk(out _, out var sched);
+        vm.SkipAlarmCommand.Execute(vm.Alarms[0]);
+        vm.ToggleAlarmCommand.Execute(vm.Alarms[0]);   // off
+
+        vm.ApplyAlarmEdit(vm.Alarms[0].Item.Id, 10, 0, RecurrenceRules.AllDays, "Talk later", SoundChoice.None, false);
+
+        var item = Assert.Single(vm.Alarms).Item;
+        Assert.False(item.IsEnabled);
+        Assert.Equal(Jan(2, 10), item.EndsAt);
+
+        vm.ToggleAlarmCommand.Execute(vm.Alarms[0]);   // back on: the skip is still there
+        Assert.True(vm.Alarms[0].IsSkipped);
+        Assert.Equal(1, sched.SkippedCount(vm.Alarms[0].Item));
+    }
+
+    [Fact]
+    public void Editing_a_one_shot_alarm_that_is_off_keeps_it_off()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AddAlarmCommand.Execute(null);
+        vm.ToggleAlarmCommand.Execute(vm.Alarms[0]);
+
+        vm.ApplyAlarmEdit(vm.Alarms[0].Item.Id, 11, 0, Weekdays.None, "Later", SoundChoice.None, false);
+
+        Assert.False(Assert.Single(vm.Alarms).Item.IsEnabled);
+    }
+
+    [Fact]
+    public void Skip_at_the_cap_is_announced_not_ignored()
+    {
+        var vm = WithDailyTalk(out _, out _);
+        for (var i = 0; i < SchedulerService.MaxSkips; i++) vm.SkipAlarmCommand.Execute(vm.Alarms[0]);
+        var changed = 0; vm.AlarmsChanged += (_, _) => changed++;
+        string? announced = null; vm.Announcement += (_, m) => announced = m;
+
+        vm.SkipAlarmCommand.Execute(vm.Alarms[0]);
+
+        Assert.Equal(0, changed);
+        Assert.Equal($"Cannot skip more than {SchedulerService.MaxSkips} alarms ahead", announced);
     }
 }

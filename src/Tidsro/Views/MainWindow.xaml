@@ -648,34 +648,42 @@
                             CommandParameter="{Binding}"
                             VerticalAlignment="Top" Margin="8,0,0,0"
                             AutomationProperties.Name="{Binding ToggleLabel}"/>
-                  <DockPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,0">
-                    <Button DockPanel.Dock="Right" Content="&#xE711;"
-                            Command="{Binding DataContext.DeleteAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                            CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                            AutomationProperties.Name="{Binding DeleteLabel}" ToolTip="{Binding DeleteLabel}" Style="{StaticResource DangerAction}" MinWidth="44" MinHeight="44"/>
-                    <Button DockPanel.Dock="Right" Content="&#xE70F;"
-                            Command="{Binding DataContext.BeginEditAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                            CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                            AutomationProperties.Name="{Binding EditLabel}" ToolTip="{Binding EditLabel}" Style="{StaticResource QuietAction}" MinWidth="44" MinHeight="44" Margin="0,0,8,0"/>
-                    <!-- Skip-next: repeating alarms only. Each press passes over one more occurrence;
-                         Undo skip appears while one is pending and takes back the latest. -->
-                    <Button DockPanel.Dock="Right" Content="&#xE893;"
-                            Command="{Binding DataContext.SkipAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                            CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                            Visibility="{Binding CanSkip, Converter={StaticResource BoolToVisible}}"
-                            AutomationProperties.Name="{Binding SkipLabel}" ToolTip="{Binding SkipLabel}" Style="{StaticResource QuietAction}" MinWidth="44" MinHeight="44" Margin="0,0,8,0"/>
-                    <Button DockPanel.Dock="Right" Content="&#xE7A7;"
-                            Command="{Binding DataContext.UndoSkipAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                            CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
-                            Visibility="{Binding IsSkipped, Converter={StaticResource BoolToVisible}}"
-                            AutomationProperties.Name="{Binding UndoSkipLabel}" ToolTip="{Binding UndoSkipLabel}" Style="{StaticResource QuietAction}" MinWidth="44" MinHeight="44" Margin="0,0,8,0"/>
+                  <!-- The sound line fills the left; the actions sit right in reading order, so Tab
+                       walks them left to right (a DockPanel docked Right would start at Delete). -->
+                  <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="*"/>
+                      <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Style="{StaticResource DimWhenOff}">
                       <TextBlock FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" FontSize="{StaticResource TextXs}" Foreground="{StaticResource TextFaint}" Margin="0,0,4,0" VerticalAlignment="Center">
                         <TextBlock.Text><Binding Path="HasSound"><Binding.Converter><StaticResource ResourceKey="SoundGlyph"/></Binding.Converter></Binding></TextBlock.Text>
                       </TextBlock>
                       <TextBlock Text="{Binding SoundText}" Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}" VerticalAlignment="Center"/>
                     </StackPanel>
-                  </DockPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                      <!-- Skip-next: recurring alarms only. Undo skip shows while a skip is pending and
+                           takes back the latest; each Skip press passes over one more occurrence. -->
+                      <Button Content="&#xE7A7;"
+                              Command="{Binding DataContext.UndoSkipAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                              CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                              Visibility="{Binding IsSkipped, Converter={StaticResource BoolToVisible}}"
+                              AutomationProperties.Name="{Binding UndoSkipLabel}" ToolTip="{Binding UndoSkipLabel}" Style="{StaticResource QuietAction}" MinWidth="44" MinHeight="44" Margin="0,0,8,0"/>
+                      <Button Content="&#xE893;"
+                              Command="{Binding DataContext.SkipAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                              CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                              Visibility="{Binding CanSkip, Converter={StaticResource BoolToVisible}}"
+                              AutomationProperties.Name="{Binding SkipLabel}" ToolTip="{Binding SkipLabel}" Style="{StaticResource QuietAction}" MinWidth="44" MinHeight="44" Margin="0,0,8,0"/>
+                      <Button Content="&#xE70F;"
+                              Command="{Binding DataContext.BeginEditAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                              CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                              AutomationProperties.Name="{Binding EditLabel}" ToolTip="{Binding EditLabel}" Style="{StaticResource QuietAction}" MinWidth="44" MinHeight="44" Margin="0,0,8,0"/>
+                      <Button Content="&#xE711;"
+                              Command="{Binding DataContext.DeleteAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                              CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                              AutomationProperties.Name="{Binding DeleteLabel}" ToolTip="{Binding DeleteLabel}" Style="{StaticResource DangerAction}" MinWidth="44" MinHeight="44"/>
+                    </StackPanel>
+                  </Grid>
                 </Grid>
                 </Border>
               </Grid>

@@ -32,7 +32,7 @@ public partial class App : Application
     private DispatcherTimer _timer = null!;
     private MainWindow? _main;
     private readonly List<CompletionPopup> _openPopups = new();
-    private readonly Dictionary<CompletionPopup, DateTimeOffset> _warningFireTimes = new();
+    private readonly Dictionary<CompletionPopup, (Guid AlarmId, DateTimeOffset FireAt)> _warningFireTimes = new();
     private Mutex? _instanceMutex;
     private EventWaitHandle? _showEvent;
     private RegisteredWaitHandle? _showWait;
@@ -240,7 +240,7 @@ public partial class App : Application
         var head = string.IsNullOrWhiteSpace(item.Label) ? "Alarm" : item.Label!.Trim();
         var popup = ShowCard(new PopupViewModel(item, head));   // heads-up (close-only) variant
         popup.Closed += (_, _) => _sound.Stop(playId);
-        _warningFireTimes[popup] = item.EndsAt ?? _scheduler.Now;   // capture this occurrence's fire time
+        _warningFireTimes[popup] = (item.Id, item.EndsAt ?? _scheduler.Now);   // capture this occurrence's fire time
     }
 
     // Show a completion card bottom-right without stealing focus, track it in the stack, and keep the
@@ -260,12 +260,15 @@ public partial class App : Application
 
     // The heads-up gives way to the completion card: close any warning whose alarm has reached its fire time.
     // Decoupled from Fired, so it works for one-shots and recurring alike (the captured fire time is the
-    // occurrence's, not the live alarm's already-advanced EndsAt).
+    // occurrence's, not the live alarm's already-advanced EndsAt). It also closes once that occurrence
+    // will no longer ring (skipped, switched off, deleted or moved by an edit), so the card never
+    // announces an alarm that is not coming.
     private void CloseFiredWarnings()
     {
         var now = _scheduler.Now;
-        foreach (var (popup, fireAt) in _warningFireTimes.ToList())
-            if (now >= fireAt && popup.IsLoaded) popup.Close();   // IsLoaded: never re-close a window already closing
+        foreach (var (popup, (alarmId, fireAt)) in _warningFireTimes.ToList())
+            if ((now >= fireAt || !_scheduler.WillRingAt(alarmId, fireAt)) && popup.IsLoaded)
+                popup.Close();   // IsLoaded: never re-close a window already closing
     }
 
     private void PositionPopup(CompletionPopup popup, int indexFromBottom)
