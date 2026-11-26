@@ -114,15 +114,10 @@ public partial class MainWindow : Window
         }
     }
 
-    // Guard against a saved position stranded off-screen by an unplugged monitor or lower resolution.
-    private static bool IsOnScreen(double left, double top)
-    {
-        var x = SystemParameters.VirtualScreenLeft;
-        var y = SystemParameters.VirtualScreenTop;
-        var right = x + SystemParameters.VirtualScreenWidth;
-        var bottom = y + SystemParameters.VirtualScreenHeight;
-        return left >= x - 8 && top >= y && left <= right - 40 && top <= bottom - 40;
-    }
+    // Guard against a saved position stranded off-screen by an unplugged monitor, a lower resolution,
+    // or the gap beside a smaller monitor. Width is already the size this window is about to take.
+    private bool IsOnScreen(double left, double top) =>
+        ScreenHelper.IsTitleBarOnScreen(left, top, Width, ScreenHelper.MonitorWorkAreas());
 
     /// <summary>A collapsed panel cannot hold keyboard focus, so switching tabs while focus sits in
     /// the panel content — which Ctrl+Tab allows from anywhere in the window — drops focus to the
