@@ -31,8 +31,9 @@ the rendering.
 
 ## Traps, each of which cost real time
 
-- **UI Automation needs Windows PowerShell.** `UIAutomationClient` does not load cleanly in pwsh 7.
-  Call the UIA scripts with `powershell.exe`.
+- **UI Automation works in pwsh 7.** `UIAutomationClient` loads there and drives `Click-Button.ps1`,
+  while Windows PowerShell 5.1 on my machine refuses to run scripts. The Verify scripts still start
+  their helpers with `powershell.exe`.
 - **Look controls up by AutomationId, never by label or accessible name.** A copy change then cannot
   break a rig. A control a rig newly drives needs an `AutomationProperties.AutomationId` in its XAML.
 - **`FindFirst` on a name alone matches the `TextBlock` inside the button**, which has no

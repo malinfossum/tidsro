@@ -3,15 +3,14 @@
     Clicks buttons in a running rig through UI Automation, found by their AutomationId.
 
 .DESCRIPTION
-    Runs on Windows PowerShell only - UIAutomationClient does not load cleanly in pwsh 7, so call
-    this with powershell.exe, not from pwsh directly.
+    Runs in pwsh 7, which loads UIAutomationClient fine.
 
     -Buttons takes AutomationIds (AutomationProperties.AutomationId in the XAML), never a label or
     an accessible name, so a copy change cannot break a lookup. Ask for an id that does not exist
     and this throws rather than clicking something else.
 
 .EXAMPLE
-    powershell.exe -NoProfile -File ./Click-Button.ps1 -ProcessId 1234 -Buttons @('OpenSettingsButton','ViewFontLicenseButton')
+    pwsh -NoProfile -Command "& ./Click-Button.ps1 -ProcessId 1234 -Buttons OpenSettingsButton, ViewFontLicenseButton"
 #>
 [CmdletBinding()]
 param([Parameter(Mandatory)][int]$ProcessId, [Parameter(Mandatory)][string[]]$Buttons)
