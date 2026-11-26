@@ -73,17 +73,29 @@ public partial class MainWindow : Window
     /// monitor it's actually on, not SystemParameters.WorkArea (always the primary monitor).</summary>
     public void ResetPlacement()
     {
-        Width = 440;
-        Height = 600;
+        Width = DefaultWidth;
+        Height = DefaultHeight;
+        CenterOnCurrentMonitor();
+    }
+
+    // The XAML defaults. ResetPlacement and the import fallback both return to them.
+    private const double DefaultWidth = 440;
+    private const double DefaultHeight = 600;
+
+    // Center at the current size. Clamped to the top-left of the work area, so a window larger than
+    // this monitor (an imported size from a bigger screen) still opens with its title bar on screen.
+    private void CenterOnCurrentMonitor()
+    {
         var work = ScreenHelper.WorkAreaForWindow(this);
-        Left = (work.Width - Width) / 2 + work.Left;
-        Top = (work.Height - Height) / 2 + work.Top;
+        Left = Math.Max(work.Left, (work.Width - Width) / 2 + work.Left);
+        Top = Math.Max(work.Top, (work.Height - Height) / 2 + work.Top);
     }
 
     /// <summary>Move an already-visible window to imported coordinates. Writing the settings alone is
     /// not enough: OnClosing writes the current placement back on every close, so the restore would
-    /// silently revert. Off-screen coordinates fall back to centering — the same guard the launch path
-    /// applies, for the same reason (an unplugged monitor or a lower resolution).</summary>
+    /// silently revert. Off-screen coordinates fall back to centering at the imported size. The launch
+    /// path applies the same guard for the same reason (an unplugged monitor or a lower resolution).
+    /// Only the position falls back: the size was never the problem.</summary>
     public void ApplyPlacement(AppSettings settings)
     {
         if (settings.WindowWidth is double w) Width = w;
@@ -95,7 +107,10 @@ public partial class MainWindow : Window
         }
         else
         {
-            ResetPlacement();
+            // A size the backup carries stays. One it lacks returns to the default, as it always did.
+            if (settings.WindowWidth is null) Width = DefaultWidth;
+            if (settings.WindowHeight is null) Height = DefaultHeight;
+            CenterOnCurrentMonitor();
         }
     }
 
