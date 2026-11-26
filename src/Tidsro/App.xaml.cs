@@ -234,6 +234,10 @@ public partial class App : Application
 
     private void OnAlarmWarning(object? sender, TimerItem item)
     {
+        // An occurrence that went away and came back inside one tick (off and on again) is owed its
+        // heads-up again, but its first card may not have closed yet. Never stack a second one.
+        if (_warningFireTimes.ContainsValue((item.Id, item.EndsAt ?? _scheduler.Now))) return;
+
         // Mirror the alarm's sound choice: a soft chime only when the alarm itself is sounded; silent otherwise.
         var playId = item.Sound != SoundChoice.None ? _sound.Play(SoundChoice.SoftChime) : 0;
 
@@ -293,7 +297,7 @@ public partial class App : Application
             new EditAlarmViewModel(row.Item.Id, row.Item.EndsAt?.ToString("HH\\:mm") ?? "",
                 row.Item.EndMinute is { } e ? $"{e / 60:D2}:{e % 60:D2}" : "",
                 row.Item.Label ?? "", row.Item.Sound, row.Item.RecurringDays ?? Weekdays.None, row.Item.WarnBefore,
-                _mainVm.SoundOptionsFor(row.Item.Sound), _mainVm.ApplyAlarmEdit, _sound));
+                _mainVm.SoundOptionsFor(row.Item.Sound), _mainVm.ApplyAlarmEdit, _sound, _mainVm.PreviewLostSkips));
         _main ??= new MainWindow(_mainVm, () => new SettingsWindow(confirm =>
                 new SettingsViewModel(_settings, new StartupService(StartupService.CurrentExePath),
                     SaveData, _mainVm.SetDefaultSound,

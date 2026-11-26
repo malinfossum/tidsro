@@ -65,6 +65,10 @@
     <TextBlock Text="{Binding Error}" Foreground="{StaticResource Danger}" FontSize="{StaticResource TextXs}"
                Margin="0,8,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"
                Visibility="{Binding Error, Converter={StaticResource NullToCollapsed}}"/>
+    <!-- A caution, not an error: accent, not danger. A second Save keeps the change. -->
+    <TextBlock Text="{Binding SkipWarning}" Foreground="{StaticResource Accent}" FontSize="{StaticResource TextXs}"
+               Margin="0,8,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"
+               Visibility="{Binding SkipWarning, Converter={StaticResource NullToCollapsed}}"/>
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
       <Button Content="Save" Style="{StaticResource GoldAction}" IsDefault="True" MinWidth="84" Margin="0,0,8,0"
               Command="{Binding SaveCommand}" AutomationProperties.Name="Save alarm"/>

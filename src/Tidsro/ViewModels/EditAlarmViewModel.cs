@@ -15,6 +15,10 @@ public partial class EditAlarmViewModel : ObservableObject
     private readonly Guid _id;
     private readonly Action<Guid, int, int, Weekdays, string?, SoundChoice, bool, int?> _apply;
     private readonly ISoundService _sound;
+    private readonly Func<Guid, int, int, Weekdays, IReadOnlyList<DateOnly>>? _lostSkips;
+    // The time and days the skip warning was shown for. A second Save of the same edit goes through;
+    // a different edit warns again with its own dates.
+    private (int Hour, int Minute, Weekdays Days)? _warnedFor;
 
     public SoundChoice[] SoundOptions { get; }
 
@@ -29,6 +33,10 @@ public partial class EditAlarmViewModel : ObservableObject
     [ObservableProperty] private RepeatOption _repeat;
     [ObservableProperty] private string? _error;
     [ObservableProperty] private bool _warnBefore;
+
+    /// <summary>Shown when Save would make the alarm ring on a day that is skipped. Not an error: a
+    /// second Save keeps the change.</summary>
+    [ObservableProperty] private string? _skipWarning;
 
     public bool ShowCustomDays => Repeat == RepeatOption.Custom;
 
@@ -47,7 +55,8 @@ public partial class EditAlarmViewModel : ObservableObject
 
     public EditAlarmViewModel(Guid id, string timeInput, string endInput, string label, SoundChoice sound,
         Weekdays days, bool warnBefore, SoundChoice[] soundOptions,
-        Action<Guid, int, int, Weekdays, string?, SoundChoice, bool, int?> apply, ISoundService soundSvc)
+        Action<Guid, int, int, Weekdays, string?, SoundChoice, bool, int?> apply, ISoundService soundSvc,
+        Func<Guid, int, int, Weekdays, IReadOnlyList<DateOnly>>? lostSkips = null)
     {
         _id = id;
         _timeInput = timeInput;
@@ -61,6 +70,7 @@ public partial class EditAlarmViewModel : ObservableObject
         SoundOptions = soundOptions;
         _apply = apply;
         _sound = soundSvc;
+        _lostSkips = lostSkips;
     }
 
     // Custom uses the picked toggles; every other option is a fixed preset (Once -> None -> one-shot).
@@ -84,6 +94,18 @@ public partial class EditAlarmViewModel : ObservableObject
         { Error = err; return; }
 
         Error = null;
+
+        // A skip can only pass over the next occurrences in order, so new days or a new time can put an
+        // unskipped occurrence first and bring a skipped day back. Say so once, before it happens.
+        var lost = _lostSkips?.Invoke(_id, h, m, days) ?? [];
+        if (lost.Count > 0 && _warnedFor != (h, m, days))
+        {
+            _warnedFor = (h, m, days);
+            SkipWarning = $"This change brings back the skipped {(lost.Count == 1 ? "day" : "days")} " +
+                $"{string.Join(", ", lost.Select(RecurrenceRules.ShortDate))}. Save again to keep it.";
+            return;
+        }
+        SkipWarning = null;
         _apply(_id, h, m, days, Label, SelectedSound, WarnBefore, end);
         CloseRequested?.Invoke(this, true);
     }

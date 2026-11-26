@@ -15,6 +15,7 @@ Decisions behind the design live in [`adr/`](adr/).
 | **Repeat** | The choice that turns an alarm into a recurring one: Once, Daily, Weekdays, Weekends or Custom. | | `RepeatOption`, `Weekdays` |
 | **Fire** | The moment a timer reaches its time. An alarm missed by sleep or a relaunch still fires within a 5-minute grace, and expires quietly after it. | | `TimerState.Fired`, `SchedulerService.Fired` |
 | **Off** | An alarm that is kept but switched off. It does not fire and sits muted at the bottom of the Schedule. Switching it back on moves a recurring alarm to its next occurrence, so it never fires the instant it returns. | Disabled | `TimerItem.IsEnabled`, persisted as `Enabled` |
+| **Skip** | Passes over the next occurrence of a recurring alarm that is on. Each press skips one more, up to 100. The row says "Skipped, next Mon 30.11" until the skipped time passes, and Undo skip takes back the latest. An edit keeps the skipped days. | Skip next | `SchedulerService.SkipNext`, `UndoSkip`, `SkippedCount` |
 | **End time** | An optional end for an alarm. Tidsro chimes at the start only (see the Roadmap in the README). | | `TimerItem.EndMinute` |
 
 ## Cards
@@ -22,7 +23,7 @@ Decisions behind the design live in [`adr/`](adr/).
 | Term | Meaning | Also called | In code |
 |------|---------|-------------|---------|
 | **Card** | The quiet box in the bottom-right corner when a timer fires. It never steals focus, and several cards stack upward. | Alert (tray menu: "Focus latest alert"), popup | `CompletionPopup`, `PopupViewModel` |
-| **Heads-up** | A close-only card 5 minutes before an alarm that has "Warn me 5 minutes before" on. It closes itself when the alarm fires. | Pre-alarm warning (README), warning | `WarnBefore`, `SchedulerService.Warning`, `WarningSent` |
+| **Heads-up** | A close-only card 5 minutes before an alarm that has "Warn me 5 minutes before" on. It closes itself when the alarm fires, or when that occurrence will no longer ring (skipped, switched off, deleted or moved by an edit). | Pre-alarm warning (README), warning | `WarnBefore`, `SchedulerService.Warning`, `WarningSent` |
 | **+5** | The card button that arms a new 5-minute countdown. | Snooze (code only; the UI never says it) | `ShowSnooze` |
 | **Restart** | The card button that runs a finished countdown again at its original duration. | | `OriginalDuration` |
 | **Dismiss** | Closes a card. | | |

@@ -87,11 +87,12 @@ public partial class MainViewModel : ObservableObject
 
     // Snapshot of (id, fire-time) the agenda was last built from. A recurring alarm advances its
     // EndsAt on firing without changing its id, so reconciling on ids alone would leave a stale row.
-    private HashSet<(Guid Id, DateTimeOffset? EndsAt, int Skipped)> _agendaSignature = new();
-    // The skip count is in the signature because it falls by itself: when a skipped occurrence's
-    // time passes, EndsAt stays put but the row's "Skipped" cue must go.
-    private HashSet<(Guid Id, DateTimeOffset? EndsAt, int Skipped)> AgendaSignature() =>
-        _scheduler.Alarms.Select(a => (a.Id, a.EndsAt, _scheduler.SkippedCount(a))).ToHashSet();
+    private HashSet<(Guid Id, DateTimeOffset? EndsAt, DateTimeOffset? FirstSkipped)> _agendaSignature = new();
+    // The first skipped occurrence is in the signature because a skip falls by itself: when that
+    // time passes, EndsAt stays put but the row's "Skipped" cue must change. It costs one occurrence
+    // lookup per alarm, so it stays cheap on every tick, unlike a full count.
+    private HashSet<(Guid Id, DateTimeOffset? EndsAt, DateTimeOffset? FirstSkipped)> AgendaSignature() =>
+        _scheduler.Alarms.Select(a => (a.Id, a.EndsAt, _scheduler.FirstSkipped(a))).ToHashSet();
 
     private TimerItem? _pendingDelete;
     private TimeSpan? _pendingDeleteRemaining;   // non-null when the pending item is a canceled countdown
@@ -398,6 +399,13 @@ public partial class MainViewModel : ObservableObject
         EditAlarmRequested?.Invoke(this, row);
     }
 
+    /// <summary>For the Edit dialog: the skipped dates this edit would ring on after all. Empty when
+    /// the alarm is gone or nothing is lost.</summary>
+    public IReadOnlyList<DateOnly> PreviewLostSkips(Guid id, int hour, int minute, Weekdays days) =>
+        _scheduler.Alarms.FirstOrDefault(a => a.Id == id) is { } existing
+            ? _scheduler.PreviewLostSkips(existing, hour, minute, days)
+            : [];
+
     // Called by the Edit-alarm dialog on Save. Replaces the alarm in place (same Id), normalizing the
     // label like the add path. Mirrors the former in-place edit branch.
     public void ApplyAlarmEdit(Guid id, int hour, int minute, Weekdays days, string? label, SoundChoice sound,
@@ -551,7 +559,7 @@ public partial class MainViewModel : ObservableObject
         if (!_scheduler.SkipNext(item))
         {
             // Only the cap refuses a row that offers Skip; say so rather than ignore the press.
-            if (row.CanSkip) Announce($"Cannot skip more than {SchedulerService.MaxSkips} alarms ahead");
+            if (row.CanSkip) Announce($"Cannot skip more than {SchedulerService.MaxSkips} occurrences ahead");
             return;
         }
         RebuildAgenda();
@@ -590,15 +598,17 @@ public partial class MainViewModel : ObservableObject
         }
         else if (item.RecurringDays is { } days && item.EndsAt is { } next)
         {
-            _scheduler.ArmRecurringAlarm(next.Hour, next.Minute, days, item.Label, item.Sound, item.Id, next,
+            var restored = _scheduler.ArmRecurringAlarm(next.Hour, next.Minute, days, item.Label, item.Sound, item.Id, next,
                 item.WarnBefore, item.IsEnabled, item.EndMinute);
+            _scheduler.ReopenWarning(restored);   // the delete closed its heads-up; owe it again
             RebuildAgenda();
             Announce("Alarm restored");
             // No persist needed: the record was never removed from disk.
         }
         else if (item.EndsAt is { } fireAt)
         {
-            _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id, item.WarnBefore, item.IsEnabled);   // re-arm; next tick re-checks grace if past
+            var restored = _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id, item.WarnBefore, item.IsEnabled);   // re-arm; next tick re-checks grace if past
+            _scheduler.ReopenWarning(restored);   // the delete closed its heads-up; owe it again
             RebuildAgenda();
             Announce("Alarm restored");
             // No persist needed: the record was never removed from disk.

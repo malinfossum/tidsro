@@ -288,6 +288,61 @@ public class SkipNextTests
     }
 
     [Fact]
+    public void Undoing_a_skip_inside_the_lead_owes_the_heads_up_again()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None, warnBefore: true);
+        var warned = 0; s.Warning += (_, _) => warned++;
+        c.Now = At(1, 9).AddMinutes(56); s.Tick();   // heads-up shown
+        s.SkipNext(alarm);                           // the App closes the card
+
+        s.UndoSkip(alarm);
+        s.Tick();
+
+        Assert.Equal(2, warned);
+    }
+
+    [Fact]
+    public void Switching_an_alarm_back_on_inside_the_lead_owes_the_heads_up_again()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None, warnBefore: true);
+        var warned = 0; s.Warning += (_, _) => warned++;
+        c.Now = At(1, 9).AddMinutes(56); s.Tick();
+
+        s.SetEnabled(alarm, false);
+        s.SetEnabled(alarm, true);
+        s.Tick();
+
+        Assert.Equal(2, warned);
+    }
+
+    [Fact]
+    public void A_stale_next_time_is_not_carried_through_an_edit()
+    {
+        // A clock that stepped back leaves the next time far more than MaxSkips occurrences out.
+        var (s, c) = New();
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None);
+        c.Now = At(1, 9).AddDays(-(SchedulerService.MaxSkips + 10));
+
+        Assert.Empty(s.SkippedDates(alarm));
+    }
+
+    [Fact]
+    public void FirstSkipped_is_the_skipped_occurrence_until_it_passes()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None);
+        Assert.Null(s.FirstSkipped(alarm));
+
+        s.SkipNext(alarm);
+        Assert.Equal(At(1, 10), s.FirstSkipped(alarm));
+
+        c.Now = At(1, 10).AddMinutes(1);
+        Assert.Null(s.FirstSkipped(alarm));
+    }
+
+    [Fact]
     public void WillRingAt_is_false_once_the_occurrence_is_skipped_or_off()
     {
         var (s, _) = New();
@@ -479,6 +534,41 @@ public class SkipNextViewModelTests
     }
 
     [Fact]
+    public void PreviewLostSkips_names_the_day_an_edit_brings_back_and_changes_nothing()
+    {
+        // A Friday alarm with Fri 02.01 skipped. Adding Thursday puts Thu 01.01 first, so Friday rings.
+        var vm = New(out _, out var sched);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmRepeat = RepeatOption.Custom;
+        foreach (var t in vm.AlarmDayToggles) t.IsSelected = t.Flag == Weekdays.Fri;
+        vm.AddAlarmCommand.Execute(null);
+        vm.SkipAlarmCommand.Execute(vm.Alarms[0]);
+        var item = vm.Alarms[0].Item;
+
+        var lost = vm.PreviewLostSkips(item.Id, 10, 0, Weekdays.Thu | Weekdays.Fri);
+
+        Assert.Equal([new DateOnly(2026, 1, 2)], lost);
+        Assert.Empty(vm.PreviewLostSkips(item.Id, 10, 0, Weekdays.Fri));
+        Assert.Equal(Jan(9, 10), item.EndsAt);           // the live alarm is untouched
+        Assert.Same(item, Assert.Single(sched.Alarms));
+    }
+
+    [Fact]
+    public void Undoing_a_delete_inside_the_lead_owes_the_heads_up_again()
+    {
+        var vm = New(out var clock, out var sched);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmRepeat = RepeatOption.Daily; vm.AlarmWarnBefore = true;
+        vm.AddAlarmCommand.Execute(null);
+        var warned = 0; sched.Warning += (_, _) => warned++;
+        clock.Now = Jan(1, 9).AddMinutes(56); sched.Tick();
+
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
+        vm.UndoDeleteCommand.Execute(null);
+        sched.Tick();
+
+        Assert.Equal(2, warned);
+    }
+
+    [Fact]
     public void Skip_at_the_cap_is_announced_not_ignored()
     {
         var vm = WithDailyTalk(out _, out _);
@@ -489,6 +579,6 @@ public class SkipNextViewModelTests
         vm.SkipAlarmCommand.Execute(vm.Alarms[0]);
 
         Assert.Equal(0, changed);
-        Assert.Equal($"Cannot skip more than {SchedulerService.MaxSkips} alarms ahead", announced);
+        Assert.Equal($"Cannot skip more than {SchedulerService.MaxSkips} occurrences ahead", announced);
     }
 }
