@@ -506,8 +506,10 @@ public partial class MainViewModel : ObservableObject
         if (_pendingDelete is not { } item) return;
         if (item.TriggerType == TriggerType.Countdown)
         {
-            var restored = _scheduler.StartCountdown(_pendingDeleteRemaining ?? TimeSpan.Zero, item.Label, item.Sound);
-            Running.Add(new TimerItemViewModel(restored, _scheduler));
+            // The same item, not a new countdown: a new one would take the remaining time as its full
+            // duration and come back running even when it was paused.
+            _scheduler.RestoreCountdown(item, _pendingDeleteRemaining ?? TimeSpan.Zero);
+            Running.Add(new TimerItemViewModel(item, _scheduler));
             SortRunning();
             MarkNextRunning();
             Announce("Timer restored");
