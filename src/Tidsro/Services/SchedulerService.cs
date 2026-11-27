@@ -66,9 +66,7 @@ public sealed class SchedulerService
             && alarm.EndsAt is { } end
             && end <= _clock.Now)
         {
-            var next = RecurrenceRules.NextOccurrence(_clock.Now, _clock.Zone, end.Hour, end.Minute, days);
-            alarm.EndsAt = next;
-            alarm.WarningSent = alarm.WarnBefore && _clock.Now >= next - WarningLead;
+            SetNext(alarm, RecurrenceRules.NextOccurrence(_clock.Now, _clock.Zone, end.Hour, end.Minute, days));
         }
     }
 
@@ -84,7 +82,7 @@ public sealed class SchedulerService
     /// up to <see cref="MaxSkips"/>. Returns false, changing nothing, for a one-shot alarm, an alarm
     /// that is off, or one already at the cap.</summary>
     public bool SkipNext(TimerItem alarm) =>
-        alarm.IsEnabled && SkippedOccurrences(alarm, MaxSkips).Count < MaxSkips && Advance(alarm);
+        alarm.IsEnabled && SkippedCount(alarm) < MaxSkips && Advance(alarm);
 
     /// <summary>Take back the latest skip: the alarm steps back one occurrence. Returns false when
     /// nothing is skipped, so it can never move an alarm to a time that has already passed.</summary>
