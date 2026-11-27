@@ -67,9 +67,20 @@ internal static class Mp3Decoder
         try
         {
             // Inside the try: on a Windows without msacm32 this first call is the one that throws.
-            if (acmStreamOpen(out acm, IntPtr.Zero, ref source, ref target, IntPtr.Zero,
-                    IntPtr.Zero, IntPtr.Zero, AcmStreamOpenNonRealtime) != 0)
-                return null;   // no MP3 codec on this machine
+            // The codec now and then refuses an open with ACMERR_NOTPOSSIBLE while other processes
+            // open streams at the same time, so try a few times before calling the file undecodable.
+            // A machine with no MP3 codec gives the same answer every time and costs ~100 ms here.
+            var opened = -1;
+            for (var attempt = 0; attempt < OpenAttempts && opened != 0; attempt++)
+            {
+                if (attempt > 0) Thread.Sleep(OpenRetryDelay);
+                opened = acmStreamOpen(out acm, IntPtr.Zero, ref source, ref target, IntPtr.Zero,
+                    IntPtr.Zero, IntPtr.Zero, AcmStreamOpenNonRealtime);
+                // A failed open can leave garbage in the handle, and closing that in the finally
+                // block crashes the process with an access violation.
+                if (opened != 0) acm = IntPtr.Zero;
+            }
+            if (opened != 0) return null;   // no MP3 codec on this machine
 
             if (acmStreamSize(acm, srcSize, out var dstSize, AcmStreamSizeSource) != 0 || dstSize <= 0)
                 return null;
@@ -186,6 +197,8 @@ internal static class Mp3Decoder
     }
 
     private const int HeaderSize = 44;
+    private const int OpenAttempts = 4;
+    private static readonly TimeSpan OpenRetryDelay = TimeSpan.FromMilliseconds(30);
 
     /// <summary>A canonical 44-byte RIFF/WAVE header for <paramref name="pcmLength"/> bytes of
     /// 16-bit PCM, written over the space left for it at the front of <paramref name="wav"/>.</summary>
