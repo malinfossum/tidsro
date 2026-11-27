@@ -50,21 +50,19 @@ public partial class MainWindow : Window
         ApplyPlacement();
     }
 
-    // First show: restore the last on-screen position, or center on first run.
+    // First show: restore the last on-screen position, or center on first run. Centering is done here
+    // rather than by WindowStartupLocation.CenterScreen, which does not clamp: a saved height taller than
+    // the screen put the title bar above its top edge.
     private void ApplyPlacement()
     {
-        if (_settings.WindowWidth is double w) Width = w;
-        if (_settings.WindowHeight is double h) Height = h;
-        if (_settings.WindowLeft is double left && _settings.WindowTop is double top && IsOnScreen(left, top))
-        {
-            WindowStartupLocation = WindowStartupLocation.Manual;
-            Left = left;
-            Top = top;
-        }
-        else
-        {
-            WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        }
+        var plan = ScreenHelper.PlanLaunchPlacement(_settings.WindowLeft, _settings.WindowTop,
+            _settings.WindowWidth ?? Width, _settings.WindowHeight ?? Height,
+            SystemParameters.MaximumWindowTrackWidth, ScreenHelper.Monitors(), ScreenHelper.CursorPosition());
+        WindowStartupLocation = WindowStartupLocation.Manual;
+        Width = plan.Width;
+        Height = plan.Height;
+        Left = plan.Left;
+        Top = plan.Top;
     }
 
     /// <summary>Return to the XAML defaults after a settings reset, so OnClosing can't re-save the
@@ -94,7 +92,8 @@ public partial class MainWindow : Window
     /// <summary>Move an already-visible window to imported coordinates. Writing the settings alone is
     /// not enough: OnClosing writes the current placement back on every close, so the restore would
     /// silently revert. Off-screen coordinates fall back to centering at the imported size. The launch
-    /// path applies the same guard for the same reason (an unplugged monitor or a lower resolution).</summary>
+    /// path applies the same off-screen guard for the same reason (an unplugged monitor or a lower
+    /// resolution), and also shrinks a centered window to fit its work area; this fallback does not.</summary>
     public void ApplyPlacement(AppSettings settings)
     {
         if (settings.WindowWidth is double w) Width = w;

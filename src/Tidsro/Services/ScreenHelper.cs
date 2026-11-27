@@ -71,6 +71,13 @@ public static class ScreenHelper
         return monitors;
     }
 
+    [StructLayout(LayoutKind.Sequential)] private struct POINT { public int X, Y; }
+    [DllImport("user32.dll")] private static extern bool GetCursorPos(out POINT point);
+
+    /// <summary>The mouse position in device pixels, or (0, 0), the primary monitor's corner, if Windows
+    /// cannot say.</summary>
+    public static Point CursorPosition() => GetCursorPos(out var p) ? new Point(p.X, p.Y) : new Point(0, 0);
+
     private static Rect ToRect(RECT r) => new(r.Left, r.Top, r.Right - r.Left, r.Bottom - r.Top);
 
     // The title bar, and the part of it the mouse can drag: everything left of the minimize, maximize
@@ -121,6 +128,87 @@ public static class ScreenHelper
         foreach (var monitor in monitors)
             if (monitor.IsPrimary) return monitor.Scale;
         return monitors.Count > 0 ? monitors[0].Scale : 1.0;
+    }
+
+    /// <summary>Where the main window opens at launch, in DIPs. A saved position whose title bar is on
+    /// screen is kept as it is, size and all. Anything else (first run, an unplugged monitor) centers
+    /// on the monitor under the mouse, as WPF's CenterScreen would, but shrunk to fit its work area
+    /// first: CenterScreen does no clamping, so a saved height taller than the screen used to put the
+    /// title bar above the top edge, where it cannot be dragged.
+    ///
+    /// <para>With mixed scaling WPF cannot open a window at every spot on a higher-scale monitor (see
+    /// FitOn). When the window has no spot of its own there, it centers on the primary monitor instead,
+    /// so it always opens where it was planned.</para></summary>
+    public static Rect PlanLaunchPlacement(double? left, double? top, double width, double height,
+        double maxTrackWidth, IReadOnlyList<DisplayMonitor> monitors, Point cursor)
+    {
+        if (left is double l && top is double t && IsTitleBarOnScreen(l, t, Math.Min(width, maxTrackWidth), monitors))
+            return new Rect(l, t, width, height);
+
+        if (monitors.Count == 0) return new Rect(0, 0, width, height);
+        var target = MonitorAt(cursor, monitors);
+        if (FitOn(target, width, height, monitors) is { } onTarget) return onTarget;
+        var primary = Primary(monitors);
+        if (FitOn(primary, width, height, monitors) is { } onPrimary) return onPrimary;
+        return Centered(target.WorkInDips, width, height);   // nothing WPF can address exactly; still fits the target
+    }
+
+    // The window shrunk to fit this monitor's work area and centered on it, at a corner WPF will read at
+    // this monitor's scale. Divided by their own scales, the boxes of monitors at different scales
+    // overlap: a corner centered on a 150 % monitor to the right of a 100 % one can fall inside the
+    // 100 % box, and WPF would open the window there instead. Such a corner moves the least it can to
+    // just past the edge of each other monitor's box, while the window stays inside this work area.
+    // Null when no such corner exists.
+    private static Rect? FitOn(DisplayMonitor monitor, double width, double height, IReadOnlyList<DisplayMonitor> monitors)
+    {
+        var work = monitor.WorkInDips;
+        var centered = Centered(work, width, height);
+        var xs = new List<double> { centered.Left };
+        var ys = new List<double> { centered.Top };
+        foreach (var other in monitors)
+        {
+            xs.Add(other.BoundsInDips.Right + 1);    // + 1: a box holds its own right and bottom edges
+            ys.Add(other.BoundsInDips.Bottom + 1);
+        }
+
+        Rect? best = null;
+        var bestShift = double.MaxValue;
+        foreach (var x in xs)
+        foreach (var y in ys)
+        {
+            if (x < work.Left || y < work.Top || x + centered.Width > work.Right || y + centered.Height > work.Bottom) continue;
+            if (PlacementScale(x, y, monitors) != monitor.Scale) continue;
+            var shift = Math.Abs(x - centered.Left) + Math.Abs(y - centered.Top);
+            if (shift < bestShift) { bestShift = shift; best = new Rect(x, y, centered.Width, centered.Height); }
+        }
+        return best;
+    }
+
+    private static Rect Centered(Rect work, double width, double height)
+    {
+        var w = Math.Min(width, work.Width);
+        var h = Math.Min(height, work.Height);
+        return new Rect(work.Left + (work.Width - w) / 2, work.Top + (work.Height - h) / 2, w, h);
+    }
+
+    private static DisplayMonitor Primary(IReadOnlyList<DisplayMonitor> monitors)
+    {
+        foreach (var monitor in monitors)
+            if (monitor.IsPrimary) return monitor;
+        return monitors[0];
+    }
+
+    // The monitor holding a point in device pixels, else the primary, else the first one listed. The
+    // right and bottom edges belong to the next monitor, as they do for MonitorFromPoint.
+    private static DisplayMonitor MonitorAt(Point devicePoint, IReadOnlyList<DisplayMonitor> monitors)
+    {
+        foreach (var monitor in monitors)
+        {
+            var b = monitor.Bounds;
+            if (devicePoint.X >= b.Left && devicePoint.X < b.Right && devicePoint.Y >= b.Top && devicePoint.Y < b.Bottom)
+                return monitor;
+        }
+        return Primary(monitors);
     }
 
     /// <summary>Bottom-right position, clamped so the card can never land off-screen.</summary>

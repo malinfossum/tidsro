@@ -180,6 +180,92 @@ public class ScreenHelperTests
         Assert.True(ScreenHelper.IsTitleBarOnScreen(-7, 0, 440, PrimaryAt150With1080pAt100));
     }
 
+    // ── Launch placement: a window that is not restored is centered and must fit ──
+
+    private static readonly DisplayMonitor[] One1080p =
+        [new(new Rect(0, 0, 1920, 1080), new Rect(0, 0, 1920, 1040), 1.0, IsPrimary: true)];
+
+    private static readonly Point CursorOnPrimary = new(500, 500);
+
+    [Fact]
+    public void A_first_run_window_is_centered_on_the_work_area()
+    {
+        var plan = ScreenHelper.PlanLaunchPlacement(null, null, 440, 600, 4000, One1080p, CursorOnPrimary);
+        Assert.Equal(new Rect(740, 220, 440, 600), plan);
+    }
+
+    [Fact]
+    public void A_tall_window_with_an_off_screen_position_is_shortened_to_fit_with_its_title_bar_on_screen()
+    {
+        // Saved on a taller monitor that is gone. Centered at full height its top would be at -180.
+        var plan = ScreenHelper.PlanLaunchPlacement(5000, 100, 440, 1400, 4000, One1080p, CursorOnPrimary);
+        Assert.Equal(new Rect(740, 0, 440, 1040), plan);
+    }
+
+    [Fact]
+    public void A_window_wider_than_the_work_area_is_narrowed_to_fit()
+    {
+        var plan = ScreenHelper.PlanLaunchPlacement(null, null, 2400, 600, 4000, One1080p, CursorOnPrimary);
+        Assert.Equal(new Rect(0, 220, 1920, 600), plan);
+    }
+
+    [Fact]
+    public void A_centered_window_fits_the_monitor_under_the_mouse_at_its_own_scale()
+    {
+        // The 4K monitor at 150 % is 2560 by 1400 DIPs once its taskbar is taken off.
+        var cursorOn4K = new Point(3000, 500);
+        var plan = ScreenHelper.PlanLaunchPlacement(null, null, 440, 1600, 4000, PrimaryAt100With4KAt150, cursorOn4K);
+        Assert.Equal(new Rect(2340, 0, 440, 1400), plan);
+    }
+
+    // A 1080p primary at 100 % and a 1440p monitor at 150 % on its right. Divided by its scale the
+    // 1440p one covers x 1280 to 2987, and the primary's box (x 0 to 1920) overlaps the left of it.
+    private static readonly DisplayMonitor[] PrimaryAt100With1440pAt150 =
+    [
+        new(new Rect(0, 0, 1920, 1080), new Rect(0, 0, 1920, 1040), 1.0, IsPrimary: true),
+        new(new Rect(1920, 0, 2560, 1440), new Rect(1920, 0, 2560, 1400), 1.5),
+    ];
+
+    [Fact]
+    public void A_centered_corner_that_another_monitor_would_claim_moves_onto_the_target()
+    {
+        // Centered in the 1440p monitor's DIPs the corner is x 1913, inside the primary's box, so WPF
+        // would open the window at device pixel 1913 on the primary's right edge. The corner moves the
+        // least it can, to x 1921, which only the 1440p monitor holds: device pixels 2882 to 3542.
+        var cursorOn1440p = new Point(3000, 500);
+        var plan = ScreenHelper.PlanLaunchPlacement(null, null, 440, 600, 4000, PrimaryAt100With1440pAt150, cursorOn1440p);
+
+        Assert.Equal(1921, plan.Left, 3);
+        Assert.Equal((1400 / 1.5 - 600) / 2, plan.Top, 3);
+        Assert.Equal(new Size(440, 600), plan.Size);
+        Assert.Equal(1.5, ScreenHelper.PlacementScale(plan.Left, plan.Top, PrimaryAt100With1440pAt150));
+    }
+
+    [Fact]
+    public void A_window_that_has_no_spot_of_its_own_on_the_target_opens_on_the_primary()
+    {
+        // 1500 wide does not fit between x 1921 and the 1440p monitor's right edge at 2987.
+        var cursorOn1440p = new Point(3000, 500);
+        var plan = ScreenHelper.PlanLaunchPlacement(null, null, 1500, 600, 4000, PrimaryAt100With1440pAt150, cursorOn1440p);
+
+        Assert.Equal(new Rect(210, 220, 1500, 600), plan);
+        Assert.Equal(1.0, ScreenHelper.PlacementScale(plan.Left, plan.Top, PrimaryAt100With1440pAt150));
+    }
+
+    [Fact]
+    public void A_restored_window_keeps_its_position_and_size()
+    {
+        // Its title bar is on screen, so nothing moves. A window this tall can be a deliberate choice
+        // on stacked monitors, so its height is left alone too.
+        var stacked = new[]
+        {
+            new DisplayMonitor(new Rect(0, 0, 1920, 1080), new Rect(0, 0, 1920, 1080), 1.0, IsPrimary: true),
+            new DisplayMonitor(new Rect(0, 1080, 1920, 1080), new Rect(0, 1080, 1920, 1040), 1.0),
+        };
+        var plan = ScreenHelper.PlanLaunchPlacement(100, 300, 440, 1600, 4000, stacked, CursorOnPrimary);
+        Assert.Equal(new Rect(100, 300, 440, 1600), plan);
+    }
+
     [Fact]
     public void No_monitors_means_off_screen()
     {
