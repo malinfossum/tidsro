@@ -70,8 +70,9 @@ internal static class Mp3Decoder
             // The codec now and then refuses an open with ACMERR_NOTPOSSIBLE while other processes
             // open streams at the same time, so try a few times before calling the file undecodable.
             // A machine with no MP3 codec gives the same answer every time and costs ~100 ms here.
+            // Any other error will not change on a retry, so it refuses the file at once.
             var opened = -1;
-            for (var attempt = 0; attempt < OpenAttempts && opened != 0; attempt++)
+            for (var attempt = 0; attempt < OpenAttempts && (attempt == 0 || opened == AcmErrNotPossible); attempt++)
             {
                 if (attempt > 0) Thread.Sleep(OpenRetryDelay);
                 opened = acmStreamOpen(out acm, IntPtr.Zero, ref source, ref target, IntPtr.Zero,
@@ -234,6 +235,7 @@ internal static class Mp3Decoder
     private const short MpegLayer3IdMpeg = 1;
     private const int MpegLayer3FlagPaddingIso = 0;
     private const int AcmStreamOpenNonRealtime = 0x4;
+    private const int AcmErrNotPossible = 512;
     private const int AcmStreamSizeSource = 0;
     private const int AcmConvertBlockAlign = 0x4;
     private const int AcmConvertStart = 0x10;
