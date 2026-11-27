@@ -206,15 +206,32 @@ public partial class MainViewModel : ObservableObject
     private void AdvanceTab() => SelectedTabIndex = (SelectedTabIndex + 1) % AppSettings.TabCount;
 
     [RelayCommand(CanExecute = nameof(CanPreviewSound))]
-    private void PreviewSound() => _sound.Play(SelectedSound);
+    private void PreviewSound() => Preview(SelectedSound);
     private bool CanPreviewSound() => SelectedSound != SoundChoice.None;   // nothing to hear when silent
 
     partial void OnSelectedSoundChanged(SoundChoice value) => PreviewSoundCommand.NotifyCanExecuteChanged();
 
     // The "Your day" sound picker has its own preview, gated on AlarmSound (independent of the timer sound above).
     [RelayCommand(CanExecute = nameof(CanPreviewAlarmSound))]
-    private void PreviewAlarmSound() => _sound.Play(AlarmSound);
+    private void PreviewAlarmSound() => Preview(AlarmSound);
     private bool CanPreviewAlarmSound() => AlarmSound != SoundChoice.None;   // nothing to hear when silent
+
+    // The preview this window started, so hiding the window can end it: My sound can run for minutes.
+    private int _previewId;
+
+    private void Preview(SoundChoice choice)
+    {
+        StopPreview();
+        _previewId = _sound.Play(choice);
+    }
+
+    /// <summary>Stop this window's preview if it is still playing. Called when the window hides to the tray.</summary>
+    public void StopPreview()
+    {
+        if (_previewId == 0) return;
+        _sound.Stop(_previewId);
+        _previewId = 0;
+    }
 
     partial void OnAlarmSoundChanged(SoundChoice value) => PreviewAlarmSoundCommand.NotifyCanExecuteChanged();
 

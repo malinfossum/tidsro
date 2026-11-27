@@ -93,7 +93,22 @@ public partial class EditAlarmViewModel : ObservableObject
 
     // Preview mirrors the main window's picker preview: disabled when the choice is silent.
     [RelayCommand(CanExecute = nameof(CanPreview))]
-    private void PreviewSound() => _sound.Play(SelectedSound);
+    private void PreviewSound()
+    {
+        StopPreview();
+        _previewId = _sound.Play(SelectedSound);
+    }
+
+    // The preview this dialog started, so closing the dialog can end it: My sound can run for minutes.
+    private int _previewId;
+
+    /// <summary>Stop this dialog's preview if it is still playing. Called when the dialog closes.</summary>
+    public void StopPreview()
+    {
+        if (_previewId == 0) return;
+        _sound.Stop(_previewId);
+        _previewId = 0;
+    }
     private bool CanPreview() => SelectedSound != SoundChoice.None;
 
     partial void OnSelectedSoundChanged(SoundChoice value) => PreviewSoundCommand.NotifyCanExecuteChanged();

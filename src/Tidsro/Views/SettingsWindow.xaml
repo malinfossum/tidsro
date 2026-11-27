@@ -21,14 +21,14 @@
          chosen here. Choosing copies the file at once, so this is outside the Save/Cancel draft. -->
     <TextBlock Text="My sound" Margin="0,20,0,4" Foreground="{StaticResource TextMuted}"
                FontWeight="SemiBold"/>
-    <TextBlock Text="Use your own .wav for timers and alarms. Applies immediately; Cancel will not undo it."
+    <TextBlock Text="Use your own .wav or .mp3 for timers and alarms. Applies immediately; Cancel will not undo it."
                TextWrapping="Wrap" Foreground="{StaticResource TextFaint}"
                FontSize="{StaticResource TextXs}" Margin="0,0,0,8"/>
     <!-- No AutomationProperties.Name: it would REPLACE the accessible name a TextBlock gets from its
          own Text, so a screen reader would announce the label and never the file that was chosen. -->
     <TextBlock Text="{Binding CustomSoundLabel}" AutomationProperties.AutomationId="CustomSoundLabel" TextWrapping="Wrap" Margin="0,0,0,8"/>
     <StackPanel Orientation="Horizontal">
-      <Button Content="Choose .wav…" Style="{StaticResource QuietAction}" MinWidth="120"
+      <Button Content="Choose file…" Style="{StaticResource QuietAction}" MinWidth="120"
               Command="{Binding ChooseCustomSoundCommand}"
               AutomationProperties.Name="Choose a custom sound" AutomationProperties.AutomationId="ChooseCustomSoundButton"/>
       <!-- Hidden, not merely disabled, until there is a sound to act on: QuietAction has no dimmed

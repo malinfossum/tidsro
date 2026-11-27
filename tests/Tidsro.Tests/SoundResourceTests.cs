@@ -36,6 +36,37 @@ public class SoundResourceTests
         Assert.True(stream!.Length > 0);
     }
 
+    // Embedded is not the same as playable: SoundPlayer needs PCM (or ADPCM or float) inside the
+    // RIFF container. Load() does not check that, so this runs the same rules Play() does, without
+    // needing a speaker. It is the check that a chime still plays after any change to sound handling.
+    [Theory]
+    [InlineData(SoundChoice.SoftChime)]
+    [InlineData(SoundChoice.Marimba)]
+    [InlineData(SoundChoice.Bell)]
+    [InlineData(SoundChoice.PianoJingle)]
+    [InlineData(SoundChoice.ElectricPianoJingle)]
+    [InlineData(SoundChoice.BellJingle)]
+    public void Each_chime_passes_the_checks_SoundPlayer_makes_before_playing(SoundChoice choice)
+    {
+        using var stream = App.GetManifestResourceStream(SoundService.ResourceNameFor(choice)!)!;
+        using var bytes = new MemoryStream();
+        stream.CopyTo(bytes);
+
+        Assert.True(WaveFile.IsPlayable(bytes.ToArray(), asStream: true));   // chimes play from a stream
+    }
+
+    [Fact]
+    public void Stopping_with_no_sound_started_is_harmless()
+    {
+        var svc = new SoundService(() => null);
+        svc.Stop(0);
+        svc.Stop(42);
+    }
+
+    [Fact]
+    public void A_custom_sound_with_no_file_starts_nothing()
+        => Assert.Equal(0, new SoundService(() => null).Play(SoundChoice.Custom));
+
     // Regression: PianoJingle and ElectricPianoJingle both resolved to Electric-Piano-Jingle.wav,
     // because the lookup matched EndsWith("Piano-Jingle.wav") — a suffix of the electric file's name.
     [Fact]

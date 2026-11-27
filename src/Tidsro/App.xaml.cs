@@ -219,12 +219,15 @@ public partial class App : Application
 
     private void OnTimerFired(object? sender, TimerItem item)
     {
-        _sound.Play(item.Sound);
+        var playId = _sound.Play(item.Sound);
 
-        ShowCard(new PopupViewModel(item,
+        var popup = ShowCard(new PopupViewModel(item,
             onSnooze: i => { var r = _scheduler.Snooze(i, TimeSpan.FromMinutes(5)); _mainVm.RefreshAll(); SaveData(); return r; },
             onRestart: i => { var r = _scheduler.Restart(i); _mainVm.RefreshAll(); return r; },
             onDismiss: i => _scheduler.Cancel(i)));
+        // However the card goes (Dismiss, Snooze, Restart, Clear all), its sound goes with it. My
+        // sound can be a song minutes long; a later alarm's sound is left alone.
+        popup.Closed += (_, _) => _sound.Stop(playId);
 
         if (item.TriggerType == TriggerType.ClockTime) SaveData();   // a one-shot left the armed set, or a recurring fire advanced its next occurrence — mirror to disk
     }
@@ -232,10 +235,11 @@ public partial class App : Application
     private void OnAlarmWarning(object? sender, TimerItem item)
     {
         // Mirror the alarm's sound choice: a soft chime only when the alarm itself is sounded; silent otherwise.
-        if (item.Sound != SoundChoice.None) _sound.Play(SoundChoice.SoftChime);
+        var playId = item.Sound != SoundChoice.None ? _sound.Play(SoundChoice.SoftChime) : 0;
 
         var head = string.IsNullOrWhiteSpace(item.Label) ? "Alarm" : item.Label!.Trim();
         var popup = ShowCard(new PopupViewModel(item, head));   // heads-up (close-only) variant
+        popup.Closed += (_, _) => _sound.Stop(playId);
         _warningFireTimes[popup] = item.EndsAt ?? _scheduler.Now;   // capture this occurrence's fire time
     }
 

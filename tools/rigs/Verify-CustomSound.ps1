@@ -1,12 +1,14 @@
 <#
 .SYNOPSIS
-    Drives the custom-sound slot in a throwaway build: choose a .wav, see it, remove it.
+    Drives the custom-sound slot in a throwaway build: choose a .wav, see it, remove it, then the
+    same with an .mp3.
 
 .DESCRIPTION
     Opens Settings on a rig with an empty slot, asserts it says so, picks a .wav through the real
     Open dialog, and asserts the chosen name reaches both the window and data.json - then removes it
-    and asserts the slot empties again. Also asserts a bad file is refused rather than accepted and
-    silent, which is the failure that would leave an alarm quiet with nothing on screen to say why.
+    and asserts the slot empties again. Then the same for an .mp3, which must arrive on disk as a
+    16-bit PCM wave file. Also asserts a bad file of each kind is refused rather than accepted
+    and silent, which is the failure that would leave an alarm quiet with nothing on screen to say why.
 
     The suite proves the view-models; only this proves the window. It found two defects a green
     607-test suite did not: Preview/Remove rendered identically enabled and disabled, because
@@ -16,6 +18,9 @@
 
     Asserts afterwards that HKCU\...\Run is untouched. The rig has its own mutex, data path AND
     sounds folder, so an installed Tidsro can stay running throughout.
+
+    Run it with pwsh 7, and its helpers run under pwsh too: Windows PowerShell 5.1 refuses to run
+    scripts on my machine.
 
 .PARAMETER ShotDir
     Save screenshots of the empty and chosen states here. Skipped when not given.
@@ -56,11 +61,18 @@ New-Item -ItemType Directory -Force -Path (Split-Path $dataFile) | Out-Null
 $fixture | ConvertTo-Json -Depth 6 | Set-Content $dataFile -Encoding UTF8
 
 # Two files to offer it: a real chime under a name that proves the label comes from the source, and
-# a text file wearing a .wav extension, which stands in for an .mp3 renamed by hand.
+# a text file wearing a .wav extension: something that is not audio at all.
 $good = Join-Path $Root 'Kitchen Gong.wav'
 $bad  = Join-Path $Root 'not-really-audio.wav'
 Copy-Item (Join-Path $repo 'src\Tidsro\Assets\sounds\Bell-Jingle.wav') $good -Force
 Set-Content $bad -Value 'ID3 this is not wave audio' -Encoding UTF8
+
+# The .mp3 pass: the test tone the suite decodes, under a name with a space, and a text file
+# wearing an .mp3 extension.
+$goodMp3 = Join-Path $Root 'Morning Birds.mp3'
+$badMp3  = Join-Path $Root 'not-really-audio.mp3'
+Copy-Item (Join-Path $repo 'tests\Tidsro.Tests\Fixtures\test-tone.mp3') $goodMp3 -Force
+Set-Content $badMp3 -Value 'ID3 this is not mp3 audio either' -Encoding UTF8
 
 # Started directly rather than through Seed-Fixture: that writes its own week, and this check
 # wants the empty schedule above so nothing competes with the Settings window.
@@ -104,11 +116,28 @@ function Find-El {
     $el
 }
 
-# Quoted defensively: powershell -File splits an unquoted argument on spaces, though no id has one.
+# Quoted defensively: pwsh -File splits an unquoted argument on spaces, though no id has one.
 function Click-Async([string]$Id) {
-    Start-Process powershell.exe -WindowStyle Hidden -ArgumentList @(
-        '-NoProfile', '-ExecutionPolicy', 'RemoteSigned', '-File', "$here\Click-Button.ps1",
+    Start-Process pwsh -WindowStyle Hidden -ArgumentList @(
+        '-NoProfile', '-File', "$here\Click-Button.ps1",
         '-ProcessId', $rig.Id, '-Buttons', "`"$Id`"")
+}
+
+# Opens the file dialog from Settings and types a path into it.
+function Choose-File([string]$Path) {
+    Click-Async 'ChooseCustomSoundButton'
+    Start-Sleep -Seconds 4
+    & pwsh -NoProfile -File "$here\Front-Dialog.ps1" -ProcessId $rig.Id
+    & pwsh -NoProfile -File "$here\Type-IntoDialog.ps1" -ProcessId $rig.Id -Path $Path
+    Start-Sleep -Seconds 3
+}
+
+# The decoded copy has Tidsro's own 44-byte header, so its format tag sits at offset 20: 1 is PCM,
+# the format SoundPlayer plays. SoundPlayer.Load() is no test here; it accepts formats Play() refuses.
+function Test-Pcm([string]$Path) {
+    $b = [IO.File]::ReadAllBytes($Path)
+    $b.Length -gt 44 -and [Text.Encoding]::ASCII.GetString($b, 0, 4) -eq 'RIFF' -and
+        [Text.Encoding]::ASCII.GetString($b, 8, 4) -eq 'WAVE' -and [BitConverter]::ToInt16($b, 20) -eq 1
 }
 
 # The slot's state, read off the window: the file name, or the note that there is none. The value
@@ -138,6 +167,17 @@ function Expect([bool]$Ok, [string]$What) {
     if ($Ok) { Write-Host "  ok   $What" } else { Write-Host "  FAIL $What"; $failures.Add($What) }
 }
 
+# The refusal card, found by id and then checked by title: the dialog is shared, and the title is
+# what is under test. Dismissed so the next step starts from Settings again.
+function Expect-Refusal([string]$What) {
+    $refusal = Find-El 'ChoiceDialog' $CT::Window
+    Expect ($null -ne $refusal -and $refusal.Current.Name -eq "That file won't do") "the refusal of $What reaches the screen"
+    if ($refusal) {
+        Click-Async 'ChoiceDialogDismissButton'
+        Start-Sleep -Seconds 2
+    }
+}
+
 try {
     # Settings is modal, so ShowDialog blocks the click - fire it and drive from here.
     Click-Async 'OpenSettingsButton'
@@ -152,28 +192,15 @@ try {
     Save-Shot $hSettings 'custom-sound-empty.png'
 
     Write-Host '--- a file it cannot play ---'
-    Click-Async 'ChooseCustomSoundButton'
-    Start-Sleep -Seconds 4
-    & powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File "$here\Front-Dialog.ps1" -ProcessId $rig.Id
-    & powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File "$here\Type-IntoDialog.ps1" -ProcessId $rig.Id -Path $bad
-    Start-Sleep -Seconds 3
-    # Found by id, then checked by title: the dialog is shared, and the title is what is under test.
-    $refusal = Find-El 'ChoiceDialog' $CT::Window
-    Expect ($null -ne $refusal -and $refusal.Current.Name -eq "That file won't do") 'the refusal reaches the screen'
+    Choose-File $bad
+    Expect-Refusal 'a text file named .wav'
     Expect (-not (Test-Path $installed)) 'the refused file was not installed'
-    if ($refusal) {
-        Click-Async 'ChoiceDialogDismissButton'
-        Start-Sleep -Seconds 2
-    }
 
     Write-Host '--- choosing a real .wav ---'
-    Click-Async 'ChooseCustomSoundButton'
-    Start-Sleep -Seconds 4
-    & powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File "$here\Front-Dialog.ps1" -ProcessId $rig.Id
-    & powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File "$here\Type-IntoDialog.ps1" -ProcessId $rig.Id -Path $good
-    Start-Sleep -Seconds 3
+    Choose-File $good
     Expect ((Get-Slot $settings) -eq 'Kitchen Gong.wav') 'the window names the chosen file'
     Expect (Test-Path $installed) 'the .wav was copied in as custom.wav'
+    Expect ((Test-Path $installed) -and ((Get-FileHash $installed).Hash -eq (Get-FileHash $good).Hash)) 'the copy is byte for byte the original'
     Expect (Test-Path $good) 'the original file is still where it was'
     $saved = (Get-Content $dataFile -Raw | ConvertFrom-Json).Settings.CustomSoundName
     Expect ($saved -eq 'Kitchen Gong.wav') "the name reached data.json (got '$saved')"
@@ -186,6 +213,29 @@ try {
     Expect (-not (Test-Path $installed)) 'the copy is gone from disk'
     $saved = (Get-Content $dataFile -Raw | ConvertFrom-Json).Settings.CustomSoundName
     Expect ([string]::IsNullOrEmpty($saved)) "the name was cleared from data.json (got '$saved')"
+
+    Write-Host '--- an .mp3 it cannot play ---'
+    Choose-File $badMp3
+    Expect-Refusal 'a text file named .mp3'
+    Expect (-not (Test-Path $installed)) 'the refused .mp3 was not installed'
+
+    Write-Host '--- choosing a real .mp3 ---'
+    Choose-File $goodMp3
+    Expect ((Get-Slot $settings) -eq 'Morning Birds.mp3') 'the window names the chosen .mp3'
+    Expect (Test-Path $installed) 'the .mp3 arrived as custom.wav'
+    Expect ((Test-Path $installed) -and (Test-Pcm $installed)) 'the installed copy is PCM wave audio'
+    Expect (Test-Path $goodMp3) 'the original .mp3 is still where it was'
+    $saved = (Get-Content $dataFile -Raw | ConvertFrom-Json).Settings.CustomSoundName
+    Expect ($saved -eq 'Morning Birds.mp3') "the .mp3 name reached data.json (got '$saved')"
+    Save-Shot $hSettings 'custom-sound-mp3.png'
+
+    Write-Host '--- removing the .mp3 ---'
+    Click-Async 'RemoveCustomSoundButton'
+    Start-Sleep -Seconds 3
+    Expect ((Get-Slot $settings) -eq 'No sound chosen') 'the window says no sound is chosen after the .mp3'
+    Expect (-not (Test-Path $installed)) 'the decoded copy is gone from disk'
+    $saved = (Get-Content $dataFile -Raw | ConvertFrom-Json).Settings.CustomSoundName
+    Expect ([string]::IsNullOrEmpty($saved)) "the .mp3 name was cleared from data.json (got '$saved')"
 }
 finally {
     if (-not $KeepRig -and $rig -and -not $rig.HasExited) {
@@ -198,4 +248,4 @@ if ($runAfter -ne $runBefore) { throw "HKCU\...\Run changed: '$runBefore' -> '$r
 Write-Host "HKCU\...\Run unchanged: $runAfter"
 
 if ($failures.Count) { throw "$($failures.Count) check(s) failed: $($failures -join '; ')" }
-Write-Host 'PASS - the custom-sound slot fills, refuses, reports and empties'
+Write-Host 'PASS - the custom-sound slot fills, refuses, reports and empties, for a .wav and an .mp3'

@@ -12,6 +12,7 @@ A record is never rewritten. If a decision changes, a new record replaces it and
 | [0004](0004-no-third-party-sdks.md) | No third-party SDKs, telemetry or monetization | 18.11.2026 |
 | [0005](0005-releases-stay-unsigned.md) | Releases stay unsigned | 27.08.2026 |
 | [0006](0006-week-rows-are-occupied-times.md) | Week rows are occupied times only | 03.09.2026 |
+| [0007](0007-mp3-is-decoded-when-chosen.md) | An .mp3 is decoded to .wav when it is chosen | 27.11.2026 |
 
 ## Template
 

@@ -19,7 +19,7 @@ the rendering.
 | `Front-Dialog.ps1` | Brings the rig's Win32 file dialog to the front. |
 | `Type-IntoDialog.ps1` | Types a path into that dialog and presses Enter, refusing if the foreground window is not the rig. |
 | `Verify-Import.ps1` | End to end: seed, clear, import, and assert both blocks kept their end times. This is the check that found the v2.5.1 bug. |
-| `Verify-CustomSound.ps1` | End to end: open Settings on an empty slot, have a non-audio file refused, choose a real .wav, and assert the name reaches the window and `data.json` - then remove it and assert the slot empties. |
+| `Verify-CustomSound.ps1` | End to end: open Settings on an empty slot, have a non-audio file refused, choose a real .wav, and assert the name reaches the window and `data.json` - then remove it and assert the slot empties. Then the same with an .mp3, which must land on disk as 16-bit PCM wave audio. |
 | `Verify-SilentUninstall.ps1` | Builds `installer/Tidsro.iss` as a throwaway installer (own AppId, name and data folder, stand-in payload) and runs its uninstaller with `/SILENT`, `/VERYSILENT` and clicked through. Asserts a silent run never asks about deleting data and keeps it, and that the clicked-through one still asks. Needs pwsh 7 and Inno Setup. |
 
 ```powershell
@@ -32,8 +32,8 @@ the rendering.
 ## Traps, each of which cost real time
 
 - **UI Automation works in pwsh 7.** `UIAutomationClient` loads there and drives `Click-Button.ps1`,
-  while Windows PowerShell 5.1 on my machine refuses to run scripts. The Verify scripts still start
-  their helpers with `powershell.exe`.
+  while Windows PowerShell 5.1 on my machine refuses to run scripts. `Verify-CustomSound.ps1`
+  starts its helpers with `pwsh`; `Verify-Import.ps1` still uses `powershell.exe`.
 - **Look controls up by AutomationId, never by label or accessible name.** A copy change then cannot
   break a rig. A control a rig newly drives needs an `AutomationProperties.AutomationId` in its XAML.
 - **AND a `ControlType` into every condition.** A name lookup alone used to match the `TextBlock`

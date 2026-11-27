@@ -79,6 +79,21 @@ public class EditAlarmViewModelTests
         Assert.Equal(SoundChoice.Marimba, sound.LastPlayed);
     }
 
+    // My sound can be a song minutes long; it must not keep playing after the dialog closes.
+    [Fact]
+    public void Closing_the_dialog_stops_its_preview()
+    {
+        var vm = New("11:15", out _, out var sound);
+        vm.SelectedSound = SoundChoice.Custom;
+        vm.PreviewSoundCommand.Execute(null);
+        var preview = sound.LastPlayId;
+
+        vm.StopPreview();
+        vm.StopPreview();   // a second close-time call has nothing left to stop
+
+        Assert.Equal([preview], sound.Stopped);
+    }
+
     [Fact]
     public void Constructed_from_a_recurring_alarm_preselects_the_repeat_option()
     {

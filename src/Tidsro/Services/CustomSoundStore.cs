@@ -1,10 +1,10 @@
 using System.IO;
-using System.Media;
 
 namespace Tidsro.Services;
 
-/// <summary>Owns the one custom-sound slot: the .wav the user chose, copied into a folder Tidsro
-/// controls.
+/// <summary>Owns the one custom-sound slot: the .wav or .mp3 the user chose, copied into a folder
+/// Tidsro controls. An .mp3 is decoded to a .wav on the way in (see <see cref="Mp3Decoder"/>), so
+/// the slot always holds wave audio and plays through the same SoundPlayer as the built-in chimes.
 ///
 /// It is a <em>copy</em> on purpose. Remembering the path the user browsed to would mean that moving,
 /// renaming or deleting that file — or picking it off a memory stick — leaves every alarm using it
@@ -18,6 +18,11 @@ public sealed class CustomSoundStore
     /// <summary>Well past any chime — the largest built-in is a little over 1 MB — and small enough
     /// that a wrongly picked film soundtrack is refused rather than copied into AppData.</summary>
     public const int MaxBytes = 5 * 1024 * 1024;
+
+    /// <summary>The longest .mp3 accepted. A low-bitrate recording fits under <see cref="MaxBytes"/>
+    /// yet decodes to a wave file many times that size; five minutes keeps the decoded copy to about
+    /// 58 MB at most (48 kHz stereo).</summary>
+    public static readonly TimeSpan MaxLength = TimeSpan.FromMinutes(5);
 
     private const string FileName = "custom.wav";
 
@@ -38,17 +43,33 @@ public sealed class CustomSoundStore
     public string? FilePath => HasCustom ? Target : null;
 
     /// <summary>Copy <paramref name="sourcePath"/> into the slot, replacing whatever was there.
-    /// Returns the file's own name to show the user, or null when the file was refused — too big,
-    /// empty, missing, or not a .wav this app can actually play. A refusal leaves any previously
-    /// installed sound untouched.</summary>
+    /// Returns the file's own name to show the user, or null when the file was refused: too big,
+    /// empty, missing, or not a .wav or .mp3 this app can actually play. The bytes decide which of
+    /// the two it is, not the extension. A refusal leaves any previously installed sound untouched.</summary>
     public string? Install(string sourcePath)
     {
+        LastRefusalWasWaveFormat = false;
         try
         {
             var info = new FileInfo(sourcePath);
             if (!info.Exists || info.Length == 0 || info.Length > MaxBytes) return null;
-            if (!LooksLikeWav(sourcePath)) return null;
-            if (!IsPlayable(sourcePath)) return null;
+
+            // Read once and work from these bytes, so the file that was checked is the file that
+            // is stored, even if the original changes underneath.
+            var bytes = File.ReadAllBytes(sourcePath);
+            if (bytes.Length == 0 || bytes.Length > MaxBytes) return null;
+
+            // A .wav SoundPlayer plays is copied as it is. Anything else, including a RIFF file
+            // with MP3 audio inside, is tried as an .mp3 and refused when it is not one either.
+            ReadOnlyMemory<byte>? decoded = WaveFile.IsPlayable(bytes) ? bytes : Mp3Decoder.ToWav(bytes, MaxLength);
+            if (decoded is not { } wav || !WaveFile.IsPlayable(wav.Span))
+            {
+                // Only a real wave file in a format SoundPlayer refuses gets the "export it as
+                // 16-bit" advice. MP3 inside RIFF (0x55) went through the .mp3 rules instead.
+                LastRefusalWasWaveFormat = WaveFile.FormatTag(bytes) is { } tag
+                                           && !WaveFile.IsPlayableFormat(tag) && tag != 0x55;
+                return null;
+            }
 
             Directory.CreateDirectory(_folder);
 
@@ -57,7 +78,7 @@ public sealed class CustomSoundStore
             var tmp = Target + ".tmp";
             try
             {
-                File.Copy(sourcePath, tmp, overwrite: true);
+                File.WriteAllBytes(tmp, wav.Span);
                 if (File.Exists(Target)) File.Replace(tmp, Target, null);
                 else File.Move(tmp, Target);
             }
@@ -76,33 +97,15 @@ public sealed class CustomSoundStore
         }
     }
 
+    /// <summary>True when the last <see cref="Install"/> refused a real .wav container whose audio
+    /// format SoundPlayer cannot play (24-bit or "extensible" exports, for example), so the message can
+    /// say what to do about it.</summary>
+    public bool LastRefusalWasWaveFormat { get; private set; }
+
     /// <summary>Empty the slot. Harmless when there is nothing installed.</summary>
     public void Remove()
     {
         try { if (File.Exists(Target)) File.Delete(Target); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* best effort */ }
-    }
-
-    // "RIFF" .... "WAVE" — the twelve-byte container header. Cheap, deterministic, and it rejects the
-    // common mistake of an .mp3 renamed to .wav before anything touches an audio API.
-    private static bool LooksLikeWav(string path)
-    {
-        using var stream = File.OpenRead(path);
-        Span<byte> head = stackalloc byte[12];
-        if (stream.ReadAtLeast(head, 12, throwOnEndOfStream: false) < 12) return false;
-        return head[..4].SequenceEqual("RIFF"u8) && head[8..12].SequenceEqual("WAVE"u8);
-    }
-
-    // The header only proves the container. SoundPlayer needs PCM inside it, and an embed-style check
-    // has fooled this app before — so load it for real and let the failure speak.
-    private static bool IsPlayable(string path)
-    {
-        try
-        {
-            using var player = new SoundPlayer(path);
-            player.Load();
-            return true;
-        }
-        catch { return false; }
     }
 }

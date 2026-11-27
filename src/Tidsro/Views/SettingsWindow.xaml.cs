@@ -8,7 +8,9 @@ public partial class SettingsWindow : Window
     public SettingsWindow(Func<Func<string, string, bool>, SettingsViewModel> vmFactory)
     {
         InitializeComponent();
-        DataContext = vmFactory((title, message) => ConfirmDialog.Ask(this, title, message));
+        var vm = vmFactory((title, message) => ConfirmDialog.Ask(this, title, message));
+        DataContext = vm;
+        Closed += (_, _) => vm.StopPreview();   // a previewed song does not outlive the window
     }
 
     // Opens the OFL text embedded in this binary. Owned by Settings, which is itself modal, so the
