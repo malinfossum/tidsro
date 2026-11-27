@@ -36,7 +36,7 @@ public partial class App : Application
     private Mutex? _instanceMutex;
     private EventWaitHandle? _showEvent;
     private RegisteredWaitHandle? _showWait;
-    private volatile bool _exiting;   // set first in Quit and OnExit, so a late show signal is ignored
+    private readonly AppLifecycle _lifecycle = new();   // only a running app opens its window or begins Quit
     private readonly FailureAlertPolicy _alerts = new();
 
     protected override void OnStartup(StartupEventArgs e)
@@ -53,11 +53,17 @@ public partial class App : Application
             WireSchedulerEvents();
             StartTickLoop();
             RegisterHotkey();
-            _tray = TrayBuilder.Create(ShowMainWindow, FocusLatestAlert, () => _openPopups.Count > 0, OpenLogFolder, Quit);
+            _tray = TrayBuilder.Create(ShowMainWindow, FocusLatestAlert, () => _openPopups.Count > 0, OpenLogFolder, Quit,
+                () => _lifecycle.IsRunning);
             ShowWindowUnlessBootLaunch(e);
+            // A second launch asked while startup ran. Queued rather than called here, so a failure while
+            // showing the window takes the survivable path, not the "couldn't start" one below.
+            if (_lifecycle.MarkStarted())
+                Dispatcher.BeginInvoke(new Action(() => { if (_lifecycle.IsRunning) ShowMainWindow(); }));
         }
         catch (Exception ex)
         {
+            _lifecycle.MarkExiting();   // the message box below pumps messages; nothing may open the window under it
             // A startup failure must explain itself, not vanish. There is no tray yet, so the
             // last resort is a single message — not knowing is the worst outcome (spec).
             _log.Log(ex, "OnStartup");
@@ -134,15 +140,17 @@ public partial class App : Application
         return true;
     }
 
-    // Runs on a thread-pool thread when a later launch signals. Once exit has begun it does nothing:
-    // Application.Shutdown runs OnExit before the dispatcher starts its own shutdown, so the flag covers
-    // the stretch HasShutdownStarted does not. BeginInvoke, not Invoke: it never blocks the pool thread
-    // and never throws on a dispatcher that is closing, and unlike InvokeAsync a failure in
+    // Runs on a thread-pool thread when a later launch signals. The lifecycle decides on the UI thread:
+    // a signal handled before startup has finished (a startup error box pumps messages) waits for it,
+    // because the window would open half built. Once exit has begun it does nothing:
+    // Application.Shutdown runs OnExit before the dispatcher starts its own shutdown, so the lifecycle
+    // covers the stretch HasShutdownStarted does not. BeginInvoke, not Invoke: it never blocks the pool
+    // thread and never throws on a dispatcher that is closing, and unlike InvokeAsync a failure in
     // ShowMainWindow still reaches OnDispatcherUnhandledException instead of vanishing into a Task.
     private void OnShowSignal()
     {
-        if (_exiting || Dispatcher.HasShutdownStarted) return;
-        Dispatcher.BeginInvoke(new Action(() => { if (!_exiting) ShowMainWindow(); }));
+        if (_lifecycle.IsExiting || Dispatcher.HasShutdownStarted) return;
+        Dispatcher.BeginInvoke(new Action(() => { if (_lifecycle.RequestShow()) ShowMainWindow(); }));
     }
 
     // Load persisted data, build the services and main view-model, arm the saved alarms, and self-heal a
@@ -304,12 +312,34 @@ public partial class App : Application
 
     private void Quit()
     {
-        _exiting = true;                 // a failed final save shows a dialog that pumps messages; no window may open then
-        _timer.Stop();
-        _hotkey.Dispose();
-        _mainVm.CommitPendingDelete();   // an uncommitted delete commits on quit (spec §3.1)
-        _main?.CaptureWindowState();   // the tray's Quit never runs OnClosing; null when the window was never opened
-        SaveData(finalSave: true);       // flush the final armed set before the window that would own a failure dialog goes away
+        // A failed final save shows a dialog that pumps messages. From then on no window may open and
+        // a second Quit from the tray must not run the teardown and the save again.
+        if (!_lifecycle.TryBeginQuit()) return;
+
+        // Once begun, Quit always finishes: the tray is already still, so an exception escaping from
+        // here would leave Tidsro running with its heartbeat stopped and no way to quit it. A slip in
+        // one teardown step is logged and the rest still run, the save included; an unexpected save
+        // failure gets the same warning as a disk error.
+        void Step(Action step)
+        {
+            try { step(); }
+            catch (Exception ex) { _log.Log(ex, "Quit"); }
+        }
+        Step(_timer.Stop);
+        Step(_hotkey.Dispose);
+        Step(_mainVm.CommitPendingDelete);   // an uncommitted delete commits on quit (spec §3.1)
+        Step(() => _main?.CaptureWindowState());   // the tray's Quit never runs OnClosing; null when the window was never opened
+
+        try
+        {
+            SaveData(finalSave: true);   // flush the final armed set before the window that would own a failure dialog goes away
+        }
+        catch (Exception ex)
+        {
+            _log.Log(ex, "Quit");
+            if (_alerts.TryClaimFinalSaveFailure()) ShowFailureDialog("Couldn't save", FinalSaveFailedMessage);
+        }
+
         _tray?.Dispose();
         Shutdown();
     }
@@ -410,10 +440,13 @@ public partial class App : Application
             var claimed = finalSave ? _alerts.TryClaimFinalSaveFailure() : _alerts.TryClaimSaveFailure();
             if (claimed)
                 ShowFailureDialog("Couldn't save", finalSave
-                    ? "Tidsro couldn't save your latest changes. They will be lost when Tidsro closes. See Tray ▸ Open log folder for details."
+                    ? FinalSaveFailedMessage
                     : "Tidsro couldn't save your changes to disk. Your alarms are still here, but they may not survive closing the app. See Tray ▸ Open log folder for details.");
         }
     }
+
+    private const string FinalSaveFailedMessage =
+        "Tidsro couldn't save your latest changes. They will be lost when Tidsro closes. See Tray ▸ Open log folder for details.";
 
     private static AlarmRecord ToRecord(TimerItem a) => new()
     {
@@ -473,7 +506,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        _exiting = true;
+        _lifecycle.MarkExiting();
         _showWait?.Unregister(null);   // before the event it waits on is disposed
         _tray?.Dispose();
         _showEvent?.Dispose();

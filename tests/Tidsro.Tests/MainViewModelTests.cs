@@ -661,6 +661,66 @@ public class MainViewModelTests
             r => Assert.Equal(TimeSpan.FromMinutes(60), sched.Remaining(r.Item)));
     }
 
+    // ── Labels are capped when they are added or edited, not first on the next load ──
+    // The data file caps a label at 200 characters. Without the same cap here a long label showed in
+    // full all session and then appeared cut after a restart.
+
+    [Fact]
+    public void A_long_alarm_label_is_capped_when_the_alarm_is_added()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = new string('x', 500);
+        vm.AddAlarmCommand.Execute(null);
+
+        Assert.Equal(200, vm.Alarms[0].Item.Label!.Length);
+    }
+
+    [Fact]
+    public void A_long_repeating_alarm_label_is_capped_when_the_alarm_is_edited()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Tea";
+        vm.AddAlarmCommand.Execute(null);
+        var id = vm.Alarms[0].Item.Id;
+
+        vm.ApplyAlarmEdit(id, 10, 0, Weekdays.Mon | Weekdays.Fri, new string('x', 500), SoundChoice.None, false);
+
+        Assert.Equal(200, vm.Alarms[0].Item.Label!.Length);
+    }
+
+    [Fact]
+    public void An_alarm_label_cap_never_splits_an_emoji()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = new string('x', 199) + "😀";
+        vm.AddAlarmCommand.Execute(null);
+
+        Assert.Equal(new string('X', 1) + new string('x', 198), vm.Alarms[0].Item.Label);
+    }
+
+    [Fact]
+    public void A_long_countdown_label_is_capped_when_it_starts()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.Label = new string('x', 500);
+        vm.StartCustomCommand.Execute(null);
+
+        Assert.Equal(200, vm.Running[0].Label!.Length);
+    }
+
+    [Fact]
+    public void A_capped_label_is_saved_exactly_as_it_is_shown()
+    {
+        // The cut lands just after a space. The label shown now has to be the one a reload gives back.
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = new string('x', 199) + " and more";
+        vm.AddAlarmCommand.Execute(null);
+        var shown = vm.Alarms[0].Item.Label;
+
+        Assert.Equal(shown, TidsroData.NormalizeLabel(shown));
+        Assert.False(shown!.EndsWith(' '));
+    }
+
     // ── Label auto-capitalization ─────────────────────────────────────────
 
     [Fact]
