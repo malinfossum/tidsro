@@ -50,8 +50,79 @@ public class TrayBuilderTests
         Assert.False(FocusLatestAlert(menu).IsEnabled);
     });
 
+    // ── While Quit runs (a failed final save keeps its dialog up) or startup has not finished ──
+
+    [Fact]
+    public void OpenFocusAndQuitDoNothingWhileTheAppIsNotRunning() => RunSta(() =>
+    {
+        var calls = new List<string>();
+        var menu = TrayBuilder.BuildMenu(() => calls.Add("open"), () => calls.Add("focus"), () => true,
+            () => calls.Add("log"), () => calls.Add("quit"), isRunning: () => false);
+
+        Click(Item(menu, "Open"));
+        Click(Item(menu, "Focus latest alert"));
+        Click(Item(menu, "Quit"));
+
+        Assert.Empty(calls);
+    });
+
+    // The failed-save message says "See Tray > Open log folder", so that one has to keep working.
+    [Fact]
+    public void OpenLogFolderStillWorksWhileQuitIsRunning() => RunSta(() =>
+    {
+        var opened = 0;
+        var menu = TrayBuilder.BuildMenu(() => { }, () => { }, () => true, () => opened++, () => { },
+            isRunning: () => false);
+
+        Click(Item(menu, "Open log folder"));
+
+        Assert.Equal(1, opened);
+    });
+
+    [Fact]
+    public void TheMenuShowsWhatIsUnavailableWhileTheAppIsNotRunning() => RunSta(() =>
+    {
+        var running = false;
+        var menu = TrayBuilder.BuildMenu(() => { }, () => { }, () => true, () => { }, () => { },
+            isRunning: () => running);
+
+        Open(menu);
+        Assert.False(Item(menu, "Open").IsEnabled);
+        Assert.False(Item(menu, "Focus latest alert").IsEnabled);
+        Assert.False(Item(menu, "Quit").IsEnabled);
+        Assert.True(Item(menu, "Open log folder").IsEnabled);
+
+        running = true;
+        Open(menu);
+        Assert.True(Item(menu, "Open").IsEnabled);
+        Assert.True(Item(menu, "Focus latest alert").IsEnabled);
+        Assert.True(Item(menu, "Quit").IsEnabled);
+    });
+
+    [Fact]
+    public void TheMenuActsAgainOnceTheAppIsRunning() => RunSta(() =>
+    {
+        var running = false;
+        var quits = 0;
+        var menu = TrayBuilder.BuildMenu(() => { }, () => { }, () => true, () => { }, () => quits++,
+            isRunning: () => running);
+
+        Click(Item(menu, "Quit"));
+        running = true;
+        Click(Item(menu, "Quit"));
+
+        Assert.Equal(1, quits);
+    });
+
     private static ContextMenu BuildMenu(Func<bool> hasAlert) =>
-        TrayBuilder.BuildMenu(() => { }, () => { }, hasAlert, () => { }, () => { });
+        TrayBuilder.BuildMenu(() => { }, () => { }, hasAlert, () => { }, () => { }, isRunning: () => true);
+
+    private static MenuItem Item(ContextMenu menu, string header) =>
+        menu.Items.OfType<MenuItem>().Single(item => (string)item.Header == header);
+
+    // RaiseEvent ignores IsEnabled, so this proves the click handler itself refuses, not just the look.
+    private static void Click(MenuItem item) =>
+        item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent, item));
 
     // Raise Opened directly rather than setting IsOpen: a real popup needs a placement target and a
     // message pump, and the handler under test is the only thing that matters here.

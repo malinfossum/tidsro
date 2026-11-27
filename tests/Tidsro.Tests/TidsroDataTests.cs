@@ -61,6 +61,15 @@ public class TidsroDataTests
         Assert.Equal(200, clean.Alarms[1].Label!.Length);
     }
 
+    [Fact]
+    public void A_label_cap_that_ends_on_a_space_drops_the_space()
+    {
+        // Otherwise the next load trims it, and the label changes between two loads.
+        var spaced = Good(); spaced.Label = new string('x', 199) + " and more";
+        var clean = new TidsroData { Settings = new(), Alarms = { spaced } }.Sanitized();
+        Assert.Equal(new string('x', 199), clean.Alarms[0].Label);
+    }
+
     private static RecurringAlarmRecord GoodRec(Guid? id = null) => new()
     {
         Id = id ?? Guid.NewGuid(),

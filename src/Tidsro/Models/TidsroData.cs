@@ -4,7 +4,7 @@ namespace Tidsro.Models;
 public sealed class TidsroData
 {
     public const int CurrentSchema = 5;
-    private const int MaxLabel = 200;
+    public const int MaxLabel = 200;
 
     public int SchemaVersion { get; set; } = CurrentSchema;
 
@@ -88,10 +88,12 @@ public sealed class TidsroData
     private static bool IsRepresentable(DateTime t) =>
         t > DateTime.MinValue.AddDays(2) && t < DateTime.MaxValue.AddDays(-2);
 
-    private static string? NormalizeLabel(string? label)
+    /// <summary>The one label rule, used on load and on every add and edit, so what shows is what gets
+    /// saved: trimmed, capped at <see cref="MaxLabel"/> without splitting an emoji, and trimmed again so
+    /// a cut just after a space leaves none behind for the next load to remove. Blank becomes null.</summary>
+    public static string? NormalizeLabel(string? label)
     {
         if (string.IsNullOrWhiteSpace(label)) return null;
-        var trimmed = label.Trim();
-        return TextRules.Cap(trimmed, MaxLabel);
+        return TextRules.Cap(label.Trim(), MaxLabel).TrimEnd();
     }
 }
