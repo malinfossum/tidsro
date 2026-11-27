@@ -407,11 +407,11 @@ public class SkipNextViewModelTests
         var vm = WithDailyTalk(out var clock, out _);
         vm.SkipAlarmCommand.Execute(vm.Alarms[0]);
 
-        clock.Now = new DateTimeOffset(2026, 1, 1, 9, 59, 59, TimeSpan.Zero);
+        clock.Now = Jan(1, 10).AddSeconds(-1);
         vm.RefreshAll();
         Assert.True(vm.Alarms[0].IsSkipped);
 
-        clock.Now = new DateTimeOffset(2026, 1, 1, 10, 0, 0, TimeSpan.Zero);
+        clock.Now = Jan(1, 10);
         vm.RefreshAll();
         Assert.False(vm.Alarms[0].IsSkipped);
     }
@@ -425,11 +425,11 @@ public class SkipNextViewModelTests
         vm.SkipAlarmCommand.Execute(vm.Alarms[0]);
         vm.SkipAlarmCommand.Execute(vm.Alarms[0]);
 
-        clock.Now = new DateTimeOffset(2026, 1, 1, 10, 1, 0, TimeSpan.Zero);
+        clock.Now = Jan(1, 10).AddMinutes(1);
         vm.RefreshAll();
         Assert.Equal("Skipped, next Sat 03.01", vm.Alarms[0].SkipText);
 
-        clock.Now = new DateTimeOffset(2026, 1, 2, 10, 1, 0, TimeSpan.Zero);
+        clock.Now = Jan(2, 10).AddMinutes(1);
         vm.RefreshAll();
         Assert.False(vm.Alarms[0].IsSkipped);
     }
@@ -475,7 +475,7 @@ public class SkipNextViewModelTests
         vm.SkipAlarmCommand.Execute(vm.Alarms.Single(r => r.Item.Label == "Talk"));
         vm.SkipAlarmCommand.Execute(vm.Alarms.Single(r => r.Item.Label == "Gym"));
 
-        clock.Now = new DateTimeOffset(2026, 1, 1, 7, 0, 0, TimeSpan.Zero);
+        clock.Now = Jan(1, 7);
         vm.RefreshAll();
 
         Assert.Equal("2 skipped, next Sat 03.01", vm.Alarms.Single(r => r.Item.Label == "Gym").SkipText);

@@ -93,37 +93,34 @@ public partial class MainViewModel : ObservableObject
 
     // A skip also falls by itself: when a skipped time passes, EndsAt stays put but the row's
     // "Skipped" cue must change. Rather than look up every alarm's skips on every tick, the rebuild
-    // stores the earliest skipped time and the tick only compares the clock with it.
-    private DateTimeOffset? _nextSkipPasses;
-    private DateTimeOffset _agendaBuiltAt;
+    // stores the earliest skipped time, and the agenda holds while the clock stays between the last
+    // check and that time.
+    private DateTimeOffset? _earliestSkip;
+    private DateTimeOffset _skipsCheckedAt;
 
     // Null when nothing is skipped.
     private DateTimeOffset? EarliestSkip() => _scheduler.Alarms.Select(_scheduler.FirstSkipped).Min();
 
-    /// <summary>Record what the agenda is built from. Call it BEFORE the rows are built: the clock is
-    /// read first, so a skipped time that passes while the rows are built is still the stored next
-    /// one, and the next tick rebuilds once more. Taken after the rows, the snapshot could already
-    /// point past a skip the rows still count, and the row would keep it until the next skip.</summary>
+    /// <summary>Record what the agenda is built from. Must run before the rows are built.</summary>
     private void SnapshotAgenda()
     {
-        _agendaBuiltAt = _scheduler.Now;
+        _skipsCheckedAt = _scheduler.Now;
         _agendaSignature = AgendaSignature();
-        _nextSkipPasses = EarliestSkip();
+        _earliestSkip = EarliestSkip();
     }
 
     private bool AgendaIsStale()
     {
+        if (!AgendaSignature().SetEquals(_agendaSignature)) return true;
         var now = _scheduler.Now;
-        if (now >= _nextSkipPasses || !AgendaSignature().SetEquals(_agendaSignature)) return true;
-        if (now >= _agendaBuiltAt) return false;
+        if (now >= _skipsCheckedAt && (_earliestSkip is null || now < _earliestSkip)) return false;
 
-        // The clock stepped back, which can bring back skipped times. Most steps are a time sync
-        // moving a second or so and bring back none, and a rebuild would drop keyboard focus for
-        // nothing. A skip that comes back lies between the new now and the last build, so before
-        // the stored earliest one: comparing the earliest (on this rare path, where the cost is
-        // fine) is enough to see whether any came back.
-        if (EarliestSkip() != _nextSkipPasses) return true;
-        _agendaBuiltAt = now;
+        // The clock left the window. Forward past the earliest skip, that skip is gone. Back past
+        // the last check, a skip may come back, and it would land before the stored earliest. Either
+        // way the earliest moves if anything changed, and a time sync that changes nothing keeps
+        // the rows, and keyboard focus, in place.
+        if (EarliestSkip() != _earliestSkip) return true;
+        _skipsCheckedAt = now;
         return false;
     }
 
@@ -707,7 +704,9 @@ public partial class MainViewModel : ObservableObject
     /// this method resyncs it.</para></summary>
     private void RebuildAgenda()
     {
-        SnapshotAgenda();   // first, so a skip passing mid-build is caught by the next tick
+        // First: the clock is read before the rows, so a skip that passes mid-build is still the
+        // stored earliest one and the next tick rebuilds. Taken after, a row could keep that skip.
+        SnapshotAgenda();
         var today = _scheduler.Now.Date;
 
         // Enabled alarms first, in fire-time order.
