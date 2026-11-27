@@ -609,6 +609,7 @@ public class HeadsUpTrackerTests
         var ringing = false;
 
         var gone = t.Reconcile(Before, (_, _) => ringing);
+        t.Park("card");                                  // App closed it early
         t.Closed("card");
         ringing = true;                                  // an undo, or switched back on
         var back = t.Reconcile(Before.AddSeconds(1), (_, _) => ringing);
@@ -623,6 +624,7 @@ public class HeadsUpTrackerTests
         var t = new HeadsUpTracker<string>();
         t.Opened("card", Id, Ten);
         t.Reconcile(Before, (_, _) => false);
+        t.Park("card");
         t.Closed("card");
 
         Assert.Empty(t.Reconcile(Ten, (_, _) => false).Back);
@@ -643,11 +645,24 @@ public class HeadsUpTrackerTests
     }
 
     [Fact]
+    public void A_card_reported_gone_but_closed_by_the_user_stays_closed()
+    {
+        var t = new HeadsUpTracker<string>();
+        t.Opened("card", Id, Ten);
+
+        t.Reconcile(Before, (_, _) => false);            // gone, but the user's X closed it first
+        t.Closed("card");
+
+        Assert.Empty(t.Reconcile(Before.AddSeconds(1), (_, _) => true).Back);
+    }
+
+    [Fact]
     public void Forget_drops_every_parked_card()
     {
         var t = new HeadsUpTracker<string>();
         t.Opened("card", Id, Ten);
         t.Reconcile(Before, (_, _) => false);
+        t.Park("card");
         t.Closed("card");
 
         t.Forget();

@@ -85,13 +85,13 @@ public partial class EditAlarmViewModel : ObservableObject
         var days = ResolveDays();
         // Custom with nothing ticked would otherwise fall through as a one-shot, silently.
         if (Repeat == RepeatOption.Custom && days == Weekdays.None)
-        { Error = "Pick at least one day."; SkipWarning = null; return; }
+        { Error = "Pick at least one day."; ClearSkipWarning(); return; }
 
         // A one-shot has no end to give. Here a bad end is reported, because there is a person to
         // tell; everywhere else -- a hand-edited file, an import -- it is silently dropped.
         var endInput = days == Weekdays.None ? null : EndInput;
         if (!ClockTimeRules.TryParseWindow(TimeInput, endInput, out var h, out var m, out var end, out var err))
-        { Error = err; SkipWarning = null; return; }
+        { Error = err; ClearSkipWarning(); return; }
 
         Error = null;
 
@@ -104,13 +104,21 @@ public partial class EditAlarmViewModel : ObservableObject
         if (lost.Count > 0 && _warnedFor != key)
         {
             _warnedFor = key;
+            SkipWarning = null;   // a new edit can lose the same dates: raise the warning (and its announcement) again
             SkipWarning = $"This change brings back the skipped {(lost.Count == 1 ? "day" : "days")} " +
-                $"{string.Join(", ", lost.Select(RecurrenceRules.ShortDate))}. Save again to keep it.";
+                $"{RecurrenceRules.ShortDates(lost)}. Save again to keep it.";
             return;
         }
         SkipWarning = null;
         _apply(_id, h, m, days, Label, SelectedSound, WarnBefore, end);
         CloseRequested?.Invoke(this, true);
+    }
+
+    // An error hides the warning, so the next Save of the same edit must show it again.
+    private void ClearSkipWarning()
+    {
+        SkipWarning = null;
+        _warnedFor = null;
     }
 
     [RelayCommand]

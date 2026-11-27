@@ -55,7 +55,8 @@ public partial class MainWindow : Window
 
     // A row action rebuilds the agenda, which destroys the focused button. Put focus back on the same
     // control in the same alarm's new row, so a keyboard user can press Skip again or reach Undo skip.
-    // Undo skip hides itself once the last skip is taken back; Skip is then the nearest control.
+    // Undo skip hides itself once the last skip is taken back; Skip is then the nearest control, and
+    // on a row that is Off, where Skip is hidden too, the on/off switch.
     // Mouse users see no ring: WPF draws focus visuals only after keyboard input.
     private void FocusAlarmRow(AlarmRowFocus focus)
     {
@@ -69,8 +70,10 @@ public partial class MainWindow : Window
             AlarmRowAction.Skip => _vm.SkipAlarmCommand,
             _ => _vm.UndoSkipAlarmCommand,
         };
-        var target = FindCommandTarget(container, command)
-            ?? (focus.Action == AlarmRowAction.UndoSkip ? FindCommandTarget(container, _vm.SkipAlarmCommand) : null);
+        var target = FindCommandTarget(container, command);
+        if (target is null && focus.Action == AlarmRowAction.UndoSkip)
+            target = FindCommandTarget(container, _vm.SkipAlarmCommand)
+                ?? FindCommandTarget(container, _vm.ToggleAlarmCommand);
         target?.Focus();
     }
 

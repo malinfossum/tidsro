@@ -71,6 +71,10 @@ public partial class CompletionPopup : Window
     /// <summary>Close without restoring the window that was foreground when this card appeared. Used
     /// when a bulk wipe closes every open card at once — restoring each card's own captured foreground
     /// (often a different, unrelated app) would push the modal Settings dialog behind it.</summary>
+    /// <summary>Never hand focus back when this card closes, however it closes. For a card shown
+    /// while Tidsro itself is in front, where the window it captured is Tidsro.</summary>
+    public void KeepFocusOnClose() => _suppressFocusRestore = true;
+
     public void CloseWithoutRestoringFocus()
     {
         _suppressFocusRestore = true;

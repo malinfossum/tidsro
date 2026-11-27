@@ -81,6 +81,15 @@ public static class RecurrenceRules
     /// <summary>The same short date for a calendar day.</summary>
     public static string ShortDate(DateOnly day) => $"{DayName(day.DayOfWeek)} {day:dd.MM}";
 
+    /// <summary>Up to three short dates, then a count: "Mon 30.11, Mon 07.12, Mon 14.12 and 17 more".
+    /// A skip can bring back up to a hundred days, and a warning or an announcement must stay short.</summary>
+    public static string ShortDates(IReadOnlyList<DateOnly> days)
+    {
+        const int shown = 3;
+        var named = string.Join(", ", days.Take(shown).Select(ShortDate));
+        return days.Count > shown ? $"{named} and {days.Count - shown} more" : named;
+    }
+
     private static bool Includes(Weekdays set, DayOfWeek day) => (set & DayFlag(day)) != 0;
 
     private static Weekdays DayFlag(DayOfWeek day) => day switch

@@ -87,6 +87,28 @@ public class TimetableViewModelTests
     }
 
     [Fact]
+    public void A_skip_on_a_daylight_saving_day_matches_the_block_after_the_switch()
+    {
+        // Oslo springs forward at 02:00 on Sunday 29.03.2026. The midnight rebuild runs at +01:00,
+        // but the 08:00 block starts at +02:00, so the remembered start must keep its own offset.
+        var oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo");
+        var clock = new FakeClock { Zone = oslo, Now = new DateTimeOffset(2026, 3, 28, 12, 0, 0, TimeSpan.FromHours(1)) };
+        var scheduler = new SchedulerService(clock);
+        var vm = new TimetableViewModel(scheduler);
+        var alarm = scheduler.ArmRecurringAlarm(8, 0, Weekdays.Sun, "Run", SoundChoice.None, endMinute: 540);
+        scheduler.SkipNext(alarm);
+        vm.Rebuild();
+
+        clock.Now = new DateTimeOffset(2026, 3, 29, 0, 0, 0, TimeSpan.FromHours(1));
+        vm.RefreshForTick();                                    // the midnight rebuild, before the switch
+        clock.Now = new DateTimeOffset(2026, 3, 29, 8, 30, 0, TimeSpan.FromHours(2));
+        vm.Rebuild();
+
+        var sunday = vm.Week.Days.Single(d => d.Day == Weekdays.Sun).Entries.Single();
+        Assert.True(sunday.IsSkipped);
+    }
+
+    [Fact]
     public void RefreshForTick_does_not_reproject_within_the_same_day()
     {
         var (vm, scheduler, clock) = Build();

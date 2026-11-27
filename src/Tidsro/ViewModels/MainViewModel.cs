@@ -439,7 +439,7 @@ public partial class MainViewModel : ObservableObject
         }
         var lost = _scheduler.ReapplySkips(rearmed, skippedDates);
         if (lost.Count > 0)
-            announcement += $". The skip no longer applies to {string.Join(", ", lost.Select(RecurrenceRules.ShortDate))}";
+            announcement += $". The skip no longer applies to {RecurrenceRules.ShortDates(lost)}";
         Announce(announcement);
         RebuildAgenda();
         AlarmsChanged?.Invoke(this, EventArgs.Empty);

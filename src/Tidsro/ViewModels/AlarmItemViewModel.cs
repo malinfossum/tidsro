@@ -2,12 +2,12 @@ using Tidsro.Models;
 
 namespace Tidsro.ViewModels;
 
-/// <summary>One row in the "Your day" agenda. Presentation only — the parent owns edit/delete.</summary>
 /// <summary>The row control an action came from, so focus can return to it after the rebuild.</summary>
 public enum AlarmRowAction { Toggle, Skip, UndoSkip }
 
 public sealed record AlarmRowFocus(Guid AlarmId, AlarmRowAction Action);
 
+/// <summary>One row in the "Your day" agenda. Presentation only — the parent owns edit/delete.</summary>
 public sealed class AlarmItemViewModel
 {
     public TimerItem Item { get; }

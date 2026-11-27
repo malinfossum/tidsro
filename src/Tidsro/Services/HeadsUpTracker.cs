@@ -26,6 +26,13 @@ public sealed class HeadsUpTracker<TCard> where TCard : notnull
 
     public void Closed(TCard card) => _open.Remove(card);
 
+    /// <summary>Keep a card's occurrence in mind so it can come back. Call it only for a card from
+    /// <see cref="Changes.Gone"/> that is actually closed early: one the user closed first stays closed.</summary>
+    public void Park(TCard card)
+    {
+        if (_open.TryGetValue(card, out var key)) _parked.Add(key);
+    }
+
     /// <summary>Drop every parked card. Clear all and Import close every card and replace the alarms;
     /// nothing from before may come back.</summary>
     public void Forget() => _parked.Clear();
@@ -37,7 +44,7 @@ public sealed class HeadsUpTracker<TCard> where TCard : notnull
         foreach (var (card, key) in _open)
         {
             if (now >= key.FireAt) fired.Add(card);
-            else if (!willRingAt(key.AlarmId, key.FireAt)) { gone.Add(card); _parked.Add(key); }
+            else if (!willRingAt(key.AlarmId, key.FireAt)) gone.Add(card);
         }
 
         var back = new List<Guid>();

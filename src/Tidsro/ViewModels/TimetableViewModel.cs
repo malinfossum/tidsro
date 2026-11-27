@@ -49,14 +49,18 @@ public sealed partial class TimetableViewModel : ObservableObject
 
     private HashSet<(Guid Id, int Minute)> SkippedToday(DateTimeOffset now)
     {
+        // Each start stays in its own offset, the zone's offset at that time, because that is where
+        // the entry's minute comes from (EndsAt). Converting to now's offset would shift it by an hour
+        // when a rebuild runs before a daylight-saving switch on the same day.
+        var today = DateOnly.FromDateTime(now.Date);
+
         // Keep only skips whose start has passed today: those can no longer be undone.
         foreach (var (id, start) in _skippedToday.ToList())
-            if (start > now || start.Date != now.Date) _skippedToday.Remove(id);
+            if (start > now || DateOnly.FromDateTime(start.DateTime) != today) _skippedToday.Remove(id);
 
         foreach (var alarm in _scheduler.Alarms)
-            if (_scheduler.FirstSkipped(alarm) is { } first
-                && first.ToOffset(now.Offset) is var local && local.Date == now.Date)
-                _skippedToday[alarm.Id] = local;
+            if (_scheduler.FirstSkipped(alarm) is { } first && DateOnly.FromDateTime(first.DateTime) == today)
+                _skippedToday[alarm.Id] = first;
 
         return _skippedToday.Select(p => (p.Key, MinuteOfDay(p.Value))).ToHashSet();
     }

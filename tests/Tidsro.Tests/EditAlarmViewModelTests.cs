@@ -281,6 +281,39 @@ public class EditAlarmViewModelTests
     }
 
     [Fact]
+    public void After_a_validation_error_the_same_edit_warns_again()
+    {
+        var vm = WithLostSkip(out var applied);
+        vm.SaveCommand.Execute(null);                    // warned
+        vm.TimeInput = "25:00";
+        vm.SaveCommand.Execute(null);                    // the error replaces the warning
+
+        vm.TimeInput = "10:00";
+        vm.SaveCommand.Execute(null);
+
+        Assert.Empty(applied);
+        Assert.NotNull(vm.SkipWarning);
+    }
+
+    [Fact]
+    public void A_new_edit_with_the_same_warning_text_raises_it_again()
+    {
+        // 10:00 Mondays and 10:00 Tuesdays lose the same date, so the text is identical.
+        var vm = WithLostSkip(out _);
+        vm.SaveCommand.Execute(null);
+        var raised = 0;
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(EditAlarmViewModel.SkipWarning) && vm.SkipWarning is not null) raised++;
+        };
+
+        vm.DayToggles.Single(t => t.Flag == Weekdays.Tue).IsSelected = true;
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal(1, raised);
+    }
+
+    [Fact]
     public void Changing_the_edit_after_the_warning_warns_again_or_clears_it()
     {
         var vm = WithLostSkip(out var applied);
