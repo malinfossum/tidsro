@@ -52,7 +52,7 @@ public class SoundResourceTests
         using var bytes = new MemoryStream();
         stream.CopyTo(bytes);
 
-        Assert.True(WaveFile.IsPlayable(bytes.ToArray()));
+        Assert.True(WaveFile.IsPlayable(bytes.ToArray(), asStream: true));   // chimes play from a stream
     }
 
     [Fact]

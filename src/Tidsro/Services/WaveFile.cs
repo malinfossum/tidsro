@@ -10,7 +10,8 @@ namespace Tidsro.Services;
 /// .NET applies before it calls PlaySound, from both of its validators: <c>ValidateSoundFile</c> (a
 /// file, as My sound plays) wants a RIFF/WAVE container whose chunks stay inside it and a <c>fmt </c>
 /// chunk in PCM, ADPCM or IEEE float; <c>ValidateSoundData</c> (a stream, as the chimes play) also
-/// wants a <c>fmt </c> chunk of 16 bytes, or of 18 plus its own cbSize. A <c>data</c> chunk with
+/// wants a <c>fmt </c> chunk of 16 bytes, or of 18 plus its own cbSize, so that rule applies only when
+/// <c>asStream</c> is set. A <c>data</c> chunk with
 /// something in it is required too, since without one there is nothing to hear.</summary>
 internal static class WaveFile
 {
@@ -22,7 +23,26 @@ internal static class WaveFile
     public static bool IsWave(ReadOnlySpan<byte> bytes)
         => bytes.Length >= 12 && bytes.StartsWith("RIFF"u8) && bytes[8..].StartsWith("WAVE"u8);
 
-    public static bool IsPlayable(ReadOnlySpan<byte> wav)
+    /// <summary>The format tag of the first <c>fmt </c> chunk, or null when there is none to read.</summary>
+    public static short? FormatTag(ReadOnlySpan<byte> wav)
+    {
+        if (!IsWave(wav)) return null;
+        long pos = 12;
+        while (pos + 8 + 2 <= wav.Length)
+        {
+            var size = BinaryPrimitives.ReadUInt32LittleEndian(wav[(int)(pos + 4)..]);
+            if (wav[(int)pos..].StartsWith("fmt "u8)) return BinaryPrimitives.ReadInt16LittleEndian(wav[(int)(pos + 8)..]);
+            pos += 8 + size + (size & 1);
+        }
+        return null;
+    }
+
+    /// <summary>A format tag SoundPlayer refuses whatever else is right with the file.</summary>
+    public static bool IsPlayableFormat(short tag) => tag is FormatPcm or FormatAdpcm or FormatIeeeFloat;
+
+    /// <summary>Whether SoundPlayer plays <paramref name="wav"/>: from a file by default, as My sound
+    /// plays, or from a stream with <paramref name="asStream"/>, as the built-in chimes play.</summary>
+    public static bool IsPlayable(ReadOnlySpan<byte> wav, bool asStream = false)
     {
         if (!IsWave(wav)) return false;
 
@@ -43,7 +63,7 @@ internal static class WaveFile
             if (chunk.StartsWith("fmt "u8) && format is null)
             {
                 if (size < 16 || dataStart + 16 > wav.Length) return false;
-                if (size != 16)
+                if (asStream && size != 16)
                 {
                     if (size < 18 || dataStart + 18 > wav.Length) return false;
                     var cbSize = BinaryPrimitives.ReadUInt16LittleEndian(wav[(int)(dataStart + 16)..]);
@@ -59,6 +79,6 @@ internal static class WaveFile
             pos = dataStart + size + (size & 1);   // chunks are padded to an even length
         }
 
-        return format is FormatPcm or FormatAdpcm or FormatIeeeFloat && hasAudio;
+        return format is { } tag && IsPlayableFormat(tag) && hasAudio;
     }
 }

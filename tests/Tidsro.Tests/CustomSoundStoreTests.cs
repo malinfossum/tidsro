@@ -159,6 +159,24 @@ public class CustomSoundStoreTests : IDisposable
         Assert.False(_store.HasCustom);
     }
 
+    // Only a real wave file in a refused format gets the "export it as 16-bit" advice; every other
+    // refusal keeps the general message, which names the size and length limits.
+    [Fact]
+    public void Only_a_refused_wave_format_is_reported_as_one()
+    {
+        _store.Install(Write("24-bit.wav", WaveFileTests.Wave(unchecked((short)0xFFFE))));
+        Assert.True(_store.LastRefusalWasWaveFormat);
+
+        _store.Install(Write("empty.wav", WaveFileTests.Wave(dataSize: 0)));
+        Assert.False(_store.LastRefusalWasWaveFormat);
+
+        _store.Install(Write("mp3-in-riff.wav", WaveFileTests.Wave(formatTag: 0x55)));
+        Assert.False(_store.LastRefusalWasWaveFormat);
+
+        _store.Install(Write("text.wav", "not audio"u8.ToArray()));
+        Assert.False(_store.LastRefusalWasWaveFormat);
+    }
+
     [Fact]
     public void An_mp3_inside_a_wav_container_is_decoded_like_any_mp3()
     {

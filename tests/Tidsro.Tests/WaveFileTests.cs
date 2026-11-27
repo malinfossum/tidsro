@@ -45,7 +45,7 @@ public class WaveFileTests
         => Assert.False(WaveFile.IsPlayable(Wave(tag)));
 
     // The rule SoundPlayer applies to a stream (how the chimes play): a fmt chunk that is not 16
-    // bytes must be 18 plus the cbSize it declares.
+    // bytes must be 18 plus the cbSize it declares. Playing from a file (My sound) has no such rule.
     [Theory]
     [InlineData(18, 0, true)]
     [InlineData(20, 2, true)]
@@ -56,7 +56,15 @@ public class WaveFileTests
         var bytes = Wave(fmtSize: fmtSize);
         if (fmtSize >= 18) BinaryPrimitives.WriteInt16LittleEndian(bytes.AsSpan(36), cbSize);
 
-        Assert.Equal(playable, WaveFile.IsPlayable(bytes));
+        Assert.Equal(playable, WaveFile.IsPlayable(bytes, asStream: true));
+        if (fmtSize % 2 == 0) Assert.True(WaveFile.IsPlayable(bytes));   // an odd chunk would need a pad byte this builder leaves out
+    }
+
+    [Fact]
+    public void The_format_tag_is_read_past_other_chunks()
+    {
+        Assert.Equal((short)0x55, WaveFile.FormatTag(Wave(0x55)));
+        Assert.Null(WaveFile.FormatTag("ID3 not a wave"u8));
     }
 
     [Fact]

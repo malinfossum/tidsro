@@ -64,7 +64,10 @@ public sealed class CustomSoundStore
             ReadOnlyMemory<byte>? decoded = WaveFile.IsPlayable(bytes) ? bytes : Mp3Decoder.ToWav(bytes, MaxLength);
             if (decoded is not { } wav || !WaveFile.IsPlayable(wav.Span))
             {
-                LastRefusalWasWaveFormat = WaveFile.IsWave(bytes);
+                // Only a real wave file in a format SoundPlayer refuses gets the "export it as
+                // 16-bit" advice. MP3 inside RIFF (0x55) went through the .mp3 rules instead.
+                LastRefusalWasWaveFormat = WaveFile.FormatTag(bytes) is { } tag
+                                           && !WaveFile.IsPlayableFormat(tag) && tag != 0x55;
                 return null;
             }
 

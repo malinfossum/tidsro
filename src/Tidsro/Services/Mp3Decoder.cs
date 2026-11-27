@@ -152,7 +152,8 @@ internal static class Mp3Decoder
                     // A full output buffer can mean the codec still holds decoded audio it had no
                     // room for, so keep asking until a call comes back short. Without this the last
                     // half second of a long file went missing.
-                    if (produced < dstSize && (pending == 0 || used == 0)) break;
+                    if (produced < dstSize && pending == 0) break;
+                    if (used == 0 && produced == 0) return null;   // never a shortened sound: refuse it
                     continue;
                 }
                 if (used == 0 && produced == 0) return null;   // stuck: a stream the codec will not read
