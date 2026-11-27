@@ -7,7 +7,7 @@ public sealed class FakeFileDialogService : IFileDialogService
 {
     public string? SavePath { get; set; }
     public string? OpenPath { get; set; }
-    public string? WavPath { get; set; }
+    public string? SoundPath { get; set; }
     public string? LastSuggestedName { get; private set; }
 
     public string? AskSavePath(string suggestedFileName)
@@ -18,5 +18,5 @@ public sealed class FakeFileDialogService : IFileDialogService
 
     public string? AskOpenPath() => OpenPath;
 
-    public string? AskWavPath() => WavPath;
+    public string? AskSoundPath() => SoundPath;
 }

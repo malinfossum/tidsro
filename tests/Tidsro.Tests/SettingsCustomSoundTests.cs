@@ -66,7 +66,7 @@ public class SettingsCustomSoundTests : IDisposable
     [Fact]
     public void Choosing_a_wav_installs_it_names_it_and_offers_it_everywhere()
     {
-        _dialogs.WavPath = RealWav("Gong.wav");
+        _dialogs.SoundPath = RealWav("Gong.wav");
 
         _vm.ChooseCustomSoundCommand.Execute(null);
 
@@ -82,7 +82,7 @@ public class SettingsCustomSoundTests : IDisposable
     [Fact]
     public void Canceling_the_file_dialog_changes_nothing()
     {
-        _dialogs.WavPath = null;
+        _dialogs.SoundPath = null;
 
         _vm.ChooseCustomSoundCommand.Execute(null);
 
@@ -98,8 +98,8 @@ public class SettingsCustomSoundTests : IDisposable
     {
         Directory.CreateDirectory(_dir);
         var fake = Path.Combine(_dir, "song.wav");
-        File.WriteAllBytes(fake, "ID3 this is really an mp3"u8.ToArray());
-        _dialogs.WavPath = fake;
+        File.WriteAllBytes(fake, "ID3 this is not audio at all"u8.ToArray());
+        _dialogs.SoundPath = fake;
 
         _vm.ChooseCustomSoundCommand.Execute(null);
 
@@ -107,14 +107,31 @@ public class SettingsCustomSoundTests : IDisposable
         Assert.Null(_settings.CustomSoundName);
         var (title, message) = Assert.Single(_messages);
         Assert.Equal("That file won't do", title);
-        Assert.Contains(".wav", message);
-        Assert.Contains("mp3", message);         // names the mistake it is actually there to catch
+        Assert.Contains(".wav", message);        // names both formats it does take
+        Assert.Contains(".mp3", message);
+    }
+
+    [Fact]
+    public void Choosing_an_mp3_installs_it_under_its_own_name()
+    {
+        Directory.CreateDirectory(_dir);
+        var mp3 = Path.Combine(_dir, "Morning Birds.mp3");
+        File.WriteAllBytes(mp3, Mp3FramesTests.Tone());
+        _dialogs.SoundPath = mp3;
+
+        _vm.ChooseCustomSoundCommand.Execute(null);
+
+        Assert.True(_vm.HasCustomSound);
+        Assert.Equal("Morning Birds.mp3", _vm.CustomSoundLabel);
+        Assert.Equal("Morning Birds.mp3", _settings.CustomSoundName);
+        Assert.Contains(SoundChoice.Custom, _vm.SoundOptions);
+        Assert.Empty(_messages);
     }
 
     [Fact]
     public void Previewing_plays_the_custom_sound()
     {
-        _dialogs.WavPath = RealWav("Gong.wav");
+        _dialogs.SoundPath = RealWav("Gong.wav");
         _vm.ChooseCustomSoundCommand.Execute(null);
 
         Assert.True(_vm.PreviewCustomSoundCommand.CanExecute(null));
@@ -126,7 +143,7 @@ public class SettingsCustomSoundTests : IDisposable
     [Fact]
     public void Removing_clears_the_file_the_name_and_the_picker_entry()
     {
-        _dialogs.WavPath = RealWav("Gong.wav");
+        _dialogs.SoundPath = RealWav("Gong.wav");
         _vm.ChooseCustomSoundCommand.Execute(null);
 
         _vm.RemoveCustomSoundCommand.Execute(null);
@@ -143,7 +160,7 @@ public class SettingsCustomSoundTests : IDisposable
     [Fact]
     public void Removing_a_sound_that_was_the_default_falls_back_to_silent()
     {
-        _dialogs.WavPath = RealWav("Gong.wav");
+        _dialogs.SoundPath = RealWav("Gong.wav");
         _vm.ChooseCustomSoundCommand.Execute(null);
         _vm.DefaultSound = SoundChoice.Custom;
 
@@ -155,7 +172,7 @@ public class SettingsCustomSoundTests : IDisposable
     [Fact]
     public void Removing_leaves_a_built_in_default_alone()
     {
-        _dialogs.WavPath = RealWav("Gong.wav");
+        _dialogs.SoundPath = RealWav("Gong.wav");
         _vm.ChooseCustomSoundCommand.Execute(null);
         _vm.DefaultSound = SoundChoice.Bell;
 

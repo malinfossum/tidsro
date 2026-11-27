@@ -6,7 +6,7 @@ public sealed class AppSettings
     public bool LaunchAtStartup { get; set; }
     public SoundChoice DefaultSound { get; set; } = SoundChoice.None;
 
-    /// <summary>The name of the .wav behind <see cref="SoundChoice.Custom"/>, shown in Settings so the
+    /// <summary>The name of the .wav or .mp3 behind <see cref="SoundChoice.Custom"/>, shown in Settings so the
     /// user can see which file they chose. A label and nothing else — the audio always lives at the one
     /// path <c>CustomSoundStore</c> owns, so this string never reaches the file system.</summary>
     public string? CustomSoundName { get; set; }

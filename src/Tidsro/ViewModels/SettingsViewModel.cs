@@ -101,7 +101,7 @@ public partial class SettingsViewModel : ObservableObject
     {
         if (_sounds is null) return;
 
-        var source = _sounds.Dialogs.AskWavPath();
+        var source = _sounds.Dialogs.AskSoundPath();
         if (source is null) return;                  // canceled — nothing happens
 
         var name = _sounds.Store.Install(source);
@@ -109,8 +109,8 @@ public partial class SettingsViewModel : ObservableObject
         {
             // Never silent: otherwise the file looks accepted and every alarm using it goes quiet.
             _sounds.ShowMessage("That file won't do",
-                "Tidsro couldn't use that file. It needs a .wav under 5 MB that Windows can play — "
-                + "an .mp3 renamed to .wav won't work. Try converting it to WAV first.");
+                "Tidsro couldn't use that file. It needs a .wav or .mp3 under 5 MB that Windows "
+                + "can play, and an .mp3 can be at most 5 minutes long.");
             return;
         }
 

@@ -3,8 +3,9 @@ using System.Media;
 
 namespace Tidsro.Services;
 
-/// <summary>Owns the one custom-sound slot: the .wav the user chose, copied into a folder Tidsro
-/// controls.
+/// <summary>Owns the one custom-sound slot: the .wav or .mp3 the user chose, copied into a folder
+/// Tidsro controls. An .mp3 is decoded to a .wav on the way in (see <see cref="Mp3Decoder"/>), so
+/// the slot always holds wave audio and plays through the same SoundPlayer as the built-in chimes.
 ///
 /// It is a <em>copy</em> on purpose. Remembering the path the user browsed to would mean that moving,
 /// renaming or deleting that file — or picking it off a memory stick — leaves every alarm using it
@@ -18,6 +19,11 @@ public sealed class CustomSoundStore
     /// <summary>Well past any chime — the largest built-in is a little over 1 MB — and small enough
     /// that a wrongly picked film soundtrack is refused rather than copied into AppData.</summary>
     public const int MaxBytes = 5 * 1024 * 1024;
+
+    /// <summary>The longest .mp3 accepted. A low-bitrate recording fits under <see cref="MaxBytes"/>
+    /// yet decodes to a wave file many times that size; five minutes keeps the decoded copy near
+    /// 50 MB at most.</summary>
+    public static readonly TimeSpan MaxLength = TimeSpan.FromMinutes(5);
 
     private const string FileName = "custom.wav";
 
@@ -38,17 +44,23 @@ public sealed class CustomSoundStore
     public string? FilePath => HasCustom ? Target : null;
 
     /// <summary>Copy <paramref name="sourcePath"/> into the slot, replacing whatever was there.
-    /// Returns the file's own name to show the user, or null when the file was refused — too big,
-    /// empty, missing, or not a .wav this app can actually play. A refusal leaves any previously
-    /// installed sound untouched.</summary>
+    /// Returns the file's own name to show the user, or null when the file was refused: too big,
+    /// empty, missing, or not a .wav or .mp3 this app can actually play. The bytes decide which of
+    /// the two it is, not the extension. A refusal leaves any previously installed sound untouched.</summary>
     public string? Install(string sourcePath)
     {
         try
         {
             var info = new FileInfo(sourcePath);
             if (!info.Exists || info.Length == 0 || info.Length > MaxBytes) return null;
-            if (!LooksLikeWav(sourcePath)) return null;
-            if (!IsPlayable(sourcePath)) return null;
+
+            // Read once and work from these bytes, so the file that was checked is the file that
+            // is stored, even if the original changes underneath.
+            var bytes = File.ReadAllBytes(sourcePath);
+            if (bytes.Length == 0 || bytes.Length > MaxBytes) return null;
+
+            var wav = LooksLikeWav(bytes) ? bytes : Mp3Decoder.ToWav(bytes, MaxLength);
+            if (wav is null || !IsPlayable(wav)) return null;
 
             Directory.CreateDirectory(_folder);
 
@@ -57,7 +69,7 @@ public sealed class CustomSoundStore
             var tmp = Target + ".tmp";
             try
             {
-                File.Copy(sourcePath, tmp, overwrite: true);
+                File.WriteAllBytes(tmp, wav);
                 if (File.Exists(Target)) File.Replace(tmp, Target, null);
                 else File.Move(tmp, Target);
             }
@@ -83,23 +95,19 @@ public sealed class CustomSoundStore
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* best effort */ }
     }
 
-    // "RIFF" .... "WAVE" — the twelve-byte container header. Cheap, deterministic, and it rejects the
-    // common mistake of an .mp3 renamed to .wav before anything touches an audio API.
-    private static bool LooksLikeWav(string path)
-    {
-        using var stream = File.OpenRead(path);
-        Span<byte> head = stackalloc byte[12];
-        if (stream.ReadAtLeast(head, 12, throwOnEndOfStream: false) < 12) return false;
-        return head[..4].SequenceEqual("RIFF"u8) && head[8..12].SequenceEqual("WAVE"u8);
-    }
+    // "RIFF" .... "WAVE": the twelve-byte container header. Cheap and deterministic. Anything
+    // without it is tried as an .mp3, and refused when it is not one either.
+    private static bool LooksLikeWav(ReadOnlySpan<byte> bytes)
+        => bytes.Length >= 12 && bytes[..4].SequenceEqual("RIFF"u8) && bytes[8..12].SequenceEqual("WAVE"u8);
 
     // The header only proves the container. SoundPlayer needs PCM inside it, and an embed-style check
-    // has fooled this app before — so load it for real and let the failure speak.
-    private static bool IsPlayable(string path)
+    // has fooled this app before, so load it for real and let the failure speak. Load parses the
+    // format; it needs no audio device. A decoded .mp3 passes through here too.
+    private static bool IsPlayable(byte[] wav)
     {
         try
         {
-            using var player = new SoundPlayer(path);
+            using var player = new SoundPlayer(new MemoryStream(wav, writable: false));
             player.Load();
             return true;
         }

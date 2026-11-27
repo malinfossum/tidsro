@@ -134,6 +134,93 @@ public class CustomSoundStoreTests : IDisposable
         Assert.False(_store.HasCustom);
     }
 
+    // --- MP3 -------------------------------------------------------------------------------------
+
+    private string Mp3(string name = "tone.mp3") => Write(name, Mp3FramesTests.Tone());
+
+    private static byte[] Installed(string path) => File.ReadAllBytes(path);
+
+    [Fact]
+    public void Installing_an_mp3_stores_a_playable_wav_and_reports_the_mp3s_name()
+    {
+        var name = _store.Install(Mp3("Morning Birds.mp3"));
+
+        Assert.Equal("Morning Birds.mp3", name);
+        Assert.True(_store.HasCustom);
+        var bytes = Installed(_store.FilePath!);
+        Assert.Equal("RIFF"u8.ToArray(), bytes[..4]);
+        using var player = new System.Media.SoundPlayer(_store.FilePath!);
+        player.Load();   // the same check every alarm sound passes
+    }
+
+    // One slot, one fixed name, whatever the user picked: the decoded copy replaces the file the
+    // .wav slot always used, so playback and a backup restored elsewhere behave exactly as before.
+    [Fact]
+    public void An_installed_mp3_lives_under_the_same_fixed_name()
+    {
+        _store.Install(RealWav("first.wav"));
+        _store.Install(Mp3("second.mp3"));
+
+        Assert.Equal("custom.wav", Path.GetFileName(_store.FilePath));
+        Assert.Single(Directory.GetFiles(Path.Combine(_dir, "sounds")));
+    }
+
+    [Fact]
+    public void The_original_mp3_is_left_alone()
+    {
+        var source = Mp3();
+        var before = File.ReadAllBytes(source);
+
+        _store.Install(source);
+
+        Assert.Equal(before, File.ReadAllBytes(source));
+    }
+
+    // The bytes decide, not the extension: a mislabeled file is used for what it is.
+    [Fact]
+    public void An_mp3_renamed_to_wav_is_used_as_the_mp3_it_is()
+    {
+        Assert.Equal("song.wav", _store.Install(Write("song.wav", Mp3FramesTests.Tone())));
+        Assert.True(_store.HasCustom);
+    }
+
+    [Fact]
+    public void A_wav_renamed_to_mp3_is_copied_as_it_is()
+    {
+        var wav = RealWav("chime.mp3");
+
+        Assert.Equal("chime.mp3", _store.Install(wav));
+        Assert.Equal(File.ReadAllBytes(wav), Installed(_store.FilePath!));
+    }
+
+    [Fact]
+    public void A_text_file_named_mp3_is_refused()
+    {
+        Assert.Null(_store.Install(Write("song.mp3", "ID3 this is not audio"u8.ToArray())));
+        Assert.False(_store.HasCustom);
+    }
+
+    // A long recording at a low bitrate fits under 5 MB but decodes to a wave file many times
+    // that size. The length cap is what keeps the copy in AppData small.
+    [Fact]
+    public void An_mp3_longer_than_the_limit_is_refused_and_the_existing_sound_stays()
+    {
+        _store.Install(RealWav("good.wav"));
+        var before = Installed(_store.FilePath!);
+
+        var tone = Mp3FramesTests.Tone();
+        var frames = Mp3Frames.Find(tone)!;
+        var start = frames.Frames[0].Offset;
+        var end = frames.Frames[^1].Offset + frames.Frames[^1].Length;
+        var copies = (int)Math.Ceiling(CustomSoundStore.MaxLength / frames.Duration) + 1;
+        var audio = tone[start..end];
+        var longMp3 = Enumerable.Repeat(audio, copies).SelectMany(b => b).ToArray();
+        Assert.True(longMp3.Length < CustomSoundStore.MaxBytes);   // under the size cap, so length is the reason
+
+        Assert.Null(_store.Install(Write("long.mp3", longMp3)));
+        Assert.Equal(before, Installed(_store.FilePath!));
+    }
+
     [Fact]
     public void Removing_the_custom_sound_clears_the_slot()
     {

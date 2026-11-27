@@ -6,9 +6,9 @@ public sealed class FileDialogService : IFileDialogService
 {
     private const string Filter = "Tidsro backup (*.json)|*.json|All files (*.*)|*.*";
 
-    // WAV only, and no "All files" escape hatch: SoundPlayer plays PCM wave audio and nothing else,
-    // so offering an .mp3 here would only produce a file Tidsro then has to refuse.
-    private const string WavFilter = "WAV audio (*.wav)|*.wav";
+    // The two formats My sound takes, and no "All files" escape hatch: anything else would only
+    // produce a file Tidsro then has to refuse.
+    private const string SoundFilter = "Sound files (*.wav;*.mp3)|*.wav;*.mp3|WAV audio (*.wav)|*.wav|MP3 audio (*.mp3)|*.mp3";
 
     private static string Documents =>
         Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
@@ -41,12 +41,12 @@ public sealed class FileDialogService : IFileDialogService
         return dialog.ShowDialog() == true ? dialog.FileName : null;
     }
 
-    public string? AskWavPath()
+    public string? AskSoundPath()
     {
         var dialog = new OpenFileDialog
         {
             DefaultExt = ".wav",
-            Filter = WavFilter,
+            Filter = SoundFilter,
             InitialDirectory = Music,
             CheckFileExists = true,
         };
