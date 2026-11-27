@@ -23,10 +23,7 @@ internal static class Mp3Decoder
     {
         var stream = Mp3Frames.Find(mp3);
         if (stream is null || stream.Duration > maxLength) return null;
-
-        var pcm = Decode(mp3, stream);
-        if (pcm is null || pcm.Length == 0) return null;
-        return Wrap(pcm, stream.SampleRate, stream.Channels);
+        return Decode(mp3, stream);
     }
 
     private static byte[]? Decode(ReadOnlySpan<byte> mp3, Mp3Stream stream)
@@ -57,18 +54,21 @@ internal static class Mp3Decoder
             cbSize = 0,
         };
 
-        if (acmStreamOpen(out var acm, IntPtr.Zero, ref source, ref target, IntPtr.Zero,
-                IntPtr.Zero, IntPtr.Zero, AcmStreamOpenNonRealtime) != 0)
-            return null;   // no MP3 codec on this machine
-
+        var blockAlign = stream.Channels * 2;
         var largestFrame = stream.Frames.Max(f => f.Length);
         var srcSize = largestFrame * FramesPerChunk;
+        var acm = IntPtr.Zero;
         var src = IntPtr.Zero;
         var dst = IntPtr.Zero;
         var header = IntPtr.Zero;
         var prepared = false;
         try
         {
+            // Inside the try: on a Windows without msacm32 this first call is the one that throws.
+            if (acmStreamOpen(out acm, IntPtr.Zero, ref source, ref target, IntPtr.Zero,
+                    IntPtr.Zero, IntPtr.Zero, AcmStreamOpenNonRealtime) != 0)
+                return null;   // no MP3 codec on this machine
+
             if (acmStreamSize(acm, srcSize, out var dstSize, AcmStreamSizeSource) != 0 || dstSize <= 0)
                 return null;
 
@@ -88,7 +88,14 @@ internal static class Mp3Decoder
             if (acmStreamPrepareHeader(acm, header, 0) != 0) return null;
             prepared = true;
 
-            using var output = new MemoryStream();
+            // Sized up front from the frame count, so a five-minute file is not regrown and copied
+            // on its way to 58 MB. The first 44 bytes are left for the header.
+            var estimate = Math.Min(int.MaxValue / 2,
+                HeaderSize + (long)stream.Frames.Count * stream.SamplesPerFrame * blockAlign + dstSize);
+            using var output = new MemoryStream((int)estimate);
+            output.Write(new byte[HeaderSize]);
+            var staging = new byte[Math.Max(srcSize, dstSize)];
+
             var frame = 0;
             var pending = 0;   // bytes the codec left unread at the front of src
             var flags = AcmConvertStart | AcmConvertBlockAlign;
@@ -102,7 +109,8 @@ internal static class Mp3Decoder
                 while (frame < stream.Frames.Count && filled + stream.Frames[frame].Length <= srcSize)
                 {
                     var f = stream.Frames[frame++];
-                    CopyIn(mp3.Slice(f.Offset, f.Length), src + filled);
+                    mp3.Slice(f.Offset, f.Length).CopyTo(staging);
+                    Marshal.Copy(staging, 0, src + filled, f.Length);
                     filled += f.Length;
                 }
 
@@ -115,18 +123,30 @@ internal static class Mp3Decoder
 
                 var used = GetInt(header, nameof(AcmStreamHeader.cbSrcLengthUsed));
                 var produced = GetInt(header, nameof(AcmStreamHeader.cbDstLengthUsed));
-                if (produced > 0) output.Write(Copy(dst, produced));
+                if (produced > 0)
+                {
+                    Marshal.Copy(dst, staging, 0, produced);
+                    output.Write(staging, 0, produced);
+                }
 
                 pending = filled - used;
                 if (last && (used == 0 || pending == 0)) break;   // drained, or the codec will take no more
                 if (used == 0 && produced == 0) return null;      // stuck: a stream the codec will not read
-                if (pending > 0) Move(src + used, src, pending);
+                if (pending > 0)
+                {
+                    Marshal.Copy(src + used, staging, 0, pending);
+                    Marshal.Copy(staging, 0, src, pending);
+                }
             }
 
             // A truncated last frame can leave half a sample; WAV data must be whole blocks.
-            var blockAlign = stream.Channels * 2;
-            var length = (int)output.Length / blockAlign * blockAlign;
-            return output.GetBuffer()[..length];
+            var pcmLength = ((int)output.Length - HeaderSize) / blockAlign * blockAlign;
+            if (pcmLength <= 0) return null;
+
+            var wav = output.GetBuffer();
+            WriteHeader(wav, pcmLength, stream.SampleRate, stream.Channels);
+            var total = HeaderSize + pcmLength;
+            return wav.Length == total ? wav : wav[..total];
         }
         catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
         {
@@ -142,17 +162,19 @@ internal static class Mp3Decoder
             if (header != IntPtr.Zero) Marshal.FreeHGlobal(header);
             if (dst != IntPtr.Zero) Marshal.FreeHGlobal(dst);
             if (src != IntPtr.Zero) Marshal.FreeHGlobal(src);
-            acmStreamClose(acm, 0);
+            if (acm != IntPtr.Zero) acmStreamClose(acm, 0);
         }
     }
 
-    /// <summary>A canonical 44-byte RIFF/WAVE header in front of 16-bit PCM samples.</summary>
-    private static byte[] Wrap(byte[] pcm, int sampleRate, int channels)
+    private const int HeaderSize = 44;
+
+    /// <summary>A canonical 44-byte RIFF/WAVE header for <paramref name="pcmLength"/> bytes of
+    /// 16-bit PCM, written over the space left for it at the front of <paramref name="wav"/>.</summary>
+    private static void WriteHeader(byte[] wav, int pcmLength, int sampleRate, int channels)
     {
-        var wav = new byte[44 + pcm.Length];
         var s = wav.AsSpan();
         "RIFF"u8.CopyTo(s);
-        BinaryPrimitives.WriteInt32LittleEndian(s[4..], 36 + pcm.Length);
+        BinaryPrimitives.WriteInt32LittleEndian(s[4..], 36 + pcmLength);
         "WAVE"u8.CopyTo(s[8..]);
         "fmt "u8.CopyTo(s[12..]);
         BinaryPrimitives.WriteInt32LittleEndian(s[16..], 16);
@@ -163,21 +185,8 @@ internal static class Mp3Decoder
         BinaryPrimitives.WriteInt16LittleEndian(s[32..], (short)(channels * 2));
         BinaryPrimitives.WriteInt16LittleEndian(s[34..], 16);
         "data"u8.CopyTo(s[36..]);
-        BinaryPrimitives.WriteInt32LittleEndian(s[40..], pcm.Length);
-        pcm.CopyTo(s[44..]);
-        return wav;
+        BinaryPrimitives.WriteInt32LittleEndian(s[40..], pcmLength);
     }
-
-    private static void CopyIn(ReadOnlySpan<byte> bytes, IntPtr to) => Marshal.Copy(bytes.ToArray(), 0, to, bytes.Length);
-
-    private static byte[] Copy(IntPtr from, int count)
-    {
-        var bytes = new byte[count];
-        Marshal.Copy(from, bytes, 0, count);
-        return bytes;
-    }
-
-    private static void Move(IntPtr from, IntPtr to, int count) => Marshal.Copy(Copy(from, count), 0, to, count);
 
     private static int GetInt(IntPtr header, string field)
         => Marshal.ReadInt32(header, (int)Marshal.OffsetOf<AcmStreamHeader>(field));
