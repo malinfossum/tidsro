@@ -174,12 +174,14 @@ public static class ScreenHelper
         Rect? best = null;
         var bestShift = double.MaxValue;
         foreach (var x in xs)
-        foreach (var y in ys)
         {
-            if (x < work.Left || y < work.Top || x + centered.Width > work.Right || y + centered.Height > work.Bottom) continue;
-            if (PlacementScale(x, y, monitors) != monitor.Scale) continue;
-            var shift = Math.Abs(x - centered.Left) + Math.Abs(y - centered.Top);
-            if (shift < bestShift) { bestShift = shift; best = new Rect(x, y, centered.Width, centered.Height); }
+            foreach (var y in ys)
+            {
+                if (x < work.Left || y < work.Top || x + centered.Width > work.Right || y + centered.Height > work.Bottom) continue;
+                if (PlacementScale(x, y, monitors) != monitor.Scale) continue;
+                var shift = Math.Abs(x - centered.Left) + Math.Abs(y - centered.Top);
+                if (shift < bestShift) { bestShift = shift; best = new Rect(x, y, centered.Width, centered.Height); }
+            }
         }
         return best;
     }
