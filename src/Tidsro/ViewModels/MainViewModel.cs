@@ -234,8 +234,7 @@ public partial class MainViewModel : ObservableObject
 
     private void Add(TimeSpan duration)
     {
-        var label = string.IsNullOrWhiteSpace(Label) ? null : CapitalizeFirst(Label.Trim());
-        var item = _scheduler.StartCountdown(duration, label, SelectedSound);
+        var item = _scheduler.StartCountdown(duration, CleanLabel(Label), SelectedSound);
         Running.Add(new TimerItemViewModel(item, _scheduler));
         Label = "";   // consumed by this timer — clear so it can't carry into the next one (preset or custom)
         SortRunning();
@@ -244,6 +243,11 @@ public partial class MainViewModel : ObservableObject
 
     private static string CapitalizeFirst(string s) =>
         s.Length == 0 ? s : char.ToUpper(s[0]) + s[1..];
+
+    // Capitalized, then held to the same rule the data file applies on load, so a label never changes
+    // between what shows now and what the next launch reads back. Null when blank.
+    private static string? CleanLabel(string? raw) =>
+        string.IsNullOrWhiteSpace(raw) ? null : TidsroData.NormalizeLabel(CapitalizeFirst(raw.Trim()));
 
     // Flag the active timer that will reach zero soonest, so the View highlights it like the agenda's
     // "next" alarm. Only Running timers qualify — a paused or already-fired countdown isn't what fires next.
@@ -342,7 +346,7 @@ public partial class MainViewModel : ObservableObject
         { AlarmError = error; return; }
         AlarmError = null;
 
-        var label = string.IsNullOrWhiteSpace(AlarmLabel) ? null : CapitalizeFirst(AlarmLabel.Trim());
+        var label = CleanLabel(AlarmLabel);
 
         if (days == Weekdays.None)
         {
@@ -382,7 +386,7 @@ public partial class MainViewModel : ObservableObject
     {
         var existing = _scheduler.Alarms.FirstOrDefault(a => a.Id == id);
         if (existing is not null) _scheduler.RemoveAlarm(existing);
-        var clean = string.IsNullOrWhiteSpace(label) ? null : CapitalizeFirst(label.Trim());
+        var clean = CleanLabel(label);
         if (days == Weekdays.None)
         {
             var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, _scheduler.Zone, hour, minute);
