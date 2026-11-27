@@ -1,6 +1,6 @@
 # 0003. My sound is a copy, with no silent fallback
 
-- Status: Accepted
+- Status: Accepted. The last consequence is superseded by [0007](0007-mp3-is-decoded-when-chosen.md)
 - Date: 10.09.2026 (v2.6.0)
 
 ## Context
