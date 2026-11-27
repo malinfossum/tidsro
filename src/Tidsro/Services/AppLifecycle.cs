@@ -10,6 +10,7 @@ public sealed class AppLifecycle
 
     private readonly object _gate = new();
     private Stage _stage = Stage.Starting;
+    private bool _showHeld;   // a second launch asked for the window before startup had finished
 
     /// <summary>Startup has finished and Quit has not begun.</summary>
     public bool IsRunning { get { lock (_gate) return _stage == Stage.Running; } }
@@ -17,11 +18,31 @@ public sealed class AppLifecycle
     /// <summary>Quit has begun, or startup failed, or the app is shutting down.</summary>
     public bool IsExiting { get { lock (_gate) return _stage == Stage.Exiting; } }
 
-    /// <summary>Startup has finished. Does nothing once exiting, so a failed startup stays failed.</summary>
-    public void MarkStarted()
+    /// <summary>Startup has finished. Returns true when a second launch asked for the window while
+    /// startup ran, so it can be shown now. Does nothing once exiting, so a failed startup stays failed.</summary>
+    public bool MarkStarted()
     {
         lock (_gate)
-            if (_stage == Stage.Starting) _stage = Stage.Running;
+        {
+            if (_stage != Stage.Starting) return false;
+            _stage = Stage.Running;
+            var held = _showHeld;
+            _showHeld = false;
+            return held;
+        }
+    }
+
+    /// <summary>A second launch asks for the window. True means show it now. Before startup has finished
+    /// the request is held for <see cref="MarkStarted"/>, since the window may be half built; once exiting
+    /// it is dropped.</summary>
+    public bool RequestShow()
+    {
+        lock (_gate)
+        {
+            if (_stage == Stage.Running) return true;
+            if (_stage == Stage.Starting) _showHeld = true;
+            return false;
+        }
     }
 
     /// <summary>True the first time Quit asks while the app is running; false on every later ask, and
@@ -39,6 +60,10 @@ public sealed class AppLifecycle
     /// <summary>Startup failed or the app is shutting down. Nothing may open the window from now on.</summary>
     public void MarkExiting()
     {
-        lock (_gate) _stage = Stage.Exiting;
+        lock (_gate)
+        {
+            _stage = Stage.Exiting;
+            _showHeld = false;
+        }
     }
 }

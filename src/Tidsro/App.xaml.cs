@@ -56,10 +56,14 @@ public partial class App : Application
             _tray = TrayBuilder.Create(ShowMainWindow, FocusLatestAlert, () => _openPopups.Count > 0, OpenLogFolder, Quit,
                 () => _lifecycle.IsRunning);
             ShowWindowUnlessBootLaunch(e);
-            _lifecycle.MarkStarted();
+            // A second launch asked while startup ran. Queued rather than called here, so a failure while
+            // showing the window takes the survivable path, not the "couldn't start" one below.
+            if (_lifecycle.MarkStarted())
+                Dispatcher.BeginInvoke(new Action(() => { if (_lifecycle.IsRunning) ShowMainWindow(); }));
         }
         catch (Exception ex)
         {
+            _lifecycle.MarkExiting();   // the message box below pumps messages; nothing may open the window under it
             // A startup failure must explain itself, not vanish. There is no tray yet, so the
             // last resort is a single message — not knowing is the worst outcome (spec).
             _log.Log(ex, "OnStartup");
@@ -136,7 +140,9 @@ public partial class App : Application
         return true;
     }
 
-    // Runs on a thread-pool thread when a later launch signals. Once exit has begun it does nothing:
+    // Runs on a thread-pool thread when a later launch signals. The lifecycle decides on the UI thread:
+    // a signal handled before startup has finished (a startup error box pumps messages) waits for it,
+    // because the window would open half built. Once exit has begun it does nothing:
     // Application.Shutdown runs OnExit before the dispatcher starts its own shutdown, so the lifecycle
     // covers the stretch HasShutdownStarted does not. BeginInvoke, not Invoke: it never blocks the pool
     // thread and never throws on a dispatcher that is closing, and unlike InvokeAsync a failure in
@@ -144,7 +150,7 @@ public partial class App : Application
     private void OnShowSignal()
     {
         if (_lifecycle.IsExiting || Dispatcher.HasShutdownStarted) return;
-        Dispatcher.BeginInvoke(new Action(() => { if (!_lifecycle.IsExiting) ShowMainWindow(); }));
+        Dispatcher.BeginInvoke(new Action(() => { if (_lifecycle.RequestShow()) ShowMainWindow(); }));
     }
 
     // Load persisted data, build the services and main view-model, arm the saved alarms, and self-heal a
