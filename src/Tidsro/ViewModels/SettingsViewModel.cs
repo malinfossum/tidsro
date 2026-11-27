@@ -104,13 +104,12 @@ public partial class SettingsViewModel : ObservableObject
         var source = _sounds.Dialogs.AskSoundPath();
         if (source is null) return;                  // canceled — nothing happens
 
+        StopPreview();   // the file being replaced may still be playing
         var name = _sounds.Store.Install(source);
         if (name is null)
         {
             // Never silent: otherwise the file looks accepted and every alarm using it goes quiet.
-            _sounds.ShowMessage("That file won't do",
-                "Tidsro couldn't use that file. It needs a .wav or .mp3 under 5 MB that Windows "
-                + "can play, and an .mp3 can be at most 5 minutes long.");
+            _sounds.ShowMessage("That file won't do", RefusalMessage);
             return;
         }
 
@@ -118,14 +117,38 @@ public partial class SettingsViewModel : ObservableObject
         CustomSoundChanged();
     }
 
+    /// <summary>The limits come from <see cref="CustomSoundStore"/>, so the message cannot drift
+    /// from what is enforced. internal for tests.</summary>
+    internal static string RefusalMessage =>
+        $"Tidsro couldn't use that file. It needs a .wav or .mp3 under {CustomSoundStore.MaxBytes / (1024 * 1024)} MB "
+        + $"that Windows can play, and an .mp3 can be at most {CustomSoundStore.MaxLength.TotalMinutes:0} minutes long.";
+
+    // The preview this window started, so it can be stopped: My sound can run for minutes.
+    private int _previewId;
+
     [RelayCommand(CanExecute = nameof(HasCustomSound))]
-    private void PreviewCustomSound() => _sounds?.Sound.Play(SoundChoice.Custom);
+    private void PreviewCustomSound()
+    {
+        if (_sounds is null) return;
+        StopPreview();
+        _previewId = _sounds.Sound.Play(SoundChoice.Custom);
+    }
+
+    /// <summary>Stop this window's preview if it is still playing. Called when Settings closes,
+    /// and before the sound it may be playing is replaced or removed.</summary>
+    public void StopPreview()
+    {
+        if (_previewId == 0) return;
+        _sounds?.Sound.Stop(_previewId);
+        _previewId = 0;
+    }
 
     [RelayCommand(CanExecute = nameof(HasCustomSound))]
     private void RemoveCustomSound()
     {
         if (_sounds is null) return;
 
+        StopPreview();
         _sounds.Store.Remove();
         _settings.CustomSoundName = null;
 

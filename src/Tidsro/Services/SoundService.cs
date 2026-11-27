@@ -13,6 +13,11 @@ public sealed class SoundService : ISoundService
     // Held so the player isn't collected while a memory-backed sound is still playing async.
     private SoundPlayer? _player;
 
+    // Which playback is current. Stop(id) only acts on the latest one, so closing an old card
+    // cannot silence a newer alarm.
+    private int _lastId;
+    private int _currentId;
+
     // Where the user's own .wav lives right now, or null when none is installed. A live read, so
     // choosing or clearing one in Settings takes effect on the next chime without rewiring anything.
     private readonly Func<string?> _customPath;
@@ -44,40 +49,58 @@ public sealed class SoundService : ISoundService
             .FirstOrDefault(n => n.EndsWith(suffix, System.StringComparison.OrdinalIgnoreCase));
     }
 
-    /// <summary>Play the chosen sound once. Silent and never throws.</summary>
-    public void Play(SoundChoice choice)
+    /// <summary>Play the chosen sound once. Never throws; returns 0 when nothing started.</summary>
+    public int Play(SoundChoice choice)
     {
-        if (choice == SoundChoice.Custom) { PlayCustom(); return; }
+        var started = choice == SoundChoice.Custom ? PlayCustom() : PlayChime(choice);
+        if (!started) return 0;
+        _currentId = ++_lastId;
+        return _currentId;
+    }
 
+    /// <summary>Stop a playback if it is still the current one. My sound can be a song several
+    /// minutes long, so closing its card or the window that previewed it has to end it.</summary>
+    public void Stop(int playId)
+    {
+        if (playId == 0 || playId != _currentId) return;
+        _currentId = 0;
+        try { _player?.Stop(); }
+        catch { /* stopping must never crash a timer either */ }
+    }
+
+    private bool PlayChime(SoundChoice choice)
+    {
         var name = ResourceNameFor(choice);
-        if (name is null) return;
+        if (name is null) return false;
         try
         {
             using var stream = Asm.GetManifestResourceStream(name);
-            if (stream is null) return;
+            if (stream is null) return false;
 
             _player?.Dispose();
             _player = new SoundPlayer(stream);
             _player.Load();   // copy the wav into the player now...
             _player.Play();   // ...then play async from that in-memory copy
+            return true;
         }
-        catch { /* sound must never crash a timer */ }
+        catch { return false; /* sound must never crash a timer */ }
     }
 
-    /// <summary>Play the user's own .wav. A sound that has been removed since it was chosen is
-    /// silence, never an error mid-alarm.</summary>
-    private void PlayCustom()
+    /// <summary>Play My sound, always a .wav on disk (an .mp3 was decoded when it was chosen). A
+    /// sound that has been removed since it was chosen is silence, never an error mid-alarm.</summary>
+    private bool PlayCustom()
     {
         try
         {
             var path = _customPath();
-            if (path is null || !File.Exists(path)) return;
+            if (path is null || !File.Exists(path)) return false;
 
             _player?.Dispose();
             _player = new SoundPlayer(path);
             _player.Load();
             _player.Play();
+            return true;
         }
-        catch { /* sound must never crash a timer */ }
+        catch { return false; /* sound must never crash a timer */ }
     }
 }

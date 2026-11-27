@@ -140,6 +140,51 @@ public class SettingsCustomSoundTests : IDisposable
         Assert.Equal(SoundChoice.Custom, _sound.LastPlayed);
     }
 
+    // My sound can be a song minutes long; it must not keep playing after Settings closes.
+    [Fact]
+    public void Closing_Settings_stops_the_preview_it_started()
+    {
+        _dialogs.SoundPath = RealWav("Gong.wav");
+        _vm.ChooseCustomSoundCommand.Execute(null);
+        _vm.PreviewCustomSoundCommand.Execute(null);
+        var preview = _sound.LastPlayId;
+
+        _vm.StopPreview();
+
+        Assert.Equal([preview], _sound.Stopped);
+    }
+
+    [Fact]
+    public void Closing_Settings_without_a_preview_stops_nothing()
+    {
+        _vm.StopPreview();
+
+        Assert.Empty(_sound.Stopped);
+    }
+
+    [Fact]
+    public void Removing_or_replacing_the_sound_stops_its_preview_first()
+    {
+        _dialogs.SoundPath = RealWav("Gong.wav");
+        _vm.ChooseCustomSoundCommand.Execute(null);
+        _vm.PreviewCustomSoundCommand.Execute(null);
+        var first = _sound.LastPlayId;
+        _vm.ChooseCustomSoundCommand.Execute(null);
+        _vm.PreviewCustomSoundCommand.Execute(null);
+        var second = _sound.LastPlayId;
+
+        _vm.RemoveCustomSoundCommand.Execute(null);
+
+        Assert.Equal([first, second], _sound.Stopped);
+    }
+
+    [Fact]
+    public void The_refusal_states_the_limits_the_store_enforces()
+    {
+        Assert.Contains($"{CustomSoundStore.MaxBytes / (1024 * 1024)} MB", SettingsViewModel.RefusalMessage);
+        Assert.Contains($"{CustomSoundStore.MaxLength.TotalMinutes:0} minutes", SettingsViewModel.RefusalMessage);
+    }
+
     [Fact]
     public void Removing_clears_the_file_the_name_and_the_picker_entry()
     {
