@@ -2,18 +2,27 @@ using Tidsro.Models;
 
 namespace Tidsro.ViewModels;
 
-/// <summary>One row in the "Your day" agenda. Presentation only — the parent owns edit/delete.</summary>
+/// <summary>The row control an action came from, so focus can return to it after the rebuild.</summary>
+public enum AlarmRowAction { Toggle, Skip, UndoSkip }
+
+public sealed record AlarmRowFocus(Guid AlarmId, AlarmRowAction Action);
+
+/// <summary>One row in the "Your day" agenda. Presentation only: the parent owns edit and delete.</summary>
 public sealed class AlarmItemViewModel
 {
     public TimerItem Item { get; }
     public bool IsTomorrow { get; }
     public bool IsNext { get; }
 
-    public AlarmItemViewModel(TimerItem item, bool isTomorrow, bool isNext)
+    /// <summary>How many occurrences this alarm will pass over before it rings again (skip-next).</summary>
+    public int SkippedCount { get; }
+
+    public AlarmItemViewModel(TimerItem item, bool isTomorrow, bool isNext, int skippedCount)
     {
         Item = item;
         IsTomorrow = isTomorrow;
         IsNext = isNext;
+        SkippedCount = skippedCount;
     }
 
     public string TimeText => Item.EndsAt is { } e ? e.ToString("HH\\:mm") : "--:--";
@@ -47,11 +56,26 @@ public sealed class AlarmItemViewModel
 
     // Sound state and the cadence/next cues are carried as text, never color alone (spec §7).
     public string AccessibleName =>
-        $"Alarm at {SpokenTime}{CadencePhrase}, {DisplayLabel}, {SoundText}{(WarnBefore ? ", warns 5 minutes before" : "")}{(IsNext ? ", next" : "")}{(IsEnabled ? "" : ", off")}";
+        $"Alarm at {SpokenTime}{CadencePhrase}, {DisplayLabel}, {SoundText}{(WarnBefore ? ", warns 5 minutes before" : "")}{(IsNext ? ", next" : "")}{(IsSkipped ? $", {SkipText.ToLowerInvariant()}" : "")}{(IsEnabled ? "" : ", off")}";
 
     private string CadencePhrase => Item.RecurringDays is { } d
         ? $" {RecurrenceRules.CadenceLabel(d).ToLowerInvariant()}"
         : (IsTomorrow ? " tomorrow" : "");
+
+    // Skip-next: only a recurring alarm that is on has a next time to pass over. A one-shot alarm is
+    // deleted instead, and an alarm that is off is already silent. A skip made before it was switched
+    // off still shows, dimmed with the row, and Undo skip still takes it back.
+    public bool CanSkip => Item.TriggerType == TriggerType.Recurring && Item.IsEnabled;
+    public bool IsSkipped => SkippedCount > 0;
+
+    /// <summary>"Skipped, next Fri 02.01" or "2 skipped, next Sat 03.01": the row says what will
+    /// actually happen, so the skip is never a silent surprise.</summary>
+    public string SkipText => !IsSkipped || Item.EndsAt is not { } next
+        ? ""
+        : $"{(SkippedCount == 1 ? "Skipped" : $"{SkippedCount} skipped")}, next {RecurrenceRules.ShortDate(next)}";
+
+    public string SkipLabel => $"Skip the next alarm at {TimeText}";
+    public string UndoSkipLabel => $"Undo skip for the alarm at {TimeText}";
 
     public string EditLabel => $"Edit alarm at {TimeText}";
     public string DeleteLabel => $"Delete alarm at {TimeText}";

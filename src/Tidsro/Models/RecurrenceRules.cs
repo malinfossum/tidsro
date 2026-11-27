@@ -66,6 +66,30 @@ public static class RecurrenceRules
         return string.Join(" ", parts);
     }
 
+    /// <summary>"Mon".."Sun", from the same table as the cadence label, so no culture decides it.</summary>
+    public static string DayName(DayOfWeek day)
+    {
+        var flag = DayFlag(day);
+        foreach (var (f, name) in Ordered)
+            if (f == flag) return name;
+        return "";
+    }
+
+    /// <summary>A short date for a cue: "Fri 02.01".</summary>
+    public static string ShortDate(DateTimeOffset when) => ShortDate(DateOnly.FromDateTime(when.DateTime));
+
+    /// <summary>The same short date for a calendar day.</summary>
+    public static string ShortDate(DateOnly day) => $"{DayName(day.DayOfWeek)} {day:dd.MM}";
+
+    /// <summary>Up to three short dates, then a count: "Mon 30.11, Mon 07.12, Mon 14.12 and 17 more".
+    /// A skip can bring back up to a hundred days, and a warning or an announcement must stay short.</summary>
+    public static string ShortDates(IReadOnlyList<DateOnly> days)
+    {
+        const int shown = 3;
+        var named = string.Join(", ", days.Take(shown).Select(ShortDate));
+        return days.Count > shown ? $"{named} and {days.Count - shown} more" : named;
+    }
+
     private static bool Includes(Weekdays set, DayOfWeek day) => (set & DayFlag(day)) != 0;
 
     private static Weekdays DayFlag(DayOfWeek day) => day switch

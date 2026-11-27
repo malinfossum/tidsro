@@ -17,7 +17,7 @@ public class EditAlarmViewModelTests
         applied = captured;
         sound = new FakeSoundService();
         return new EditAlarmViewModel(id ?? Guid.NewGuid(), timeInput, endInput, "Tea", SoundChoice.Bell, days, warnBefore,
-            Options, (i, h, m, d, l, s, w, e) => captured.Add((i, h, m, d, l, s, w, e)), sound);
+            Options, (i, h, m, d, l, s, w, e) => captured.Add((i, h, m, d, l, s, w, e)), sound, (_, _, _, _) => []);
     }
 
     [Fact]
@@ -228,5 +228,101 @@ public class EditAlarmViewModelTests
 
         Assert.Equal("Pick at least one day.", vm.Error);
         Assert.Empty(applied);
+    }
+
+    // Stands in for MainViewModel.PreviewLostSkips: a 10:00 edit brings back Mon 05.01, any other time loses nothing.
+    private static EditAlarmViewModel WithLostSkip(out List<(Guid, int, int, Weekdays, string?, SoundChoice, bool, int?)> applied)
+    {
+        var captured = new List<(Guid, int, int, Weekdays, string?, SoundChoice, bool, int?)>();
+        applied = captured;
+        return new EditAlarmViewModel(Guid.NewGuid(), "10:00", "", "Lecture", SoundChoice.Bell, Weekdays.Mon, false,
+            Options, (i, h, m, d, l, s, w, e) => captured.Add((i, h, m, d, l, s, w, e)), new FakeSoundService(),
+            (_, h, _, _) => h == 10 ? [new DateOnly(2026, 1, 5)] : []);
+    }
+
+    [Fact]
+    public void Save_that_brings_back_a_skipped_day_warns_first_and_keeps_the_dialog_open()
+    {
+        var vm = WithLostSkip(out var applied);
+        bool? closed = null; vm.CloseRequested += (_, saved) => closed = saved;
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Empty(applied);
+        Assert.Null(closed);
+        Assert.Null(vm.Error);
+        Assert.Equal("This change brings back the skipped day Mon 05.01. Save again to keep it.", vm.SkipWarning);
+    }
+
+    [Fact]
+    public void A_second_Save_of_the_same_edit_goes_through()
+    {
+        var vm = WithLostSkip(out var applied);
+        vm.SaveCommand.Execute(null);
+
+        vm.SaveCommand.Execute(null);
+
+        Assert.Single(applied);
+        Assert.Null(vm.SkipWarning);
+    }
+
+    [Fact]
+    public void A_validation_error_replaces_the_skip_warning()
+    {
+        var vm = WithLostSkip(out var applied);
+        vm.SaveCommand.Execute(null);
+
+        vm.TimeInput = "25:00";
+        vm.SaveCommand.Execute(null);
+
+        Assert.NotNull(vm.Error);
+        Assert.Null(vm.SkipWarning);
+        Assert.Empty(applied);
+    }
+
+    [Fact]
+    public void After_a_validation_error_the_same_edit_warns_again()
+    {
+        var vm = WithLostSkip(out var applied);
+        vm.SaveCommand.Execute(null);                    // warned
+        vm.TimeInput = "25:00";
+        vm.SaveCommand.Execute(null);                    // the error replaces the warning
+
+        vm.TimeInput = "10:00";
+        vm.SaveCommand.Execute(null);
+
+        Assert.Empty(applied);
+        Assert.NotNull(vm.SkipWarning);
+    }
+
+    [Fact]
+    public void A_new_edit_with_the_same_warning_text_raises_it_again()
+    {
+        // 10:00 Mondays and 10:00 Tuesdays lose the same date, so the text is identical.
+        var vm = WithLostSkip(out _);
+        vm.SaveCommand.Execute(null);
+        var raised = 0;
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(EditAlarmViewModel.SkipWarning) && vm.SkipWarning is not null) raised++;
+        };
+
+        vm.DayToggles.Single(t => t.Flag == Weekdays.Tue).IsSelected = true;
+        vm.SaveCommand.Execute(null);
+
+        Assert.Equal(1, raised);
+    }
+
+    [Fact]
+    public void Changing_the_edit_after_the_warning_warns_again_or_clears_it()
+    {
+        var vm = WithLostSkip(out var applied);
+        vm.SaveCommand.Execute(null);
+
+        vm.TimeInput = "11:00";   // loses nothing: saves at once
+        vm.SaveCommand.Execute(null);
+
+        Assert.Single(applied);
+        Assert.Null(vm.SkipWarning);
     }
 }

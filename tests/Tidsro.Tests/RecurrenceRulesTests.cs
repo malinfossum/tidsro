@@ -131,4 +131,14 @@ public class RecurrenceRulesTests
         var prev = RecurrenceRules.MostRecentOccurrence(now, Oslo, 10, 0, weekdays);
         Assert.Equal(new DateTimeOffset(2026, 3, 27, 10, 0, 0, TimeSpan.FromHours(1)), prev);
     }
+
+    [Fact]
+    public void ShortDates_names_up_to_three_days_and_counts_the_rest()
+    {
+        var mondays = Enumerable.Range(0, 5).Select(w => new DateOnly(2026, 1, 5).AddDays(7 * w)).ToList();
+
+        Assert.Equal("Mon 05.01", RecurrenceRules.ShortDates(mondays.Take(1).ToList()));
+        Assert.Equal("Mon 05.01, Mon 12.01, Mon 19.01", RecurrenceRules.ShortDates(mondays.Take(3).ToList()));
+        Assert.Equal("Mon 05.01, Mon 12.01, Mon 19.01 and 2 more", RecurrenceRules.ShortDates(mondays));
+    }
 }

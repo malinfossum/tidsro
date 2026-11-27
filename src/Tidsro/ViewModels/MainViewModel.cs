@@ -91,6 +91,39 @@ public partial class MainViewModel : ObservableObject
     private HashSet<(Guid Id, DateTimeOffset? EndsAt)> AgendaSignature() =>
         _scheduler.Alarms.Select(a => (a.Id, a.EndsAt)).ToHashSet();
 
+    // A skip also falls by itself: when a skipped time passes, EndsAt stays put but the row's
+    // "Skipped" cue must change. Rather than look up every alarm's skips on every tick, the rebuild
+    // stores the earliest skipped time, and the agenda holds while the clock stays between the last
+    // check and that time.
+    private DateTimeOffset? _earliestSkip;
+    private DateTimeOffset _skipsCheckedAt;
+
+    // Null when nothing is skipped.
+    private DateTimeOffset? EarliestSkip() => _scheduler.Alarms.Select(_scheduler.FirstSkipped).Min();
+
+    /// <summary>Record what the agenda is built from. Must run before the rows are built.</summary>
+    private void SnapshotAgenda()
+    {
+        _skipsCheckedAt = _scheduler.Now;
+        _agendaSignature = AgendaSignature();
+        _earliestSkip = EarliestSkip();
+    }
+
+    private bool AgendaIsStale()
+    {
+        if (!AgendaSignature().SetEquals(_agendaSignature)) return true;
+        var now = _scheduler.Now;
+        if (now >= _skipsCheckedAt && (_earliestSkip is null || now < _earliestSkip)) return false;
+
+        // The clock left the window. Forward past the earliest skip, that skip is gone. Back past
+        // the last check, a skip may come back, and it would land before the stored earliest. Either
+        // way the earliest moves if anything changed, and a time sync that changes nothing keeps
+        // the rows, and keyboard focus, in place.
+        if (EarliestSkip() != _earliestSkip) return true;
+        _skipsCheckedAt = now;
+        return false;
+    }
+
     private TimerItem? _pendingDelete;
     private TimeSpan? _pendingDeleteRemaining;   // non-null when the pending item is a canceled countdown
     [ObservableProperty] private string? _pendingDeleteLabel;
@@ -102,6 +135,10 @@ public partial class MainViewModel : ObservableObject
     public event EventHandler<string>? Announcement;
     /// <summary>Raised when the user picks an agenda row to edit, so the View opens the modal Edit-alarm dialog.</summary>
     public event EventHandler<AlarmItemViewModel>? EditAlarmRequested;
+
+    /// <summary>Raised after a row action rebuilt the agenda, which destroyed the focused control.
+    /// The view puts focus back on the same control in the same alarm's new row.</summary>
+    public event EventHandler<AlarmRowFocus>? AlarmRowFocusRequested;
     /// <summary>Raised before a bulk wipe so the View can close open completion cards — their Snooze
     /// would otherwise re-arm an alarm into the schedule we are emptying.</summary>
     public event EventHandler? ClosePopupsRequested;
@@ -342,7 +379,7 @@ public partial class MainViewModel : ObservableObject
         // or a recurring roll-forward (EndsAt). Otherwise leave the collection alone so focus and
         // announcements aren't disrupted every second. The same signature also catches an alarm armed
         // straight on the scheduler (Snooze/Restart-style, bypassing AlarmsChanged) for the Week tab.
-        if (!AgendaSignature().SetEquals(_agendaSignature)) RebuildAgenda();   // rebuilds the week too
+        if (AgendaIsStale()) RebuildAgenda();   // rebuilds the week too
 
         Timetable.RefreshForTick();
     }
@@ -396,26 +433,44 @@ public partial class MainViewModel : ObservableObject
         EditAlarmRequested?.Invoke(this, row);
     }
 
+    /// <summary>For the Edit dialog: the skipped dates this edit would ring on after all. Empty when
+    /// the alarm is gone or nothing is lost.</summary>
+    public IReadOnlyList<DateOnly> PreviewLostSkips(Guid id, int hour, int minute, Weekdays days) =>
+        _scheduler.Alarms.FirstOrDefault(a => a.Id == id) is { } existing
+            ? _scheduler.PreviewLostSkips(existing, hour, minute, days)
+            : [];
+
     // Called by the Edit-alarm dialog on Save. Replaces the alarm in place (same Id), normalizing the
     // label like the add path. Mirrors the former in-place edit branch.
     public void ApplyAlarmEdit(Guid id, int hour, int minute, Weekdays days, string? label, SoundChoice sound,
         bool warnBefore, int? endMinute = null)
     {
         var existing = _scheduler.Alarms.FirstOrDefault(a => a.Id == id);
+        // An edit re-arms from scratch, which on its own would switch an alarm that is Off back on and
+        // silently undo a skip. Carry both across. The skip travels as dates, so a new time or new days
+        // still pass over the days that were skipped, never just the same number of occurrences.
+        var enabled = existing?.IsEnabled ?? true;
+        var skippedDates = existing is null ? [] : _scheduler.SkippedDates(existing);
         if (existing is not null) _scheduler.RemoveAlarm(existing);
         var clean = CleanLabel(label);
+        TimerItem rearmed;
+        string announcement;
         if (days == Weekdays.None)
         {
             var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, _scheduler.Zone, hour, minute);
-            _scheduler.ArmClockAlarm(fireAt, clean, sound, id, warnBefore: warnBefore);
-            Announce($"Alarm updated for {fireAt:HH\\:mm}");
+            rearmed = _scheduler.ArmClockAlarm(fireAt, clean, sound, id, warnBefore: warnBefore, enabled: enabled);
+            announcement = $"Alarm updated for {fireAt:HH\\:mm}";
         }
         else
         {
-            _scheduler.ArmRecurringAlarm(hour, minute, days, clean, sound, id, warnBefore: warnBefore,
-                endMinute: endMinute);
-            Announce($"Alarm updated for {hour:00}:{minute:00}, {RecurrenceRules.CadenceLabel(days)}");
+            rearmed = _scheduler.ArmRecurringAlarm(hour, minute, days, clean, sound, id, warnBefore: warnBefore,
+                enabled: enabled, endMinute: endMinute);
+            announcement = $"Alarm updated for {hour:00}:{minute:00}, {RecurrenceRules.CadenceLabel(days)}";
         }
+        var lost = _scheduler.ReapplySkips(rearmed, skippedDates);
+        if (lost.Count > 0)
+            announcement += $". The skip no longer applies to {RecurrenceRules.ShortDates(lost)}";
+        Announce(announcement);
         RebuildAgenda();
         AlarmsChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -452,12 +507,12 @@ public partial class MainViewModel : ObservableObject
         Running.Clear();
         Alarms.Clear();
         MissedNote = null;
-        // ClearAllAlarms manages Alarms itself rather than going through RebuildAgenda — clearing a
-        // collection is cheaper than re-deriving an empty one — so it owes RebuildAgenda's two exit
+        // ClearAllAlarms manages Alarms itself rather than going through RebuildAgenda (clearing a
+        // collection is cheaper than re-deriving an empty one), so it owes RebuildAgenda's two other
         // duties by hand: re-project the week, and resync the signature so the next RefreshAll tick
         // does not mismatch against the now-empty scheduler and redo the whole thing 250 ms later.
         Timetable.Rebuild();
-        _agendaSignature = AgendaSignature();
+        SnapshotAgenda();
 
         OnPropertyChanged(nameof(IsDayEmpty));
         AlarmsChanged?.Invoke(this, EventArgs.Empty);
@@ -526,7 +581,43 @@ public partial class MainViewModel : ObservableObject
         RebuildAgenda();
         AlarmsChanged?.Invoke(this, EventArgs.Empty);   // the on/off change is persisted
         Announce($"Alarm at {row.TimeText} turned {(item.IsEnabled ? "on" : "off")}");
+        AlarmRowFocusRequested?.Invoke(this, new AlarmRowFocus(item.Id, AlarmRowAction.Toggle));
     }
+
+    [RelayCommand]
+    private void SkipAlarm(AlarmItemViewModel? row)
+    {
+        if (row is null) return;
+        CommitPendingDelete();                          // settle any outstanding undo first
+        var item = row.Item;
+        if (item.EndsAt is not { } skipped) return;
+        if (!_scheduler.SkipNext(item))
+        {
+            // Only the cap refuses a row that offers Skip; say so rather than ignore the press.
+            if (row.CanSkip) Announce($"Cannot skip more than {SchedulerService.MaxSkips} occurrences ahead");
+            return;
+        }
+        RebuildAgenda();
+        AlarmsChanged?.Invoke(this, EventArgs.Empty);   // the new next time is what gets saved
+        Announce($"Skipped the alarm at {row.TimeText} on {RecurrenceRules.ShortDate(skipped)}. Next: {DescribeNext(item)}");
+        AlarmRowFocusRequested?.Invoke(this, new AlarmRowFocus(item.Id, AlarmRowAction.Skip));
+    }
+
+    [RelayCommand]
+    private void UndoSkipAlarm(AlarmItemViewModel? row)
+    {
+        if (row is null) return;
+        CommitPendingDelete();
+        var item = row.Item;
+        if (!_scheduler.UndoSkip(item)) return;
+        RebuildAgenda();
+        AlarmsChanged?.Invoke(this, EventArgs.Empty);
+        Announce($"Skip undone. Next: {DescribeNext(item)}");
+        AlarmRowFocusRequested?.Invoke(this, new AlarmRowFocus(item.Id, AlarmRowAction.UndoSkip));
+    }
+
+    private static string DescribeNext(TimerItem item) =>
+        item.EndsAt is { } next ? $"{RecurrenceRules.ShortDate(next)} {next:HH\\:mm}" : "";
 
     [RelayCommand]
     private void UndoDelete()
@@ -610,9 +701,12 @@ public partial class MainViewModel : ObservableObject
     /// other; hanging the week off AlarmsChanged instead left DeleteAlarm — which does not raise it,
     /// because the record stays on disk through the undo window — drawing a deleted alarm for nine
     /// seconds, with RefreshAll's signature gate comparing equal on every tick in between because
-    /// this method resyncs it on its way out.</para></summary>
+    /// this method resyncs it.</para></summary>
     private void RebuildAgenda()
     {
+        // First: the clock is read before the rows, so a skip that passes mid-build is still the
+        // stored earliest one and the next tick rebuilds. Taken after, a row could keep that skip.
+        SnapshotAgenda();
         var today = _scheduler.Now.Date;
 
         // Enabled alarms first, in fire-time order.
@@ -636,10 +730,9 @@ public partial class MainViewModel : ObservableObject
             var a = ordered[i];
             var isTomorrow = a.EndsAt is { } e && e.Date != today;
             var isNext = i == 0 && a.IsEnabled;   // a disabled alarm is never "next"
-            Alarms.Add(new AlarmItemViewModel(a, isTomorrow, isNext));
+            Alarms.Add(new AlarmItemViewModel(a, isTomorrow, isNext, _scheduler.SkippedCount(a)));
         }
         OnPropertyChanged(nameof(IsDayEmpty));
         Timetable.Rebuild();
-        _agendaSignature = AgendaSignature();
     }
 }

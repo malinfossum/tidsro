@@ -15,6 +15,10 @@ public partial class EditAlarmViewModel : ObservableObject
     private readonly Guid _id;
     private readonly Action<Guid, int, int, Weekdays, string?, SoundChoice, bool, int?> _apply;
     private readonly ISoundService _sound;
+    private readonly Func<Guid, int, int, Weekdays, IReadOnlyList<DateOnly>> _lostSkips;
+    // The time and days the skip warning was shown for. A second Save of the same edit goes through;
+    // a different edit warns again with its own dates.
+    private string? _warnedFor;
 
     public SoundChoice[] SoundOptions { get; }
 
@@ -29,6 +33,10 @@ public partial class EditAlarmViewModel : ObservableObject
     [ObservableProperty] private RepeatOption _repeat;
     [ObservableProperty] private string? _error;
     [ObservableProperty] private bool _warnBefore;
+
+    /// <summary>Shown when Save would make the alarm ring on a day that is skipped. Not an error: a
+    /// second Save keeps the change.</summary>
+    [ObservableProperty] private string? _skipWarning;
 
     public bool ShowCustomDays => Repeat == RepeatOption.Custom;
 
@@ -47,7 +55,8 @@ public partial class EditAlarmViewModel : ObservableObject
 
     public EditAlarmViewModel(Guid id, string timeInput, string endInput, string label, SoundChoice sound,
         Weekdays days, bool warnBefore, SoundChoice[] soundOptions,
-        Action<Guid, int, int, Weekdays, string?, SoundChoice, bool, int?> apply, ISoundService soundSvc)
+        Action<Guid, int, int, Weekdays, string?, SoundChoice, bool, int?> apply, ISoundService soundSvc,
+        Func<Guid, int, int, Weekdays, IReadOnlyList<DateOnly>> lostSkips)
     {
         _id = id;
         _timeInput = timeInput;
@@ -61,6 +70,7 @@ public partial class EditAlarmViewModel : ObservableObject
         SoundOptions = soundOptions;
         _apply = apply;
         _sound = soundSvc;
+        _lostSkips = lostSkips;
     }
 
     // Custom uses the picked toggles; every other option is a fixed preset (Once -> None -> one-shot).
@@ -75,17 +85,40 @@ public partial class EditAlarmViewModel : ObservableObject
         var days = ResolveDays();
         // Custom with nothing ticked would otherwise fall through as a one-shot, silently.
         if (Repeat == RepeatOption.Custom && days == Weekdays.None)
-        { Error = "Pick at least one day."; return; }
+        { Error = "Pick at least one day."; ClearSkipWarning(); return; }
 
         // A one-shot has no end to give. Here a bad end is reported, because there is a person to
         // tell; everywhere else -- a hand-edited file, an import -- it is silently dropped.
         var endInput = days == Weekdays.None ? null : EndInput;
         if (!ClockTimeRules.TryParseWindow(TimeInput, endInput, out var h, out var m, out var end, out var err))
-        { Error = err; return; }
+        { Error = err; ClearSkipWarning(); return; }
 
         Error = null;
+
+        // A skip can only pass over the next occurrences in order, so new days or a new time can put an
+        // unskipped occurrence first and bring a skipped day back. Say so once, before it happens.
+        var lost = _lostSkips(_id, h, m, days);
+        // Keyed on the edit and the dates it brings back, so a second Save only goes through for the
+        // exact loss that was shown (the dates can move if the dialog stays open past a skipped time).
+        var key = $"{h}:{m}:{days}:{string.Join(",", lost)}";
+        if (lost.Count > 0 && _warnedFor != key)
+        {
+            _warnedFor = key;
+            SkipWarning = null;   // a new edit can lose the same dates: raise the warning (and its announcement) again
+            SkipWarning = $"This change brings back the skipped {(lost.Count == 1 ? "day" : "days")} " +
+                $"{RecurrenceRules.ShortDates(lost)}. Save again to keep it.";
+            return;
+        }
+        SkipWarning = null;
         _apply(_id, h, m, days, Label, SelectedSound, WarnBefore, end);
         CloseRequested?.Invoke(this, true);
+    }
+
+    // An error hides the warning, so the next Save of the same edit must show it again.
+    private void ClearSkipWarning()
+    {
+        SkipWarning = null;
+        _warnedFor = null;
     }
 
     [RelayCommand]

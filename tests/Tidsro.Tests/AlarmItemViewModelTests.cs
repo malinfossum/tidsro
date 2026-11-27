@@ -18,7 +18,7 @@ public class AlarmItemViewModelTests
     [Fact]
     public void Formats_time_label_and_sound()
     {
-        var vm = new AlarmItemViewModel(Alarm("Meeting prep", SoundChoice.Bell, 14, 0), isTomorrow: false, isNext: false);
+        var vm = new AlarmItemViewModel(Alarm("Meeting prep", SoundChoice.Bell, 14, 0), isTomorrow: false, isNext: false, skippedCount: 0);
         Assert.Equal("14:00", vm.TimeText);
         Assert.Equal("Meeting prep", vm.DisplayLabel);
         Assert.True(vm.HasSound);
@@ -28,7 +28,7 @@ public class AlarmItemViewModelTests
     [Fact]
     public void Shows_no_label_and_silent_when_unset()
     {
-        var vm = new AlarmItemViewModel(Alarm(null, SoundChoice.None, 9, 5), isTomorrow: false, isNext: false);
+        var vm = new AlarmItemViewModel(Alarm(null, SoundChoice.None, 9, 5), isTomorrow: false, isNext: false, skippedCount: 0);
         Assert.Equal("09:05", vm.TimeText);
         Assert.Equal("No label", vm.DisplayLabel);
         Assert.False(vm.HasSound);
@@ -38,7 +38,7 @@ public class AlarmItemViewModelTests
     [Fact]
     public void Accessible_name_includes_tomorrow_and_next_cues_as_text()
     {
-        var vm = new AlarmItemViewModel(Alarm("Lunch", SoundChoice.Bell, 14, 0), isTomorrow: true, isNext: true);
+        var vm = new AlarmItemViewModel(Alarm("Lunch", SoundChoice.Bell, 14, 0), isTomorrow: true, isNext: true, skippedCount: 0);
         Assert.Contains("14:00", vm.AccessibleName);
         Assert.Contains("tomorrow", vm.AccessibleName);
         Assert.Contains("Lunch", vm.AccessibleName);
@@ -61,7 +61,7 @@ public class AlarmItemViewModelTests
     public void Recurring_alarm_shows_its_cadence_tag_and_speaks_it()
     {
         var weekdays = Weekdays.Mon | Weekdays.Tue | Weekdays.Wed | Weekdays.Thu | Weekdays.Fri;
-        var vm = new AlarmItemViewModel(Recurring("Stand-up", weekdays, 7, 0), isTomorrow: true, isNext: false);
+        var vm = new AlarmItemViewModel(Recurring("Stand-up", weekdays, 7, 0), isTomorrow: true, isNext: false, skippedCount: 0);
         Assert.Equal("Weekdays", vm.CadenceText);          // cadence wins over the tomorrow cue
         Assert.Contains("weekdays", vm.AccessibleName);     // folded into the spoken name, lower-cased
     }
@@ -69,9 +69,9 @@ public class AlarmItemViewModelTests
     [Fact]
     public void One_shot_alarm_shows_tomorrow_or_nothing_as_its_cadence()
     {
-        var today = new AlarmItemViewModel(Alarm("Lunch", SoundChoice.Bell, 14, 0), isTomorrow: false, isNext: false);
+        var today = new AlarmItemViewModel(Alarm("Lunch", SoundChoice.Bell, 14, 0), isTomorrow: false, isNext: false, skippedCount: 0);
         Assert.Equal("", today.CadenceText);
-        var tomorrow = new AlarmItemViewModel(Alarm("Lunch", SoundChoice.Bell, 14, 0), isTomorrow: true, isNext: false);
+        var tomorrow = new AlarmItemViewModel(Alarm("Lunch", SoundChoice.Bell, 14, 0), isTomorrow: true, isNext: false, skippedCount: 0);
         Assert.Equal("tomorrow", tomorrow.CadenceText);
     }
 
@@ -80,7 +80,7 @@ public class AlarmItemViewModelTests
     {
         var item = Alarm("Stand-up", SoundChoice.Bell, 7, 0);
         item.WarnBefore = true;
-        var vm = new AlarmItemViewModel(item, isTomorrow: false, isNext: false);
+        var vm = new AlarmItemViewModel(item, isTomorrow: false, isNext: false, skippedCount: 0);
         Assert.True(vm.WarnBefore);
         Assert.Equal("5-min warning", vm.WarnText);
         Assert.Contains("warns 5 minutes before", vm.AccessibleName);
@@ -89,7 +89,7 @@ public class AlarmItemViewModelTests
     [Fact]
     public void Alarm_without_warning_has_an_empty_cue_and_no_warning_phrase()
     {
-        var vm = new AlarmItemViewModel(Alarm("Lunch", SoundChoice.Bell, 14, 0), isTomorrow: false, isNext: false);
+        var vm = new AlarmItemViewModel(Alarm("Lunch", SoundChoice.Bell, 14, 0), isTomorrow: false, isNext: false, skippedCount: 0);
         Assert.False(vm.WarnBefore);
         Assert.Equal("", vm.WarnText);
         Assert.DoesNotContain("warns", vm.AccessibleName);
@@ -100,7 +100,7 @@ public class AlarmItemViewModelTests
     {
         var item = Alarm("Lunch", SoundChoice.Bell, 14, 0);
         item.IsEnabled = false;
-        var vm = new AlarmItemViewModel(item, isTomorrow: false, isNext: false);
+        var vm = new AlarmItemViewModel(item, isTomorrow: false, isNext: false, skippedCount: 0);
         Assert.False(vm.IsEnabled);
         Assert.Contains("off", vm.AccessibleName);
     }
@@ -108,7 +108,7 @@ public class AlarmItemViewModelTests
     [Fact]
     public void Enabled_alarm_has_no_off_cue_and_exposes_a_toggle_label()
     {
-        var vm = new AlarmItemViewModel(Alarm("Lunch", SoundChoice.Bell, 14, 0), isTomorrow: false, isNext: false);
+        var vm = new AlarmItemViewModel(Alarm("Lunch", SoundChoice.Bell, 14, 0), isTomorrow: false, isNext: false, skippedCount: 0);
         Assert.True(vm.IsEnabled);
         Assert.DoesNotContain("off", vm.AccessibleName);
         Assert.Equal("Alarm at 14:00", vm.ToggleLabel);
@@ -129,7 +129,7 @@ public class AlarmItemViewModelTests
     public void A_recurring_row_with_an_end_reads_as_a_range()
     {
         var vm = new AlarmItemViewModel(
-            Block(9, 0, 630, Weekdays.Mon | Weekdays.Wed), isTomorrow: false, isNext: false);
+            Block(9, 0, 630, Weekdays.Mon | Weekdays.Wed), isTomorrow: false, isNext: false, skippedCount: 0);
 
         Assert.Equal("09:00–10:30", vm.RangeText);
         Assert.Equal("Mon Wed", vm.CadenceText);
@@ -138,7 +138,7 @@ public class AlarmItemViewModelTests
     [Fact]
     public void An_alarm_with_no_end_still_reads_as_one_time()
     {
-        var vm = new AlarmItemViewModel(Block(9, 0, null, Weekdays.Mon), isTomorrow: false, isNext: false);
+        var vm = new AlarmItemViewModel(Block(9, 0, null, Weekdays.Mon), isTomorrow: false, isNext: false, skippedCount: 0);
 
         Assert.Equal("09:00", vm.RangeText);
     }
@@ -146,7 +146,7 @@ public class AlarmItemViewModelTests
     [Fact]
     public void A_block_speaks_its_end_but_the_command_labels_stay_on_the_start()
     {
-        var vm = new AlarmItemViewModel(Block(9, 0, 630, Weekdays.Mon), isTomorrow: false, isNext: false);
+        var vm = new AlarmItemViewModel(Block(9, 0, 630, Weekdays.Mon), isTomorrow: false, isNext: false, skippedCount: 0);
 
         Assert.Contains("Alarm at 09:00 to 10:30", vm.AccessibleName);
         Assert.Equal("Edit alarm at 09:00", vm.EditLabel);     // a command names the alarm, not its length

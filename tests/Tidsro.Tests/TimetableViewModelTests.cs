@@ -33,6 +33,81 @@ public class TimetableViewModelTests
         Assert.Single(vm.Week.Days.Single(d => d.Day == Weekdays.Mon).Entries);
     }
 
+    // The clock starts Thursday 01.01.2026 08:00. Once a skipped 09:00 start has passed, the
+    // alarm's state looks the same as one that rang, so the view model has to remember the skip.
+    private static TimetableEntry Thursday(TimetableViewModel vm) =>
+        vm.Week.Days.Single(d => d.Day == Weekdays.Thu).Entries.Single();
+
+    [Fact]
+    public void A_block_skipped_today_stays_unlit_after_its_start()
+    {
+        var (vm, scheduler, clock) = Build();
+        var alarm = scheduler.ArmRecurringAlarm(9, 0, Weekdays.Thu, "Lecture", SoundChoice.None, endMinute: 630);
+        Assert.True(scheduler.SkipNext(alarm));
+        vm.Rebuild();
+        Assert.True(Thursday(vm).IsSkipped);
+
+        clock.Now = clock.Now.AddMinutes(90);   // 09:30, inside the block
+        vm.Rebuild();                           // MainViewModel rebuilds when the skipped start passes
+
+        Assert.True(Thursday(vm).IsSkipped);
+        Assert.False(TimetableLayout.IsCurrent(Thursday(vm), isToday: true, vm.NowMinuteOfDay));
+    }
+
+    [Fact]
+    public void Undo_skip_before_the_start_lights_the_block_again()
+    {
+        var (vm, scheduler, clock) = Build();
+        var alarm = scheduler.ArmRecurringAlarm(9, 0, Weekdays.Thu, "Lecture", SoundChoice.None, endMinute: 630);
+        scheduler.SkipNext(alarm);
+        vm.Rebuild();
+        Assert.True(scheduler.UndoSkip(alarm));
+        vm.Rebuild();
+
+        clock.Now = clock.Now.AddMinutes(90);
+        vm.Rebuild();
+
+        Assert.False(Thursday(vm).IsSkipped);
+    }
+
+    [Fact]
+    public void A_skip_is_forgotten_when_the_day_changes()
+    {
+        var (vm, scheduler, clock) = Build();
+        var alarm = scheduler.ArmRecurringAlarm(9, 0, Weekdays.Thu, "Lecture", SoundChoice.None, endMinute: 630);
+        scheduler.SkipNext(alarm);
+        vm.Rebuild();
+        clock.Now = clock.Now.AddMinutes(90);
+        vm.Rebuild();
+
+        clock.Now = clock.Now.AddDays(7);       // next Thursday 09:30: the occurrence that rings
+        vm.RefreshForTick();
+
+        Assert.False(Thursday(vm).IsSkipped);
+    }
+
+    [Fact]
+    public void A_skip_on_a_daylight_saving_day_matches_the_block_after_the_switch()
+    {
+        // Oslo springs forward at 02:00 on Sunday 29.03.2026. The midnight rebuild runs at +01:00,
+        // but the 08:00 block starts at +02:00, so the remembered start must keep its own offset.
+        var oslo = TimeZoneInfo.FindSystemTimeZoneById("Europe/Oslo");
+        var clock = new FakeClock { Zone = oslo, Now = new DateTimeOffset(2026, 3, 28, 12, 0, 0, TimeSpan.FromHours(1)) };
+        var scheduler = new SchedulerService(clock);
+        var vm = new TimetableViewModel(scheduler);
+        var alarm = scheduler.ArmRecurringAlarm(8, 0, Weekdays.Sun, "Run", SoundChoice.None, endMinute: 540);
+        scheduler.SkipNext(alarm);
+        vm.Rebuild();
+
+        clock.Now = new DateTimeOffset(2026, 3, 29, 0, 0, 0, TimeSpan.FromHours(1));
+        vm.RefreshForTick();                                    // the midnight rebuild, before the switch
+        clock.Now = new DateTimeOffset(2026, 3, 29, 8, 30, 0, TimeSpan.FromHours(2));
+        vm.Rebuild();
+
+        var sunday = vm.Week.Days.Single(d => d.Day == Weekdays.Sun).Entries.Single();
+        Assert.True(sunday.IsSkipped);
+    }
+
     [Fact]
     public void RefreshForTick_does_not_reproject_within_the_same_day()
     {
