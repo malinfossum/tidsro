@@ -112,6 +112,25 @@ public class MainViewModelTests
         Assert.Equal(SoundChoice.Bell, sound.LastPlayed);
     }
 
+    // My sound can be a song minutes long: a new preview replaces the last one, and hiding the
+    // window to the tray ends it.
+    [Fact]
+    public void A_new_preview_or_hiding_the_window_stops_the_last_preview()
+    {
+        var vm = New(SoundChoice.None, out _, out _, out var sound);
+        vm.SelectedSound = SoundChoice.Bell;
+        vm.PreviewSoundCommand.Execute(null);
+        var first = sound.LastPlayId;
+        vm.AlarmSound = SoundChoice.Marimba;
+        vm.PreviewAlarmSoundCommand.Execute(null);
+        var second = sound.LastPlayId;
+
+        vm.StopPreview();
+        vm.StopPreview();
+
+        Assert.Equal([first, second], sound.Stopped);
+    }
+
     [Fact]
     public void Preview_is_disabled_when_the_sound_is_silent()
     {

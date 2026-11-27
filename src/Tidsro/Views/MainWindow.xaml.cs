@@ -158,6 +158,7 @@ public partial class MainWindow : Window
     {
         e.Cancel = true;
         SavePlacement();
+        _vm.StopPreview();   // a previewed song does not play on in the tray
         Hide();
     }
 
