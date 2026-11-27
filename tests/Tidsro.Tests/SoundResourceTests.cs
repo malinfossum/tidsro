@@ -36,6 +36,24 @@ public class SoundResourceTests
         Assert.True(stream!.Length > 0);
     }
 
+    // Embedded is not the same as playable: SoundPlayer needs PCM inside the RIFF container, and
+    // Load() parses the format without needing a speaker. This is the check that a chime still
+    // plays after any change to how sounds are handled.
+    [Theory]
+    [InlineData(SoundChoice.SoftChime)]
+    [InlineData(SoundChoice.Marimba)]
+    [InlineData(SoundChoice.Bell)]
+    [InlineData(SoundChoice.PianoJingle)]
+    [InlineData(SoundChoice.ElectricPianoJingle)]
+    [InlineData(SoundChoice.BellJingle)]
+    public void Each_chime_loads_in_SoundPlayer(SoundChoice choice)
+    {
+        using var stream = App.GetManifestResourceStream(SoundService.ResourceNameFor(choice)!)!;
+        using var player = new System.Media.SoundPlayer(stream);
+
+        player.Load();   // throws InvalidOperationException on a wave SoundPlayer cannot play
+    }
+
     // Regression: PianoJingle and ElectricPianoJingle both resolved to Electric-Piano-Jingle.wav,
     // because the lookup matched EndsWith("Piano-Jingle.wav") — a suffix of the electric file's name.
     [Fact]
