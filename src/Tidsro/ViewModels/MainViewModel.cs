@@ -93,22 +93,38 @@ public partial class MainViewModel : ObservableObject
 
     // A skip also falls by itself: when a skipped time passes, EndsAt stays put but the row's
     // "Skipped" cue must change. Rather than look up every alarm's skips on every tick, the rebuild
-    // stores the earliest skipped time and the tick only compares the clock with it. A clock that
-    // stepped back can add a skipped time before that one, so it rebuilds too.
+    // stores the earliest skipped time and the tick only compares the clock with it.
     private DateTimeOffset? _nextSkipPasses;
     private DateTimeOffset _agendaBuiltAt;
 
+    // Null when nothing is skipped.
+    private DateTimeOffset? EarliestSkip() => _scheduler.Alarms.Select(_scheduler.FirstSkipped).Min();
+
+    /// <summary>Record what the agenda is built from. Call it BEFORE the rows are built: the clock is
+    /// read first, so a skipped time that passes while the rows are built is still the stored next
+    /// one, and the next tick rebuilds once more. Taken after the rows, the snapshot could already
+    /// point past a skip the rows still count, and the row would keep it until the next skip.</summary>
     private void SnapshotAgenda()
     {
-        _agendaSignature = AgendaSignature();
         _agendaBuiltAt = _scheduler.Now;
-        _nextSkipPasses = _scheduler.Alarms.Select(_scheduler.FirstSkipped).Min();   // null when nothing is skipped
+        _agendaSignature = AgendaSignature();
+        _nextSkipPasses = EarliestSkip();
     }
 
     private bool AgendaIsStale()
     {
         var now = _scheduler.Now;
-        return now >= _nextSkipPasses || now < _agendaBuiltAt || !AgendaSignature().SetEquals(_agendaSignature);
+        if (now >= _nextSkipPasses || !AgendaSignature().SetEquals(_agendaSignature)) return true;
+        if (now >= _agendaBuiltAt) return false;
+
+        // The clock stepped back, which can bring back skipped times. Most steps are a time sync
+        // moving a second or so and bring back none, and a rebuild would drop keyboard focus for
+        // nothing. A skip that comes back lies between the new now and the last build, so before
+        // the stored earliest one: comparing the earliest (on this rare path, where the cost is
+        // fine) is enough to see whether any came back.
+        if (EarliestSkip() != _nextSkipPasses) return true;
+        _agendaBuiltAt = now;
+        return false;
     }
 
     private TimerItem? _pendingDelete;
@@ -494,8 +510,8 @@ public partial class MainViewModel : ObservableObject
         Running.Clear();
         Alarms.Clear();
         MissedNote = null;
-        // ClearAllAlarms manages Alarms itself rather than going through RebuildAgenda — clearing a
-        // collection is cheaper than re-deriving an empty one — so it owes RebuildAgenda's two exit
+        // ClearAllAlarms manages Alarms itself rather than going through RebuildAgenda (clearing a
+        // collection is cheaper than re-deriving an empty one), so it owes RebuildAgenda's two other
         // duties by hand: re-project the week, and resync the signature so the next RefreshAll tick
         // does not mismatch against the now-empty scheduler and redo the whole thing 250 ms later.
         Timetable.Rebuild();
@@ -688,9 +704,10 @@ public partial class MainViewModel : ObservableObject
     /// other; hanging the week off AlarmsChanged instead left DeleteAlarm — which does not raise it,
     /// because the record stays on disk through the undo window — drawing a deleted alarm for nine
     /// seconds, with RefreshAll's signature gate comparing equal on every tick in between because
-    /// this method resyncs it on its way out.</para></summary>
+    /// this method resyncs it.</para></summary>
     private void RebuildAgenda()
     {
+        SnapshotAgenda();   // first, so a skip passing mid-build is caught by the next tick
         var today = _scheduler.Now.Date;
 
         // Enabled alarms first, in fire-time order.
@@ -718,6 +735,5 @@ public partial class MainViewModel : ObservableObject
         }
         OnPropertyChanged(nameof(IsDayEmpty));
         Timetable.Rebuild();
-        SnapshotAgenda();
     }
 }

@@ -447,6 +447,42 @@ public class SkipNextViewModelTests
     }
 
     [Fact]
+    public void A_small_step_back_that_changes_no_skip_leaves_the_rows_alone()
+    {
+        // A time sync after resume moves the clock back a second or so. Rebuilding for it would drop
+        // keyboard focus from the row the user is on.
+        var vm = WithDailyTalk(out var clock, out _);
+        vm.SkipAlarmCommand.Execute(vm.Alarms[0]);
+        var row = vm.Alarms[0];
+
+        clock.Now -= TimeSpan.FromSeconds(1);
+        vm.RefreshAll();
+        clock.Now += TimeSpan.FromMilliseconds(250);
+        vm.RefreshAll();
+
+        Assert.Same(row, vm.Alarms[0]);
+    }
+
+    [Fact]
+    public void A_step_back_counts_a_skip_it_brings_back_on_that_alarm_only()
+    {
+        // Stepping back to 07:00 brings back Gym's Thu 08:00 but none of Talk's occurrences.
+        var vm = WithDailyTalk(out var clock, out _);
+        vm.AlarmTimeInput = "08:00";
+        vm.AlarmLabel = "Gym";
+        vm.AlarmRepeat = RepeatOption.Daily;
+        vm.AddAlarmCommand.Execute(null);
+        vm.SkipAlarmCommand.Execute(vm.Alarms.Single(r => r.Item.Label == "Talk"));
+        vm.SkipAlarmCommand.Execute(vm.Alarms.Single(r => r.Item.Label == "Gym"));
+
+        clock.Now = new DateTimeOffset(2026, 1, 1, 7, 0, 0, TimeSpan.Zero);
+        vm.RefreshAll();
+
+        Assert.Equal("2 skipped, next Sat 03.01", vm.Alarms.Single(r => r.Item.Label == "Gym").SkipText);
+        Assert.Equal("Skipped, next Fri 02.01", vm.Alarms.Single(r => r.Item.Label == "Talk").SkipText);
+    }
+
+    [Fact]
     public void A_tick_with_a_skip_still_ahead_leaves_the_rows_alone()
     {
         // Rebuilding replaces every row, which drops keyboard focus and re-announces the list.

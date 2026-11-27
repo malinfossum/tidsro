@@ -110,8 +110,9 @@ public sealed class SchedulerService
         return skipped.Count > MaxSkips ? [] : skipped.Select(LocalDate).ToList();
     }
 
-    /// <summary>The first occurrence the alarm passes over, or null. Cheap enough for every tick: it
-    /// changes exactly when a skipped occurrence's time goes by, which is when the row must change.</summary>
+    /// <summary>The first occurrence the alarm passes over, or null. It changes exactly when a skipped
+    /// occurrence's time goes by, which is when the row must change. The agenda reads it once per
+    /// rebuild and the tick compares the clock with the stored result, so keep it off the tick.</summary>
     public DateTimeOffset? FirstSkipped(TimerItem alarm) =>
         SkippedOccurrences(alarm, 1) is [var first] ? first : null;
 

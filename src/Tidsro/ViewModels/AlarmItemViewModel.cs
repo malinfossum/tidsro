@@ -7,7 +7,7 @@ public enum AlarmRowAction { Toggle, Skip, UndoSkip }
 
 public sealed record AlarmRowFocus(Guid AlarmId, AlarmRowAction Action);
 
-/// <summary>One row in the "Your day" agenda. Presentation only — the parent owns edit/delete.</summary>
+/// <summary>One row in the "Your day" agenda. Presentation only: the parent owns edit and delete.</summary>
 public sealed class AlarmItemViewModel
 {
     public TimerItem Item { get; }
