@@ -30,6 +30,7 @@ public class Dlg {
   [DllImport("user32.dll")] static extern bool AttachThreadInput(int a, int b, bool attach);
   [DllImport("user32.dll")] static extern bool BringWindowToTop(IntPtr h);
   [DllImport("kernel32.dll")] static extern int GetCurrentThreadId();
+  public static bool InFront(IntPtr h) { return GetForegroundWindow() == h; }
   public static void Front(IntPtr h) {
     int ignored;
     var me = GetCurrentThreadId();
@@ -57,6 +58,11 @@ for ($i = 0; $i -lt 40 -and $h -eq [IntPtr]::Zero; $i++) {
     if ($h -eq [IntPtr]::Zero) { Start-Sleep -Milliseconds 250 }
 }
 if ($h -eq [IntPtr]::Zero) { throw "no file dialog open in pid $ProcessId" }
-[Dlg]::Front($h)
-Start-Sleep -Milliseconds 700
-Write-Host "fronted dialog $($h.ToInt64()) in pid $ProcessId"
+# Checked and retried: another app can take the foreground back between the call and the keystroke.
+for ($try = 0; $try -lt 5; $try++) {
+    [Dlg]::Front($h)
+    Start-Sleep -Milliseconds 700
+    if ([Dlg]::InFront($h)) { break }
+}
+if (-not [Dlg]::InFront($h)) { Write-Host "dialog $($h.ToInt64()) in pid $ProcessId is still not in front" }
+else { Write-Host "fronted dialog $($h.ToInt64()) in pid $ProcessId" }
