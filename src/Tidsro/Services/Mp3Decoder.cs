@@ -18,15 +18,17 @@ internal static class Mp3Decoder
     private const int FramesPerChunk = 32;
 
     /// <summary>The decoded WAV file, or null when <paramref name="mp3"/> is not an MP3, is longer
-    /// than <paramref name="maxLength"/>, or cannot be decoded on this machine.</summary>
-    public static byte[]? ToWav(ReadOnlySpan<byte> mp3, TimeSpan maxLength)
+    /// than <paramref name="maxLength"/>, or cannot be decoded on this machine. Returned as a slice
+    /// of the buffer it was decoded into, so a long file is not copied once more on the way out.
+    /// <paramref name="outputChunk"/> shrinks the codec's output buffer; internal for tests.</summary>
+    public static ReadOnlyMemory<byte>? ToWav(ReadOnlySpan<byte> mp3, TimeSpan maxLength, int? outputChunk = null)
     {
         var stream = Mp3Frames.Find(mp3);
         if (stream is null || stream.Duration > maxLength) return null;
-        return Decode(mp3, stream);
+        return Decode(mp3, stream, outputChunk);
     }
 
-    private static byte[]? Decode(ReadOnlySpan<byte> mp3, Mp3Stream stream)
+    private static ReadOnlyMemory<byte>? Decode(ReadOnlySpan<byte> mp3, Mp3Stream stream, int? outputChunk)
     {
         var source = new MpegLayer3WaveFormat
         {
@@ -71,6 +73,7 @@ internal static class Mp3Decoder
 
             if (acmStreamSize(acm, srcSize, out var dstSize, AcmStreamSizeSource) != 0 || dstSize <= 0)
                 return null;
+            if (outputChunk is { } chunk) dstSize = Math.Min(dstSize, chunk);
 
             src = Marshal.AllocHGlobal(srcSize);
             dst = Marshal.AllocHGlobal(dstSize);
@@ -100,13 +103,17 @@ internal static class Mp3Decoder
             var pending = 0;   // bytes the codec left unread at the front of src
             var flags = AcmConvertStart | AcmConvertBlockAlign;
             var rounds = 0;
-            while (frame < stream.Frames.Count || pending > 0)
+            var maxRounds = 2 * stream.Frames.Count + 64;
+            while (true)
             {
-                if (++rounds > stream.Frames.Count + 16) return null;   // a codec that never drains
+                if (++rounds > maxRounds) return null;   // a codec that never drains
 
-                // Top up src with whole frames, after whatever the codec did not use last time.
+                // Top up src with whole frames, after whatever the codec did not use last time. At
+                // most FramesPerChunk at a time, so one round's audio fits the output buffer even
+                // when a variable-bitrate file packs many small frames into the source buffer.
                 var filled = pending;
-                while (frame < stream.Frames.Count && filled + stream.Frames[frame].Length <= srcSize)
+                for (var added = 0; added < FramesPerChunk && frame < stream.Frames.Count
+                                    && filled + stream.Frames[frame].Length <= srcSize; added++)
                 {
                     var f = stream.Frames[frame++];
                     mp3.Slice(f.Offset, f.Length).CopyTo(staging);
@@ -118,7 +125,11 @@ internal static class Mp3Decoder
                 if (last) flags = (flags & ~AcmConvertBlockAlign) | AcmConvertEnd;
 
                 SetInt(header, nameof(AcmStreamHeader.cbSrcLength), filled);
-                if (acmStreamConvert(acm, header, flags) != 0) return null;
+                if (acmStreamConvert(acm, header, flags) != 0)
+                {
+                    if (last && filled == 0) break;   // a codec that will not be asked to flush twice
+                    return null;
+                }
                 flags &= ~AcmConvertStart;
 
                 var used = GetInt(header, nameof(AcmStreamHeader.cbSrcLengthUsed));
@@ -130,13 +141,21 @@ internal static class Mp3Decoder
                 }
 
                 pending = filled - used;
-                if (last && (used == 0 || pending == 0)) break;   // drained, or the codec will take no more
-                if (used == 0 && produced == 0) return null;      // stuck: a stream the codec will not read
-                if (pending > 0)
+                if (pending > 0 && used > 0)
                 {
                     Marshal.Copy(src + used, staging, 0, pending);
                     Marshal.Copy(staging, 0, src, pending);
                 }
+
+                if (last)
+                {
+                    // A full output buffer can mean the codec still holds decoded audio it had no
+                    // room for, so keep asking until a call comes back short. Without this the last
+                    // half second of a long file went missing.
+                    if (produced < dstSize && (pending == 0 || used == 0)) break;
+                    continue;
+                }
+                if (used == 0 && produced == 0) return null;   // stuck: a stream the codec will not read
             }
 
             // A truncated last frame can leave half a sample; WAV data must be whole blocks.
@@ -145,8 +164,7 @@ internal static class Mp3Decoder
 
             var wav = output.GetBuffer();
             WriteHeader(wav, pcmLength, stream.SampleRate, stream.Channels);
-            var total = HeaderSize + pcmLength;
-            return wav.Length == total ? wav : wav[..total];
+            return new ReadOnlyMemory<byte>(wav, 0, HeaderSize + pcmLength);
         }
         catch (Exception ex) when (ex is DllNotFoundException or EntryPointNotFoundException)
         {

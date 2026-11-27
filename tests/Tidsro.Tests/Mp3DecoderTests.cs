@@ -10,10 +10,13 @@ public class Mp3DecoderTests
 {
     private static readonly TimeSpan Plenty = TimeSpan.FromMinutes(5);
 
+    private static byte[]? Decode(byte[] mp3, int? outputChunk = null)
+        => Mp3Decoder.ToWav(mp3, Plenty, outputChunk)?.ToArray();
+
     [Fact]
     public void The_tone_decodes_to_a_pcm_wav_of_the_same_rate_channels_and_length()
     {
-        var wav = Mp3Decoder.ToWav(Mp3FramesTests.Tone(), Plenty);
+        var wav = Decode(Mp3FramesTests.Tone());
 
         Assert.NotNull(wav);
         Assert.Equal("RIFF"u8.ToArray(), wav![..4]);
@@ -35,7 +38,7 @@ public class Mp3DecoderTests
     [Fact]
     public void The_decoded_audio_is_the_tone()
     {
-        var wav = Mp3Decoder.ToWav(Mp3FramesTests.Tone(), Plenty)!;
+        var wav = Decode(Mp3FramesTests.Tone())!;
         short Sample(int i) => BinaryPrimitives.ReadInt16LittleEndian(wav.AsSpan(44 + i * 2));
         var count = (wav.Length - 44) / 2;
 
@@ -52,7 +55,7 @@ public class Mp3DecoderTests
 
     [Fact]
     public void The_result_passes_the_checks_SoundPlayer_makes_before_playing()
-        => Assert.True(WaveFile.IsPlayable(Mp3Decoder.ToWav(Mp3FramesTests.Tone(), Plenty)!));
+        => Assert.True(WaveFile.IsPlayable(Decode(Mp3FramesTests.Tone())));
 
     // Most real files are stereo; the second fixture is a 1 s, 440 Hz stereo tone at 48 kHz, 128 kbps.
     [Fact]
@@ -60,7 +63,7 @@ public class Mp3DecoderTests
     {
         var mp3 = File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "Fixtures", "test-tone-stereo.mp3"));
 
-        var wav = Mp3Decoder.ToWav(mp3, Plenty)!;
+        var wav = Decode(mp3)!;
 
         Assert.Equal(2, BinaryPrimitives.ReadInt16LittleEndian(wav.AsSpan(22)));
         Assert.Equal(48000, BinaryPrimitives.ReadInt32LittleEndian(wav.AsSpan(24)));
@@ -68,6 +71,28 @@ public class Mp3DecoderTests
         var seconds = BinaryPrimitives.ReadInt32LittleEndian(wav.AsSpan(40)) / (48000.0 * 4);
         Assert.InRange(seconds, 0.95, 1.1);
     }
+
+    // A variable-bitrate file can pack more frames into one input buffer than one output buffer
+    // holds, and the codec keeps the rest back until asked again. Squeezing the output buffer to a
+    // few frames forces that on the fixture: the tail must still come out, sample for sample.
+    [Theory]
+    [InlineData(4608)]   // two frames of mono audio
+    [InlineData(6912)]   // three
+    public void A_small_output_buffer_still_yields_every_sample(int outputChunk)
+    {
+        var whole = Decode(Mp3FramesTests.Tone())!;
+
+        var squeezed = Decode(Mp3FramesTests.Tone(), outputChunk);
+
+        Assert.NotNull(squeezed);
+        Assert.Equal(whole.Length, squeezed!.Length);
+        Assert.Equal(whole, squeezed);
+    }
+
+    // Never a shortened sound: an output buffer too small for one frame is refused outright.
+    [Fact]
+    public void An_output_buffer_smaller_than_a_frame_gives_nothing_rather_than_part()
+        => Assert.Null(Decode(Mp3FramesTests.Tone(), outputChunk: 1000));
 
     [Fact]
     public void Something_that_is_not_an_mp3_gives_nothing()

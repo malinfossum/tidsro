@@ -48,6 +48,7 @@ public sealed class CustomSoundStore
     /// the two it is, not the extension. A refusal leaves any previously installed sound untouched.</summary>
     public string? Install(string sourcePath)
     {
+        LastRefusalWasWaveFormat = false;
         try
         {
             var info = new FileInfo(sourcePath);
@@ -60,8 +61,12 @@ public sealed class CustomSoundStore
 
             // A .wav SoundPlayer plays is copied as it is. Anything else, including a RIFF file
             // with MP3 audio inside, is tried as an .mp3 and refused when it is not one either.
-            var wav = WaveFile.IsPlayable(bytes) ? bytes : Mp3Decoder.ToWav(bytes, MaxLength);
-            if (wav is null || !WaveFile.IsPlayable(wav)) return null;
+            ReadOnlyMemory<byte>? decoded = WaveFile.IsPlayable(bytes) ? bytes : Mp3Decoder.ToWav(bytes, MaxLength);
+            if (decoded is not { } wav || !WaveFile.IsPlayable(wav.Span))
+            {
+                LastRefusalWasWaveFormat = WaveFile.IsWave(bytes);
+                return null;
+            }
 
             Directory.CreateDirectory(_folder);
 
@@ -70,7 +75,7 @@ public sealed class CustomSoundStore
             var tmp = Target + ".tmp";
             try
             {
-                File.WriteAllBytes(tmp, wav);
+                File.WriteAllBytes(tmp, wav.Span);
                 if (File.Exists(Target)) File.Replace(tmp, Target, null);
                 else File.Move(tmp, Target);
             }
@@ -88,6 +93,11 @@ public sealed class CustomSoundStore
             return null;   // choosing a sound must never fail louder than "that file won't do"
         }
     }
+
+    /// <summary>True when the last <see cref="Install"/> refused a real .wav container whose audio
+    /// format SoundPlayer cannot play (24-bit or "extensible" exports, for example), so the message can
+    /// say what to do about it.</summary>
+    public bool LastRefusalWasWaveFormat { get; private set; }
 
     /// <summary>Empty the slot. Harmless when there is nothing installed.</summary>
     public void Remove()
