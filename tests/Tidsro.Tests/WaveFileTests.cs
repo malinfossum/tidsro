@@ -44,6 +44,21 @@ public class WaveFileTests
     public void Other_formats_are_refused(short tag)
         => Assert.False(WaveFile.IsPlayable(Wave(tag)));
 
+    // The rule SoundPlayer applies to a stream (how the chimes play): a fmt chunk that is not 16
+    // bytes must be 18 plus the cbSize it declares.
+    [Theory]
+    [InlineData(18, 0, true)]
+    [InlineData(20, 2, true)]
+    [InlineData(20, 0, false)]
+    [InlineData(17, 0, false)]
+    public void A_longer_format_chunk_must_match_its_own_size_field(int fmtSize, short cbSize, bool playable)
+    {
+        var bytes = Wave(fmtSize: fmtSize);
+        if (fmtSize >= 18) BinaryPrimitives.WriteInt16LittleEndian(bytes.AsSpan(36), cbSize);
+
+        Assert.Equal(playable, WaveFile.IsPlayable(bytes));
+    }
+
     [Fact]
     public void A_riff_size_of_zero_is_refused()
         => Assert.False(WaveFile.IsPlayable(Wave(riffSize: 0)));

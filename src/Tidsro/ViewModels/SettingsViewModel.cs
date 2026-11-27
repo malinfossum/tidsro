@@ -109,7 +109,8 @@ public partial class SettingsViewModel : ObservableObject
         if (name is null)
         {
             // Never silent: otherwise the file looks accepted and every alarm using it goes quiet.
-            _sounds.ShowMessage("That file won't do", RefusalMessage);
+            _sounds.ShowMessage("That file won't do",
+                _sounds.Store.LastRefusalWasWaveFormat ? WaveFormatMessage : RefusalMessage);
             return;
         }
 
@@ -122,6 +123,12 @@ public partial class SettingsViewModel : ObservableObject
     internal static string RefusalMessage =>
         $"Tidsro couldn't use that file. It needs a .wav or .mp3 under {CustomSoundStore.MaxBytes / (1024 * 1024)} MB "
         + $"that Windows can play, and an .mp3 can be at most {CustomSoundStore.MaxLength.TotalMinutes:0} minutes long.";
+
+    /// <summary>For a .wav that is a real wave file in a format SoundPlayer cannot play, which says
+    /// nothing to the user who can play it everywhere else. internal for tests.</summary>
+    internal const string WaveFormatMessage =
+        "Windows can't play that .wav here: it is in a format such as 24-bit that Tidsro can't use. "
+        + "Export it again as a 16-bit .wav, or as an .mp3, and choose that.";
 
     // The preview this window started, so it can be stopped: My sound can run for minutes.
     private int _previewId;

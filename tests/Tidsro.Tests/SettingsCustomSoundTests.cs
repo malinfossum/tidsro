@@ -178,6 +178,23 @@ public class SettingsCustomSoundTests : IDisposable
         Assert.Equal([first, second], _sound.Stopped);
     }
 
+    // A 24-bit export plays everywhere else, so the plain refusal would tell the user nothing.
+    [Fact]
+    public void A_wav_in_a_format_Windows_cannot_play_here_says_how_to_export_it()
+    {
+        Directory.CreateDirectory(_dir);
+        var wav = Path.Combine(_dir, "24-bit.wav");
+        File.WriteAllBytes(wav, WaveFileTests.Wave(unchecked((short)0xFFFE)));
+        _dialogs.SoundPath = wav;
+
+        _vm.ChooseCustomSoundCommand.Execute(null);
+
+        var (title, message) = Assert.Single(_messages);
+        Assert.Equal("That file won't do", title);
+        Assert.Equal(SettingsViewModel.WaveFormatMessage, message);
+        Assert.Contains("16-bit", message);
+    }
+
     [Fact]
     public void The_refusal_states_the_limits_the_store_enforces()
     {
