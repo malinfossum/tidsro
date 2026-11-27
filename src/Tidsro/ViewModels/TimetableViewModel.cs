@@ -17,6 +17,13 @@ public sealed partial class TimetableViewModel : ObservableObject
     private readonly SchedulerService _scheduler;
     private DateOnly _builtFor;
 
+    // Today's skipped occurrences, as alarm id and start. A skip moves the alarm's next time on, so
+    // once a skipped start has passed, the alarm looks exactly like one that rang (ADR 0002 keeps no
+    // ledger). The Week tab must still not light that block, so the skip is remembered here for the
+    // rest of the day. A skip whose start is still ahead is re-read every rebuild, so Undo skip
+    // drops it. Limit: a skip made before Tidsro starts in the middle of the block is not known.
+    private readonly Dictionary<Guid, DateTimeOffset> _skippedToday = new();
+
     public TimetableViewModel(SchedulerService scheduler)
     {
         _scheduler = scheduler;
@@ -37,7 +44,21 @@ public sealed partial class TimetableViewModel : ObservableObject
     {
         var now = _scheduler.Now;
         _builtFor = DateOnly.FromDateTime(now.Date);
-        Week = TimetableLayout.Build(_scheduler.Alarms, now);
+        Week = TimetableLayout.Build(_scheduler.Alarms, now, SkippedToday(now));
+    }
+
+    private HashSet<(Guid Id, int Minute)> SkippedToday(DateTimeOffset now)
+    {
+        // Keep only skips whose start has passed today: those can no longer be undone.
+        foreach (var (id, start) in _skippedToday.ToList())
+            if (start > now || start.Date != now.Date) _skippedToday.Remove(id);
+
+        foreach (var alarm in _scheduler.Alarms)
+            if (_scheduler.FirstSkipped(alarm) is { } first
+                && first.ToOffset(now.Offset) is var local && local.Date == now.Date)
+                _skippedToday[alarm.Id] = local;
+
+        return _skippedToday.Select(p => (p.Key, MinuteOfDay(p.Value))).ToHashSet();
     }
 
     /// <summary>

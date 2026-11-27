@@ -8,7 +8,7 @@ public enum SegmentRole { Instant, Start, Middle, End, Whole }
 /// <summary>One alarm placed in the week. Layout data only — no pixels, no view concerns.</summary>
 public sealed record TimetableEntry(
     Guid Id, string? Label, string DayName, int Hour, int Minute, SoundChoice Sound, bool IsEnabled,
-    int SlotIndex, int? EndMinute, SegmentRole Role, int LaneIndex, int LaneCount)
+    int SlotIndex, int? EndMinute, SegmentRole Role, int LaneIndex, int LaneCount, bool IsSkipped = false)
 {
     public string TimeText => $"{Hour:D2}:{Minute:D2}";
 
@@ -274,7 +274,12 @@ public static class TimetableLayout
         (Weekdays.Sun, "Sunday"),
     };
 
-    public static TimetableWeek Build(IEnumerable<TimerItem>? alarms, DateTimeOffset now)
+    /// <param name="skippedToday">Today's skipped occurrences, as alarm id and start minute. The
+    /// matching entries in today's column are marked <see cref="TimetableEntry.IsSkipped"/>: still
+    /// drawn, never lit as current. The caller keeps the set, because once a skipped start has passed
+    /// the alarm's own state no longer shows the skip.</param>
+    public static TimetableWeek Build(IEnumerable<TimerItem>? alarms, DateTimeOffset now,
+        IReadOnlySet<(Guid Id, int Minute)>? skippedToday = null)
     {
         var usable = Collect(alarms);
         if (usable.Count == 0) return Empty(now);
@@ -318,7 +323,8 @@ public static class TimetableLayout
 
                     segments.Add(new TimetableEntry(
                         u.Id, u.Label, name, u.Minutes / 60, u.Minutes % 60, u.Sound, u.IsEnabled,
-                        s, u.EndMinute, role, u.LaneIndex, u.LaneCount));
+                        s, u.EndMinute, role, u.LaneIndex, u.LaneCount,
+                        flag == today && skippedToday?.Contains((u.Id, u.Minutes)) == true));
                 }
             }
             // The day lists each alarm once; the grid's rows get every segment.
@@ -514,14 +520,15 @@ public static class TimetableLayout
 
     /// <summary>Whether this entry is happening now. Start inclusive, end exclusive, so a block that
     /// ends at 10:30 stops being current the moment 10:30 arrives and the next one can take over
-    /// cleanly. An instant has no duration and is never current; a disabled block is never lit.
+    /// cleanly. An instant has no duration and is never current; a disabled block and a block skipped
+    /// today are never lit, because neither will ring.
     ///
     /// <para>Every segment of a block answers the same way, which is what makes a three-row bar light
     /// as one thing rather than a third of one. Pure, so the view can ask it per entry from a
     /// converter without putting the rule anywhere a test cannot reach.</para></summary>
     public static bool IsCurrent(TimetableEntry entry, bool isToday, int nowMinuteOfDay)
     {
-        if (!isToday || !entry.IsEnabled || entry.EndMinute is not { } end) return false;
+        if (!isToday || !entry.IsEnabled || entry.IsSkipped || entry.EndMinute is not { } end) return false;
 
         var start = entry.Hour * 60 + entry.Minute;
         return nowMinuteOfDay >= start && nowMinuteOfDay < end;

@@ -899,6 +899,34 @@ public class TimetableLayoutTests
     }
 
     [Fact]
+    public void A_block_skipped_today_is_drawn_but_never_lit()
+    {
+        var block = Block(9, 0, 630, Weekdays.Mon);
+        var skipped = new HashSet<(Guid, int)> { (block.Id, 540) };
+
+        var week = TimetableLayout.Build(new[] { block }, At(5, 8, 0), skipped);   // Monday
+        var entry = week.Rows[0].Cells[0].Entries[0];
+
+        Assert.True(entry.IsSkipped);
+        Assert.False(TimetableLayout.IsCurrent(entry, isToday: true, 600));
+    }
+
+    [Fact]
+    public void A_skip_marks_only_today_and_only_the_skipped_start()
+    {
+        var block = Block(9, 0, 630, Weekdays.Mon | Weekdays.Tue);
+        var other = Block(9, 0, 630, Weekdays.Mon, label: "Other");
+        var skipped = new HashSet<(Guid, int)> { (block.Id, 540), (other.Id, 600) };
+
+        var week = TimetableLayout.Build(new[] { block, other }, At(5, 8, 0), skipped);   // Monday
+
+        var monday = week.Days.Single(d => d.Day == Weekdays.Mon).Entries;
+        Assert.True(monday.Single(e => e.Id == block.Id).IsSkipped);
+        Assert.False(monday.Single(e => e.Id == other.Id).IsSkipped);    // skipped at another time
+        Assert.All(week.Days.Single(d => d.Day == Weekdays.Tue).Entries, e => Assert.False(e.IsSkipped));
+    }
+
+    [Fact]
     public void A_continuation_segment_is_current_too_so_the_whole_bar_lights()
     {
         var week = TimetableLayout.Build(new[] { Block(9, 0, 630, Weekdays.Mon) }, At(5, 8, 0));
