@@ -402,6 +402,65 @@ public class SkipNextViewModelTests
     }
 
     [Fact]
+    public void The_skipped_cue_goes_on_the_tick_that_reaches_the_skipped_time()
+    {
+        var vm = WithDailyTalk(out var clock, out _);
+        vm.SkipAlarmCommand.Execute(vm.Alarms[0]);
+
+        clock.Now = new DateTimeOffset(2026, 1, 1, 9, 59, 59, TimeSpan.Zero);
+        vm.RefreshAll();
+        Assert.True(vm.Alarms[0].IsSkipped);
+
+        clock.Now = new DateTimeOffset(2026, 1, 1, 10, 0, 0, TimeSpan.Zero);
+        vm.RefreshAll();
+        Assert.False(vm.Alarms[0].IsSkipped);
+    }
+
+    [Fact]
+    public void Each_skipped_time_that_passes_takes_one_off_the_count()
+    {
+        // The tick watches only the earliest skipped time, so the rebuild after it passes must pick
+        // up the next one, or the second skip would never fall.
+        var vm = WithDailyTalk(out var clock, out _);
+        vm.SkipAlarmCommand.Execute(vm.Alarms[0]);
+        vm.SkipAlarmCommand.Execute(vm.Alarms[0]);
+
+        clock.Now = new DateTimeOffset(2026, 1, 1, 10, 1, 0, TimeSpan.Zero);
+        vm.RefreshAll();
+        Assert.Equal("Skipped, next Sat 03.01", vm.Alarms[0].SkipText);
+
+        clock.Now = new DateTimeOffset(2026, 1, 2, 10, 1, 0, TimeSpan.Zero);
+        vm.RefreshAll();
+        Assert.False(vm.Alarms[0].IsSkipped);
+    }
+
+    [Fact]
+    public void A_clock_that_steps_back_counts_the_skipped_times_it_brings_back()
+    {
+        var vm = WithDailyTalk(out var clock, out _);
+        vm.SkipAlarmCommand.Execute(vm.Alarms[0]);
+
+        clock.Now = new DateTimeOffset(2025, 12, 31, 9, 0, 0, TimeSpan.Zero);
+        vm.RefreshAll();
+
+        Assert.Equal("2 skipped, next Fri 02.01", vm.Alarms[0].SkipText);
+    }
+
+    [Fact]
+    public void A_tick_with_a_skip_still_ahead_leaves_the_rows_alone()
+    {
+        // Rebuilding replaces every row, which drops keyboard focus and re-announces the list.
+        var vm = WithDailyTalk(out var clock, out _);
+        vm.SkipAlarmCommand.Execute(vm.Alarms[0]);
+        var row = vm.Alarms[0];
+
+        clock.Advance(TimeSpan.FromMinutes(30));
+        vm.RefreshAll();
+
+        Assert.Same(row, vm.Alarms[0]);
+    }
+
+    [Fact]
     public void Editing_a_skipped_alarm_keeps_the_skip()
     {
         var vm = WithDailyTalk(out _, out _);

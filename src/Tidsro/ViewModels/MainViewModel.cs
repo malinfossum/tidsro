@@ -87,12 +87,29 @@ public partial class MainViewModel : ObservableObject
 
     // Snapshot of (id, fire-time) the agenda was last built from. A recurring alarm advances its
     // EndsAt on firing without changing its id, so reconciling on ids alone would leave a stale row.
-    private HashSet<(Guid Id, DateTimeOffset? EndsAt, DateTimeOffset? FirstSkipped)> _agendaSignature = new();
-    // The first skipped occurrence is in the signature because a skip falls by itself: when that
-    // time passes, EndsAt stays put but the row's "Skipped" cue must change. It costs one occurrence
-    // lookup per alarm, so it stays cheap on every tick, unlike a full count.
-    private HashSet<(Guid Id, DateTimeOffset? EndsAt, DateTimeOffset? FirstSkipped)> AgendaSignature() =>
-        _scheduler.Alarms.Select(a => (a.Id, a.EndsAt, _scheduler.FirstSkipped(a))).ToHashSet();
+    private HashSet<(Guid Id, DateTimeOffset? EndsAt)> _agendaSignature = new();
+    private HashSet<(Guid Id, DateTimeOffset? EndsAt)> AgendaSignature() =>
+        _scheduler.Alarms.Select(a => (a.Id, a.EndsAt)).ToHashSet();
+
+    // A skip also falls by itself: when a skipped time passes, EndsAt stays put but the row's
+    // "Skipped" cue must change. Rather than look up every alarm's skips on every tick, the rebuild
+    // stores the earliest skipped time and the tick only compares the clock with it. A clock that
+    // stepped back can add a skipped time before that one, so it rebuilds too.
+    private DateTimeOffset? _nextSkipPasses;
+    private DateTimeOffset _agendaBuiltAt;
+
+    private void SnapshotAgenda()
+    {
+        _agendaSignature = AgendaSignature();
+        _agendaBuiltAt = _scheduler.Now;
+        _nextSkipPasses = _scheduler.Alarms.Select(_scheduler.FirstSkipped).Min();   // null when nothing is skipped
+    }
+
+    private bool AgendaIsStale()
+    {
+        var now = _scheduler.Now;
+        return now >= _nextSkipPasses || now < _agendaBuiltAt || !AgendaSignature().SetEquals(_agendaSignature);
+    }
 
     private TimerItem? _pendingDelete;
     private TimeSpan? _pendingDeleteRemaining;   // non-null when the pending item is a canceled countdown
@@ -349,7 +366,7 @@ public partial class MainViewModel : ObservableObject
         // or a recurring roll-forward (EndsAt). Otherwise leave the collection alone so focus and
         // announcements aren't disrupted every second. The same signature also catches an alarm armed
         // straight on the scheduler (Snooze/Restart-style, bypassing AlarmsChanged) for the Week tab.
-        if (!AgendaSignature().SetEquals(_agendaSignature)) RebuildAgenda();   // rebuilds the week too
+        if (AgendaIsStale()) RebuildAgenda();   // rebuilds the week too
 
         Timetable.RefreshForTick();
     }
@@ -482,7 +499,7 @@ public partial class MainViewModel : ObservableObject
         // duties by hand: re-project the week, and resync the signature so the next RefreshAll tick
         // does not mismatch against the now-empty scheduler and redo the whole thing 250 ms later.
         Timetable.Rebuild();
-        _agendaSignature = AgendaSignature();
+        SnapshotAgenda();
 
         OnPropertyChanged(nameof(IsDayEmpty));
         AlarmsChanged?.Invoke(this, EventArgs.Empty);
@@ -701,6 +718,6 @@ public partial class MainViewModel : ObservableObject
         }
         OnPropertyChanged(nameof(IsDayEmpty));
         Timetable.Rebuild();
-        _agendaSignature = AgendaSignature();
+        SnapshotAgenda();
     }
 }
