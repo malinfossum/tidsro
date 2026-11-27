@@ -54,4 +54,4 @@ Decisions behind the design live in [`adr/`](adr/).
 | **Schema version** | The number inside the data file that tells Tidsro which format it is reading. | `TidsroData.CurrentSchema` |
 | **Export / import** | A file with alarms and settings that can be moved to another machine. Import asks "Restore everything" or "Restore alarms only". | `DataTransferService`, `ImportChoice` |
 | **Clear data** | The Settings action that removes all alarms ("Clear all alarms"). | |
-| **My sound** | The one custom sound slot (a .wav, or an .mp3 decoded to .wav when it is chosen), next to the six built-in chimes (see [ADR 0003](adr/0003-my-sound-is-a-copy.md)). | `CustomSoundStore`, `SoundChoice` |
+| **My sound** | The one custom sound slot (a .wav, or an .mp3 decoded to .wav when it is chosen), next to the six built-in chimes (see [ADR 0003](adr/0003-my-sound-is-a-copy.md) and [ADR 0007](adr/0007-mp3-is-decoded-when-chosen.md)). | `CustomSoundStore`, `SoundChoice` |
