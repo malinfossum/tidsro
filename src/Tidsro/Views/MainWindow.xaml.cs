@@ -113,12 +113,14 @@ public partial class MainWindow : Window
         }
     }
 
-    // Guard against a saved position stranded off-screen by an unplugged monitor, a lower resolution,
+    // Guard against an imported position stranded off-screen by an unplugged monitor, a lower resolution,
     // or the gap beside a smaller monitor. Width is already the size this window is about to take, but
     // Windows shrinks a window wider than its maximum track size, so only that much title bar exists.
+    // This window is already shown, so WPF turns the new Left and Top into device pixels at the scale of
+    // the monitor it is on now, and the check has to use that scale too.
     private bool IsOnScreen(double left, double top) =>
         ScreenHelper.IsTitleBarOnScreen(left, top, Math.Min(Width, SystemParameters.MaximumWindowTrackWidth),
-                                        ScreenHelper.MonitorWorkAreas());
+                                        ScreenHelper.Monitors(), VisualTreeHelper.GetDpi(this).DpiScaleX);
 
     /// <summary>A collapsed panel cannot hold keyboard focus, so switching tabs while focus sits in
     /// the panel content — which Ctrl+Tab allows from anywhere in the window — drops focus to the
