@@ -1,6 +1,5 @@
 using System.Buffers.Binary;
 using System.IO;
-using System.Media;
 using Tidsro.Services;
 
 namespace Tidsro.Tests;
@@ -52,13 +51,8 @@ public class Mp3DecoderTests
     }
 
     [Fact]
-    public void SoundPlayer_accepts_the_result()
-    {
-        var wav = Mp3Decoder.ToWav(Mp3FramesTests.Tone(), Plenty)!;
-
-        using var player = new SoundPlayer(new MemoryStream(wav));
-        player.Load();
-    }
+    public void The_result_passes_the_checks_SoundPlayer_makes_before_playing()
+        => Assert.True(WaveFile.IsPlayable(Mp3Decoder.ToWav(Mp3FramesTests.Tone(), Plenty)!));
 
     // Most real files are stereo; the second fixture is a 1 s, 440 Hz stereo tone at 48 kHz, 128 kbps.
     [Fact]

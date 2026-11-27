@@ -7,7 +7,7 @@
     Opens Settings on a rig with an empty slot, asserts it says so, picks a .wav through the real
     Open dialog, and asserts the chosen name reaches both the window and data.json - then removes it
     and asserts the slot empties again. Then the same for an .mp3, which must arrive on disk as a
-    wave file SoundPlayer loads. Also asserts a bad file of each kind is refused rather than accepted
+    16-bit PCM wave file. Also asserts a bad file of each kind is refused rather than accepted
     and silent, which is the failure that would leave an alarm quiet with nothing on screen to say why.
 
     The suite proves the view-models; only this proves the window. It found two defects a green
@@ -61,7 +61,7 @@ New-Item -ItemType Directory -Force -Path (Split-Path $dataFile) | Out-Null
 $fixture | ConvertTo-Json -Depth 6 | Set-Content $dataFile -Encoding UTF8
 
 # Two files to offer it: a real chime under a name that proves the label comes from the source, and
-# a text file wearing a .wav extension, which stands in for an .mp3 renamed by hand.
+# a text file wearing a .wav extension: something that is not audio at all.
 $good = Join-Path $Root 'Kitchen Gong.wav'
 $bad  = Join-Path $Root 'not-really-audio.wav'
 Copy-Item (Join-Path $repo 'src\Tidsro\Assets\sounds\Bell-Jingle.wav') $good -Force
@@ -132,9 +132,12 @@ function Choose-File([string]$Path) {
     Start-Sleep -Seconds 3
 }
 
-# What SoundPlayer makes of the installed copy: the same Load() every alarm sound goes through.
-function Test-Playable([string]$Path) {
-    try { $p = [System.Media.SoundPlayer]::new($Path); $p.Load(); $p.Dispose(); $true } catch { $false }
+# The decoded copy has Tidsro's own 44-byte header, so its format tag sits at offset 20: 1 is PCM,
+# the format SoundPlayer plays. SoundPlayer.Load() is no test here; it accepts formats Play() refuses.
+function Test-Pcm([string]$Path) {
+    $b = [IO.File]::ReadAllBytes($Path)
+    $b.Length -gt 44 -and [Text.Encoding]::ASCII.GetString($b, 0, 4) -eq 'RIFF' -and
+        [Text.Encoding]::ASCII.GetString($b, 8, 4) -eq 'WAVE' -and [BitConverter]::ToInt16($b, 20) -eq 1
 }
 
 # The slot's state, read off the window: the file name, or the note that there is none. The value
@@ -220,9 +223,7 @@ try {
     Choose-File $goodMp3
     Expect ((Get-Slot $settings) -eq 'Morning Birds.mp3') 'the window names the chosen .mp3'
     Expect (Test-Path $installed) 'the .mp3 arrived as custom.wav'
-    $head = if (Test-Path $installed) { [Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($installed), 0, 4) } else { '' }
-    Expect ($head -eq 'RIFF') "the installed copy is wave audio (starts '$head')"
-    Expect ((Test-Path $installed) -and (Test-Playable $installed)) 'SoundPlayer loads the installed copy'
+    Expect ((Test-Path $installed) -and (Test-Pcm $installed)) 'the installed copy is PCM wave audio'
     Expect (Test-Path $goodMp3) 'the original .mp3 is still where it was'
     $saved = (Get-Content $dataFile -Raw | ConvertFrom-Json).Settings.CustomSoundName
     Expect ($saved -eq 'Morning Birds.mp3') "the .mp3 name reached data.json (got '$saved')"

@@ -147,10 +147,27 @@ public class CustomSoundStoreTests : IDisposable
 
         Assert.Equal("Morning Birds.mp3", name);
         Assert.True(_store.HasCustom);
-        var bytes = Installed(_store.FilePath!);
-        Assert.Equal("RIFF"u8.ToArray(), bytes[..4]);
-        using var player = new System.Media.SoundPlayer(_store.FilePath!);
-        player.Load();   // the same check every alarm sound passes
+        Assert.True(WaveFile.IsPlayable(Installed(_store.FilePath!)));   // the rules SoundPlayer plays by
+    }
+
+    // SoundPlayer.Load() accepts these, and Play() then refuses them, so they used to install and
+    // ring silently. A 24-bit export from an audio editor is the common case.
+    [Fact]
+    public void A_wav_in_a_format_SoundPlayer_cannot_play_is_refused()
+    {
+        Assert.Null(_store.Install(Write("24-bit.wav", WaveFileTests.Wave(unchecked((short)0xFFFE)))));
+        Assert.False(_store.HasCustom);
+    }
+
+    [Fact]
+    public void An_mp3_inside_a_wav_container_is_decoded_like_any_mp3()
+    {
+        var tone = Mp3FramesTests.Tone();
+        var wrapped = WaveFileTests.Wave(formatTag: 0x55, dataSize: tone.Length);
+        tone.CopyTo(wrapped, wrapped.Length - tone.Length);
+
+        Assert.Equal("wrapped.wav", _store.Install(Write("wrapped.wav", wrapped)));
+        Assert.True(WaveFile.IsPlayable(Installed(_store.FilePath!)));
     }
 
     // One slot, one fixed name, whatever the user picked: the decoded copy replaces the file the

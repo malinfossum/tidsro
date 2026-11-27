@@ -1,5 +1,4 @@
 using System.IO;
-using System.Media;
 
 namespace Tidsro.Services;
 
@@ -21,8 +20,8 @@ public sealed class CustomSoundStore
     public const int MaxBytes = 5 * 1024 * 1024;
 
     /// <summary>The longest .mp3 accepted. A low-bitrate recording fits under <see cref="MaxBytes"/>
-    /// yet decodes to a wave file many times that size; five minutes keeps the decoded copy near
-    /// 50 MB at most.</summary>
+    /// yet decodes to a wave file many times that size; five minutes keeps the decoded copy to about
+    /// 58 MB at most (48 kHz stereo).</summary>
     public static readonly TimeSpan MaxLength = TimeSpan.FromMinutes(5);
 
     private const string FileName = "custom.wav";
@@ -59,8 +58,10 @@ public sealed class CustomSoundStore
             var bytes = File.ReadAllBytes(sourcePath);
             if (bytes.Length == 0 || bytes.Length > MaxBytes) return null;
 
-            var wav = LooksLikeWav(bytes) ? bytes : Mp3Decoder.ToWav(bytes, MaxLength);
-            if (wav is null || !IsPlayable(wav)) return null;
+            // A .wav SoundPlayer plays is copied as it is. Anything else, including a RIFF file
+            // with MP3 audio inside, is tried as an .mp3 and refused when it is not one either.
+            var wav = WaveFile.IsPlayable(bytes) ? bytes : Mp3Decoder.ToWav(bytes, MaxLength);
+            if (wav is null || !WaveFile.IsPlayable(wav)) return null;
 
             Directory.CreateDirectory(_folder);
 
@@ -93,24 +94,5 @@ public sealed class CustomSoundStore
     {
         try { if (File.Exists(Target)) File.Delete(Target); }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { /* best effort */ }
-    }
-
-    // "RIFF" .... "WAVE": the twelve-byte container header. Cheap and deterministic. Anything
-    // without it is tried as an .mp3, and refused when it is not one either.
-    private static bool LooksLikeWav(ReadOnlySpan<byte> bytes)
-        => bytes.Length >= 12 && bytes[..4].SequenceEqual("RIFF"u8) && bytes[8..12].SequenceEqual("WAVE"u8);
-
-    // The header only proves the container. SoundPlayer needs PCM inside it, and an embed-style check
-    // has fooled this app before, so load it for real and let the failure speak. Load parses the
-    // format; it needs no audio device. A decoded .mp3 passes through here too.
-    private static bool IsPlayable(byte[] wav)
-    {
-        try
-        {
-            using var player = new SoundPlayer(new MemoryStream(wav, writable: false));
-            player.Load();
-            return true;
-        }
-        catch { return false; }
     }
 }

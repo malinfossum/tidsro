@@ -36,9 +36,9 @@ public class SoundResourceTests
         Assert.True(stream!.Length > 0);
     }
 
-    // Embedded is not the same as playable: SoundPlayer needs PCM inside the RIFF container, and
-    // Load() parses the format without needing a speaker. This is the check that a chime still
-    // plays after any change to how sounds are handled.
+    // Embedded is not the same as playable: SoundPlayer needs PCM (or ADPCM or float) inside the
+    // RIFF container. Load() does not check that, so this runs the same rules Play() does, without
+    // needing a speaker. It is the check that a chime still plays after any change to sound handling.
     [Theory]
     [InlineData(SoundChoice.SoftChime)]
     [InlineData(SoundChoice.Marimba)]
@@ -46,13 +46,26 @@ public class SoundResourceTests
     [InlineData(SoundChoice.PianoJingle)]
     [InlineData(SoundChoice.ElectricPianoJingle)]
     [InlineData(SoundChoice.BellJingle)]
-    public void Each_chime_loads_in_SoundPlayer(SoundChoice choice)
+    public void Each_chime_passes_the_checks_SoundPlayer_makes_before_playing(SoundChoice choice)
     {
         using var stream = App.GetManifestResourceStream(SoundService.ResourceNameFor(choice)!)!;
-        using var player = new System.Media.SoundPlayer(stream);
+        using var bytes = new MemoryStream();
+        stream.CopyTo(bytes);
 
-        player.Load();   // throws InvalidOperationException on a wave SoundPlayer cannot play
+        Assert.True(WaveFile.IsPlayable(bytes.ToArray()));
     }
+
+    [Fact]
+    public void Stopping_with_no_sound_started_is_harmless()
+    {
+        var svc = new SoundService(() => null);
+        svc.Stop(0);
+        svc.Stop(42);
+    }
+
+    [Fact]
+    public void A_custom_sound_with_no_file_starts_nothing()
+        => Assert.Equal(0, new SoundService(() => null).Play(SoundChoice.Custom));
 
     // Regression: PianoJingle and ElectricPianoJingle both resolved to Electric-Piano-Jingle.wav,
     // because the lookup matched EndsWith("Piano-Jingle.wav") — a suffix of the electric file's name.
