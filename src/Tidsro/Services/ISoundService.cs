@@ -13,4 +13,8 @@ public interface ISoundService
     /// A later sound is left alone, so closing an old card cannot cut off a newer alarm. Harmless
     /// when it has already finished.</summary>
     public void Stop(int playId);
+
+    /// <summary>Stop whatever is playing if it is My sound, whoever started it. Called when My sound is
+    /// removed or replaced, so the old audio does not play on.</summary>
+    public void StopCustom();
 }

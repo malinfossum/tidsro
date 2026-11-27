@@ -234,6 +234,8 @@ try {
     Start-Sleep -Seconds 3
     Expect ((Get-Slot $settings) -eq 'No sound chosen') 'the window says no sound is chosen after the .mp3'
     Expect (-not (Test-Path $installed)) 'the decoded copy is gone from disk'
+    $saved = (Get-Content $dataFile -Raw | ConvertFrom-Json).Settings.CustomSoundName
+    Expect ([string]::IsNullOrEmpty($saved)) "the .mp3 name was cleared from data.json (got '$saved')"
 }
 finally {
     if (-not $KeepRig -and $rig -and -not $rig.HasExited) {

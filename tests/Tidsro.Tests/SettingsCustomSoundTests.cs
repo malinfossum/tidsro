@@ -176,6 +176,7 @@ public class SettingsCustomSoundTests : IDisposable
         _vm.RemoveCustomSoundCommand.Execute(null);
 
         Assert.Equal([first, second], _sound.Stopped);
+        Assert.Equal(3, _sound.StopCustomCalls);   // each Choose and the Remove also stop a My sound started elsewhere
     }
 
     // A 24-bit export plays everywhere else, so the plain refusal would tell the user nothing.

@@ -17,6 +17,7 @@ public sealed class SoundService : ISoundService
     // cannot silence a newer alarm.
     private int _lastId;
     private int _currentId;
+    private bool _currentIsCustom;
 
     // Where the user's own .wav lives right now, or null when none is installed. A live read, so
     // choosing or clearing one in Settings takes effect on the next chime without rewiring anything.
@@ -55,6 +56,7 @@ public sealed class SoundService : ISoundService
         var started = choice == SoundChoice.Custom ? PlayCustom() : PlayChime(choice);
         if (!started) return 0;
         _currentId = ++_lastId;
+        _currentIsCustom = choice == SoundChoice.Custom;
         return _currentId;
     }
 
@@ -64,8 +66,14 @@ public sealed class SoundService : ISoundService
     {
         if (playId == 0 || playId != _currentId) return;
         _currentId = 0;
+        _currentIsCustom = false;
         try { _player?.Stop(); }
         catch { /* stopping must never crash a timer either */ }
+    }
+
+    public void StopCustom()
+    {
+        if (_currentIsCustom) Stop(_currentId);
     }
 
     private bool PlayChime(SoundChoice choice)

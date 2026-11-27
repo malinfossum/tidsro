@@ -18,4 +18,7 @@ public sealed class FakeSoundService : ISoundService
     }
 
     public void Stop(int playId) => Stopped.Add(playId);
+
+    public int StopCustomCalls { get; private set; }
+    public void StopCustom() => StopCustomCalls++;
 }

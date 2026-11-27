@@ -104,7 +104,8 @@ public partial class SettingsViewModel : ObservableObject
         var source = _sounds.Dialogs.AskSoundPath();
         if (source is null) return;                  // canceled — nothing happens
 
-        StopPreview();   // the file being replaced may still be playing
+        StopPreview();               // the file being replaced may still be playing,
+        _sounds.Sound.StopCustom();  // from this preview, another window's or an alarm's
         var name = _sounds.Store.Install(source);
         if (name is null)
         {
@@ -156,6 +157,7 @@ public partial class SettingsViewModel : ObservableObject
         if (_sounds is null) return;
 
         StopPreview();
+        _sounds.Sound.StopCustom();   // whoever started it, the removed sound stops with it
         _sounds.Store.Remove();
         _settings.CustomSoundName = null;
 
